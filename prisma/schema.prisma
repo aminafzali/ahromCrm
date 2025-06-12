@@ -1,0 +1,584 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// schema.prisma
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum FieldType {
+  text
+  number
+  boolean
+  select
+  multi_select
+  date
+  file
+}
+
+model Form {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String?          @db.Text
+  isActive    Boolean          @default(true)
+  fields      FieldOnForm[]
+  submissions FormSubmission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Field {
+  id           Int           @id @default(autoincrement())
+  name         String        @unique @default(uuid())
+  label        String        @default("برچسپ")
+  type         FieldType     @default(text)
+  placeholder  String?
+  required     Boolean       @default(false)
+  options      FieldOption[]
+  validation   String? // JSON string of validation rules
+  defaultValue String?
+  order        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  forms        FieldOnForm[]
+}
+
+model FieldOnForm {
+  formId  Int
+  fieldId Int
+  form    Form  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  field   Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@id([formId, fieldId]) // تعریف کلید مرکب برای ارتباط Many-to-Many
+}
+
+model FieldOption {
+  id        Int      @id @default(autoincrement())
+  fieldId   Int
+  field     Field    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  label     String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FormSubmission {
+  id     Int                   @id @default(autoincrement())
+  formId Int
+  form   Form                  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  values FormSubmissionValue[]
+  data   Json // Stores form submission data
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requests Request[]
+}
+
+model FormSubmissionValue {
+  id           Int            @id @default(autoincrement())
+  submissionId Int
+  submission   FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  value        String // مقدار ورودی کاربر
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  CANCELED
+}
+
+enum PaymentStatus {
+  PENDING // در انتظار تایید
+  SUCCESS // موفق
+  FAILED // ناموفق
+  CANCELED // لغو شده
+}
+
+enum PaymentMethod {
+  CASH // در انتظار تایید
+  CARD // موفق
+  TRANSFER // ناموفق
+}
+
+enum InvoiceType {
+  SALES // فاکتور فروش
+  PURCHASE // فاکتور خرید
+  PROFORMA // پیش‌فاکتور
+  RETURN_SALES // برگشت از فروش
+  RETURN_PURCHASE // برگشت از خرید
+}
+
+enum PaymentType {
+  RECEIVE // دریافت
+  PAY // پرداخت
+}
+
+enum InvoiceItemType {
+  SERVICE
+  PRODUCT
+  CUSTOM
+}
+
+model Invoice {
+  id              Int           @id @unique @default(autoincrement())
+  requestId       Int?
+  request         Request?      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  items           InvoiceItem[]
+  type            InvoiceType   @default(SALES) // نوع فاکتور
+  subtotal        Float         @default(0)
+  tax             Float         @default(0)
+  taxPercent      Float         @default(0) // درصد مالیات
+  discount        Float         @default(0)
+  discountPercent Float         @default(0) // درصد تخفیف
+  total           Float
+  status          InvoiceStatus @default(PENDING)
+  dueDate         DateTime? // تاریخ سررسید پرداخت فاکتور
+  description     String?       @db.Text
+
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  paymentDate DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  payments    Payment[] // لیست پرداخت‌ها برای این فاکتور
+}
+
+model InvoiceItem {
+  id        Int     @id @unique @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  itemType InvoiceItemType @default(CUSTOM)
+
+  // For SERVICE type
+  serviceTypeId Int?
+  serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id])
+
+  // For PRODUCT type  
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  // Common fields
+  description     String
+  quantity        Int
+  price           Float
+  discount        Float    @default(0) // مقدار تخفیف روی هر آیتم
+  discountPercent Float    @default(0) // درصد تخفیف روی هر آیتم
+  tax             Float    @default(0) // مالیات هر آیتم به‌صورت جداگانه
+  taxPercent      Float    @default(0) // درصد مالیات هر آیتم
+  total           Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Payment {
+  id          Int           @id @unique @default(autoincrement())
+  userId      Int?
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  invoiceId   Int?
+  invoice     Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull) // پرداخت می‌تواند به فاکتور متصل باشد
+  amount      Float
+  type        PaymentType   @default(RECEIVE) // نوع پرداخت (دریافت یا پرداخت)
+  reference   String? // شماره تراکنش یا مرجع پرداخت
+  status      PaymentStatus @default(PENDING)
+  method      PaymentMethod @default(CARD)
+  paidAt      DateTime?
+  description String?       @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id            Int                @id @default(autoincrement())
+  name          String
+  description   String?
+  blog          Json? // ذخیره توضیحات با فرمت HTML یا Markdown
+  price         Float
+  stock         Int                @default(0)
+  warrantyId    Int?
+  isActive      Boolean            @default(false)
+  warranty      Warranty?          @relation(fields: [warrantyId], references: [id], onDelete: SetNull)
+  categoryId    Int?
+  category      Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brandId       Int?
+  brand         Brand?             @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  attributes    ProductAttribute[]
+  variants      ProductVariant[]
+  reviews       Review[]
+  expertReviews ExpertReview[]
+  images        ProductImage[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  InvoiceItem InvoiceItem[]
+}
+
+model ProductImage {
+  id        Int      @id @default(autoincrement())
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  parentId    Int?
+
+  lft   Int @default(0)
+  rgt   Int @default(0)
+  depth Int @default(0)
+
+  parent    Category?  @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Category[] @relation("CategoryToCategory")
+  products  Product[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Brand {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  logoUrl     String?
+  website     String?
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Attribute {
+  id           Int                @id @default(autoincrement())
+  name         String             @unique
+  type         String // 'text', 'number', 'boolean', 'select', 'multi_select', 'color', etc.
+  options      String? // JSON format for select options
+  isComparable Boolean            @default(true)
+  products     ProductAttribute[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model ProductAttribute {
+  id          Int       @id @default(autoincrement())
+  productId   Int
+  attributeId Int
+  value       String // Attribute value
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ProductVariant {
+  id         Int      @id @default(autoincrement())
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku        String?  @unique
+  price      Float
+  stock      Int      @default(0)
+  attributes Json // JSON for variant-specific attributes (e.g., color, size)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Warranty {
+  id          Int       @id @default(autoincrement())
+  name        String
+  duration    Int // Warranty duration in months
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    Int
+  rating    Float // 1-5 star rating
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+model ExpertReview {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  author    String // Name of the expert reviewer
+  rating    Float // Overall rating
+  pros      Json // Strengths (e.g., ["Long battery life", "Great display"])
+  cons      Json // Weaknesses (e.g., ["Expensive", "Limited ports"])
+  content   String // Full review content
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ReminderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  SMS
+  EMAIL
+  IN_APP
+  ALL
+}
+
+model Reminder {
+  id                   Int                 @id @default(autoincrement())
+  title                String
+  description          String?             @db.Text
+  dueDate              DateTime
+  status               ReminderStatus      @default(PENDING)
+  type                 String // For identifying different types of reminders (e.g., 'request', 'invoice', etc.)
+  entityId             Int // ID of the related entity (request, invoice, etc.)
+  entityType           String // Name of the related entity type
+  userId               Int
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  notified             Boolean             @default(false)
+  lastNotified         DateTime?
+  repeatInterval       String? // e.g., 'daily', 'weekly', 'monthly'
+  notificationChannels NotificationChannel @default(ALL)
+  timezone             String              @default("UTC")
+}
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// schema.prisma
+
+model Request {
+  id     Int  @id @unique @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  serviceTypeId Int?
+  serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+
+  description   String    @db.Text
+  address       String?
+  preferredDate DateTime?
+  preferredTime DateTime?
+  note          String?
+
+  statusId Int?
+  status   Status? @relation(fields: [statusId], references: [id], onDelete: Cascade)
+
+  priority     String @default("متوسط") // پایین، متوسط، بالا
+  assignedToId Int? // اپراتور یا تکنسین مسئول
+  assignedTo   User?  @relation(name: "AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  estimatedPrice Float? // مبلغ تخمینی
+  actualPrice    Float? // مبلغ نهایی بعد از انجام کار
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime? // تاریخ تکمیل درخواست
+
+  notes         Note[]
+  invoices      Invoice[]
+  notifications Notification[]
+  attachments   RequestAttachment[]
+  statusHistory RequestStatusHistory[]
+  reviews       RequestReview[]
+  cancellations RequestCancellation[]
+
+  // Add form submission relation
+  formSubmission   FormSubmission? @relation(fields: [formSubmissionid], references: [id])
+  formSubmissionid Int?
+}
+
+model RequestAttachment {
+  id         Int      @id @unique @default(autoincrement())
+  requestId  Int
+  request    Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fileUrl    String // مسیر ذخیره فایل
+  fileType   String // مثلا "image/png", "application/pdf"
+  uploadedAt DateTime @default(now())
+}
+
+model RequestStatusHistory {
+  id        Int     @id @unique @default(autoincrement())
+  requestId Int
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  oldStatusId Int?
+  oldStatus   Status? @relation(name: "oldStatus", fields: [oldStatusId], references: [id], onDelete: SetNull)
+
+  newStatusId Int
+  newStatus   Status @relation(name: "newStatus", fields: [newStatusId], references: [id], onDelete: Cascade)
+
+  changedById Int
+  changedBy   User @relation(fields: [changedById], references: [id], onDelete: Cascade)
+
+  changedAt DateTime @default(now())
+}
+
+model RequestReview {
+  id        Int     @id @unique @default(autoincrement())
+  requestId Int
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  rating    Int // امتیاز از ۱ تا ۵
+  comment   String?  @db.Text // نظر مشتری
+  createdAt DateTime @default(now())
+}
+
+model RequestCancellation {
+  id        Int     @id @unique @default(autoincrement())
+  requestId Int
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  cancelledById Int
+  cancelledBy   User @relation(fields: [cancelledById], references: [id], onDelete: Cascade)
+
+  reason      String   @db.Text // دلیل لغو
+  cancelledAt DateTime @default(now())
+}
+
+model Status {
+  id        Int       @id @unique @default(autoincrement())
+  name      String    @unique
+  color     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  requests  Request[]
+  isLock    Boolean   @default(false)
+
+  RequestStatusHistoryNew RequestStatusHistory[] @relation(name: "newStatus")
+
+  RequestStatusHistoryOld RequestStatusHistory[] @relation(name: "oldStatus")
+}
+
+model ServiceType {
+  id          Int       @id @unique @default(autoincrement())
+  name        String    @unique
+  description String?   @db.Text
+  basePrice   Float     @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  requests    Request[]
+
+  InvoiceItem InvoiceItem[]
+}
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// schema.prisma
+
+model User {
+  id            Int            @id @unique @default(autoincrement())
+  name          String?
+  email         String?        @unique
+  phone         String         @unique
+  password      String? // Added password field
+  address       String         @default("")
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  requests      Request[]
+  notifications Notification[]
+  labels        Label[]        @relation("UserLabels")
+  groups        UserGroup[]    @relation("UserGroups")
+  Review        Review[]
+
+  RequestCancellation RequestCancellation[]
+
+  RequestReview RequestReview[]
+
+  RequestStatusHistory RequestStatusHistory[]
+
+  requestsAssigned Request[] @relation(name: "AssignedTo")
+
+  payments Payment[]
+
+  Invoice Invoice[]
+
+  Reminder Reminder[]
+}
+
+model Label {
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  color      String      @default("primary")
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  users      User[]      @relation("UserLabels")
+  userGroups UserGroup[] @relation("GroupLabels")
+}
+
+model UserGroup {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]   @relation("UserGroups")
+  labels      Label[]  @relation("GroupLabels")
+}
+
+model Note {
+  id        Int      @id @unique @default(autoincrement())
+  requestId Int
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        Int      @id @unique @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requestId Int?
+  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  title     String
+  note      String?
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  sendSms   Boolean  @default(true)
+  sendEmail Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  TECHNICIAN
+  USER
+}
+
+enum LabelColor {
+  primary
+  accent
+  secondary
+  warning
+  success
+  neutral
+  info
+}
