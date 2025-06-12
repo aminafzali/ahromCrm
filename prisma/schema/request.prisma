@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// schema.prisma
+
+model Request {
+  id     Int  @id @unique @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  serviceTypeId Int?
+  serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+
+  description   String    @db.Text
+  address       String?
+  preferredDate DateTime?
+  preferredTime DateTime?
+  note          String?
+
+  statusId Int?
+  status   Status? @relation(fields: [statusId], references: [id], onDelete: Cascade)
+
+  priority     String @default("متوسط") // پایین، متوسط، بالا
+  assignedToId Int? // اپراتور یا تکنسین مسئول
+  assignedTo   User?  @relation(name: "AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  estimatedPrice Float? // مبلغ تخمینی
+  actualPrice    Float? // مبلغ نهایی بعد از انجام کار
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime? // تاریخ تکمیل درخواست
+
+  notes         Note[]
+  invoices      Invoice[]
+  notifications Notification[]
+  attachments   RequestAttachment[]
+  statusHistory RequestStatusHistory[]
+  reviews       RequestReview[]
+  cancellations RequestCancellation[]
+
+  // Add form submission relation
+  formSubmission   FormSubmission? @relation(fields: [formSubmissionid], references: [id])
+  formSubmissionid Int?
+}
+
+model RequestAttachment {
+  id         Int      @id @unique @default(autoincrement())
+  requestId  Int
+  request    Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fileUrl    String // مسیر ذخیره فایل
+  fileType   String // مثلا "image/png", "application/pdf"
+  uploadedAt DateTime @default(now())
+}
+
+model RequestStatusHistory {
+  id        Int     @id @unique @default(autoincrement())
+  requestId Int
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  oldStatusId Int?
+  oldStatus   Status? @relation(name: "oldStatus", fields: [oldStatusId], references: [id], onDelete: SetNull)
+
+  newStatusId Int
+  newStatus   Status @relation(name: "newStatus", fields: [newStatusId], references: [id], onDelete: Cascade)
+
+  changedById Int
+  changedBy   User @relation(fields: [changedById], references: [id], onDelete: Cascade)
+
+  changedAt DateTime @default(now())
+}
+
+model RequestReview {
+  id        Int     @id @unique @default(autoincrement())
+  requestId Int
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  rating    Int // امتیاز از ۱ تا ۵
+  comment   String?  @db.Text // نظر مشتری
+  createdAt DateTime @default(now())
+}
+
+model RequestCancellation {
+  id        Int     @id @unique @default(autoincrement())
+  requestId Int
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  cancelledById Int
+  cancelledBy   User @relation(fields: [cancelledById], references: [id], onDelete: Cascade)
+
+  reason      String   @db.Text // دلیل لغو
+  cancelledAt DateTime @default(now())
+}
+
+model Status {
+  id        Int       @id @unique @default(autoincrement())
+  name      String    @unique
+  color     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  requests  Request[]
+  isLock    Boolean   @default(false)
+
+  RequestStatusHistoryNew RequestStatusHistory[] @relation(name: "newStatus")
+
+  RequestStatusHistoryOld RequestStatusHistory[] @relation(name: "oldStatus")
+}
+
+model ServiceType {
+  id          Int       @id @unique @default(autoincrement())
+  name        String    @unique
+  description String?   @db.Text
+  basePrice   Float     @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  requests    Request[]
+
+  InvoiceItem InvoiceItem[]
+}

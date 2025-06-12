@@ -1,0 +1,24 @@
+.btn-sm {
+  height: unset !important;
+  min-height: unset !important;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+@media screen and (max-width: 1023px) {
+  aside {
+    nav {
+      padding-bottom: 64px;
+    }
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  aside {
+    nav {
+      padding-bottom: 16px;
+    }
+  }
+}

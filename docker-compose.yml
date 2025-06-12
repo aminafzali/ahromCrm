@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  nextjs-app:
+    container_name: tealup-demo
+    build: .
+    ports:
+      - "4010:4010"
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Tehran
+    networks:
+      - nginx-proxy-manager_default
+    volumes:
+      - /etc/localtime:/etc/localtime:ro # Optional but useful on non-Alpine systems
+
+networks:
+  nginx-proxy-manager_default:
+    external: true

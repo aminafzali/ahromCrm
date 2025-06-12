@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// schema.prisma
+
+model User {
+  id            Int            @id @unique @default(autoincrement())
+  name          String?
+  email         String?        @unique
+  phone         String         @unique
+  password      String? // Added password field
+  address       String         @default("")
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  requests      Request[]
+  notifications Notification[]
+  labels        Label[]        @relation("UserLabels")
+  groups        UserGroup[]    @relation("UserGroups")
+  Review        Review[]
+
+  RequestCancellation RequestCancellation[]
+
+  RequestReview RequestReview[]
+
+  RequestStatusHistory RequestStatusHistory[]
+
+  requestsAssigned Request[] @relation(name: "AssignedTo")
+
+  payments Payment[]
+
+  Invoice Invoice[]
+
+  Reminder Reminder[]
+}
+
+model Label {
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  color      String      @default("primary")
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  users      User[]      @relation("UserLabels")
+  userGroups UserGroup[] @relation("GroupLabels")
+}
+
+model UserGroup {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]   @relation("UserGroups")
+  labels      Label[]  @relation("GroupLabels")
+}
+
+model Note {
+  id        Int      @id @unique @default(autoincrement())
+  requestId Int
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        Int      @id @unique @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requestId Int?
+  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  title     String
+  note      String?
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  sendSms   Boolean  @default(true)
+  sendEmail Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  TECHNICIAN
+  USER
+}
+
+enum LabelColor {
+  primary
+  accent
+  secondary
+  warning
+  success
+  neutral
+  info
+}

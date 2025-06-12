@@ -1,0 +1,1534 @@
+//come from tailwind
+$primary: theme("colors.primary.DEFAULT");
+$primary-10: theme("colors.primary.10");
+$primary-20: theme("colors.primary.20");
+$primary-30: theme("colors.primary.30");
+$primary-40: theme("colors.primary.40");
+$primary-50: theme("colors.primary.50");
+$primary-70: theme("colors.primary.70");
+$primary-80: theme("colors.primary.80");
+$primary-90: theme("colors.primary.90");
+$primary-100: theme("colors.primary.100");
+$secondary: theme("colors.secondary.DEFAULT");
+$secondary-10: theme("colors.secondary.10");
+$secondary-20: theme("colors.secondary.20");
+$secondary-30: theme("colors.secondary.30");
+$secondary-40: theme("colors.secondary.40");
+$secondary-50: theme("colors.secondary.50");
+$secondary-70: theme("colors.secondary.70");
+$secondary-80: theme("colors.secondary.80");
+$secondary-90: theme("colors.secondary.90");
+$secondary-95: theme("colors.secondary.95");
+$secondary-99: theme("colors.secondary.99");
+$secondary-100: theme("colors.secondary.100");
+$accent: theme("colors.accent.DEFAULT");
+$accent-10: theme("colors.accent.10");
+$accent-20: theme("colors.accent.20");
+$accent-30: theme("colors.accent.30");
+$accent-40: theme("colors.accent.40");
+$accent-50: theme("colors.accent.50");
+$accent-70: theme("colors.accent.70");
+$accent-80: theme("colors.accent.80");
+$accent-90: theme("colors.accent.90");
+$accent-95: theme("colors.accent.95");
+$accent-99: theme("colors.accent.99");
+$accent-100: theme("colors.accent.100");
+$surface-light: theme("colors.surface-light.DEFAULT");
+$surface-light-1: theme("colors.surface-light.1");
+$surface-light-2: theme("colors.surface-light.2");
+$surface-light-3: theme("colors.surface-light.3");
+$surface-light-4: theme("colors.surface-light.4");
+$surface-dark: theme("colors.surface-dark.DEFAULT");
+$surface-dark-1: theme("colors.surface-dark.1");
+$surface-dark-2: theme("colors.surface-dark.2");
+$surface-dark-3: theme("colors.surface-dark.3");
+$surface-dark-4: theme("colors.surface-dark.4");
+//$gradient-color: linear-gradient(to left top, $primary-99, $primary-95, $primary-90, $primary-70, $primary);
+$gradient-color: linear-gradient(
+  to left top,
+  $secondary-99,
+  $secondary-95,
+  $secondary-90,
+  $secondary-70,
+  $secondary
+);
+//$gradient-color: linear-gradient(to left top, $accent-99, $accent-95, $accent-90, $accent-70, $accent);
+html {
+  direction: rtl;
+}
+
+ul {
+  padding-right: 0;
+}
+
+.pl-0 {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.mt-0 {
+  margin-top: 0 !important;
+}
+
+.me-1 {
+  margin-right: 0 !important;
+  margin-left: 0.25rem !important;
+}
+
+.navbar-area {
+  nav {
+    .navbar-nav {
+      margin-left: 0;
+      margin-right: auto;
+
+      .nav-item {
+        .dropdown-menu {
+          left: auto;
+          right: 0;
+
+          li {
+            text-align: right;
+          }
+        }
+      }
+    }
+
+    .others-options {
+      margin: 0 10px 0 0;
+    }
+  }
+}
+
+.navbar-brand {
+  margin-right: 0;
+  margin-left: 1rem;
+}
+
+.navbar-toggler {
+  background-color: transparent;
+
+  &:focus {
+    box-shadow: none;
+  }
+}
+
+.main-banner-content {
+  padding-right: 0;
+  padding-left: 30px;
+
+  .btn-primary {
+    margin-right: 0;
+    margin-left: 20px;
+  }
+}
+
+.about-content-two {
+  padding-left: 0;
+  padding-right: 30px;
+
+  .section-title {
+    text-align: right;
+  }
+
+  .about-text {
+    ul {
+      li {
+        padding-left: 0;
+        padding-right: 25px;
+
+        i {
+          right: 0;
+          left: auto;
+        }
+      }
+    }
+  }
+}
+
+.single-case-studies {
+  .content {
+    left: auto;
+    right: 0;
+  }
+
+  .btn {
+    left: auto;
+    right: 30px;
+  }
+}
+
+.cta-btn-box {
+  text-align: left;
+}
+
+.read-more-btn i {
+  padding-left: 0;
+  padding-right: 5px;
+}
+
+.single-footer-widget {
+  ul.get-in-touch {
+    li {
+      padding-left: 0;
+      padding-right: 50px;
+
+      i {
+        left: auto;
+        right: 0;
+      }
+    }
+  }
+
+  .social-links {
+    li {
+      margin-right: 0;
+      margin-left: 5px;
+
+      &:last-child {
+        margin-left: 0;
+      }
+
+      a {
+        margin: 0;
+      }
+    }
+  }
+}
+
+.scroll-to-top {
+  i {
+    right: auto;
+    left: 20px;
+  }
+}
+
+.contact-cta-box {
+  padding: 30px 30px 30px 210px;
+
+  .btn {
+    right: auto;
+    left: 30px;
+  }
+}
+
+.single-blog-item {
+  .blog-image {
+    .post-tag {
+      left: auto;
+      right: 0;
+    }
+  }
+}
+
+.feature-list {
+  padding: 13px 45px 13px 13px;
+
+  i {
+    left: auto;
+    right: 18px;
+    top: 15px;
+  }
+}
+
+.single-pricing-table {
+  .pricing-features {
+    li {
+      padding-left: 0;
+      padding-right: 25px;
+
+      i {
+        left: auto;
+        right: 0;
+      }
+    }
+  }
+}
+
+.blog-item-box {
+  .blog-item {
+    .post-content {
+      .post-meta {
+        li {
+          margin-right: 0 !important;
+          margin-left: 18px !important;
+          padding-left: 0 !important;
+          padding-right: 25px !important;
+
+          i {
+            left: auto;
+            right: 0;
+          }
+
+          &::before {
+            right: auto;
+            left: -10px;
+          }
+        }
+      }
+    }
+  }
+}
+
+.single-blog-post {
+  .post-content {
+    .post-meta {
+      li {
+        margin-right: 0 !important;
+        margin-left: 18px !important;
+        padding-left: 0 !important;
+        padding-right: 25px !important;
+
+        i {
+          left: auto;
+          right: 0;
+        }
+
+        &::before {
+          right: auto;
+          left: -10px;
+        }
+      }
+    }
+  }
+}
+
+.pricing-list-tab {
+  .react-tabs {
+    .react-tabs__tab-list {
+      li {
+        &:nth-child(1) {
+          border-radius: 0 30px 30px 0;
+        }
+
+        &:nth-child(2) {
+          border-radius: 30px 0 0 30px;
+        }
+      }
+    }
+  }
+}
+
+.services-slides {
+  .swiper-button-next {
+    right: auto;
+  }
+}
+
+.services-details-info {
+  ul {
+    li {
+      padding-left: 0;
+      padding-right: 20px;
+
+      &::before {
+        left: auto;
+        right: 0;
+      }
+    }
+  }
+}
+
+.faq-accordion {
+  .accordion {
+    .accordion__item {
+      .accordion__button {
+        padding: 12px 20px;
+        text-align: right;
+
+        &::before {
+          margin-right: 0;
+          margin-left: 10px;
+        }
+      }
+    }
+  }
+}
+
+.contact-info-box {
+  padding: 30px 120px 30px 30px;
+
+  .icon {
+    left: auto;
+    right: 30px;
+  }
+}
+
+.widget-area {
+  .widget_search {
+    form {
+      .search-submit {
+        right: auto;
+        left: 0;
+      }
+    }
+  }
+
+  .widget_posts_thumb {
+    .item {
+      .thumb {
+        float: right;
+        margin-right: 0;
+        margin-left: 15px;
+      }
+    }
+  }
+
+  .widget {
+    ul {
+      li {
+        padding-left: 0;
+        padding-right: 17px;
+
+        &::before {
+          left: auto;
+          right: 0;
+        }
+      }
+    }
+  }
+}
+
+.blog-details {
+  .article-content {
+    .entry-meta {
+      li {
+        margin-right: 0;
+        margin-left: 15px;
+
+        i {
+          margin-right: 0;
+          margin-left: 5px;
+        }
+      }
+    }
+  }
+}
+
+.comments-area {
+  .comment-body {
+    margin-left: 60px;
+    margin-right: 65px;
+  }
+
+  .comment-author {
+    .avatar {
+      left: auto;
+      right: -65px;
+    }
+  }
+
+  .comment-respond {
+    .comment-form-cookies-consent {
+      padding-left: 0;
+      padding-right: 20px;
+
+      input {
+        left: auto;
+        right: 0;
+      }
+    }
+  }
+}
+
+.lang-didebar {
+  left: 0;
+  right: auto;
+
+  a {
+    font-size: 13px;
+  }
+}
+
+.cta-area-two {
+  .cta-btn-box {
+    text-align: center;
+  }
+}
+
+.newsletter-inner-area {
+  .newsletter-content {
+    .newsletter-form {
+      button {
+        left: 5px;
+        right: auto;
+      }
+    }
+  }
+}
+
+.it-banner {
+  overflow: hidden;
+}
+
+/* Software Startup Home */
+.software-banner-content {
+  margin-left: 0;
+  padding-right: 0;
+  margin-right: auto;
+}
+
+.software-overview-box {
+  .overview-image {
+    &.left-img {
+      padding-right: 0;
+      padding-left: 30px;
+    }
+
+    &.right-img {
+      padding-right: 30px;
+      padding-left: 0;
+    }
+  }
+
+  .overview-content {
+    padding-left: 0;
+    padding-right: 30px;
+
+    .overview-list {
+      li {
+        span {
+          padding: 15px 80px 15px 25px;
+
+          i {
+            left: auto;
+            right: 25px;
+          }
+        }
+      }
+    }
+  }
+
+  &:nth-child(2),
+  &:nth-child(3),
+  &:nth-child(4),
+  &:nth-child(5),
+  &:nth-child(6),
+  &:nth-child(7),
+  &:nth-child(8),
+  &:nth-child(9),
+  &:nth-child(10),
+  &:nth-child(11),
+  &:nth-child(12) {
+    .overview-content {
+      padding-right: 0;
+      padding-left: 30px;
+    }
+  }
+}
+
+.software-pricing-box {
+  .features-list {
+    li {
+      padding-left: 0;
+      padding-right: 35px;
+
+      i {
+        left: auto;
+        right: 0;
+      }
+    }
+  }
+}
+
+.software-faq {
+  &.faq-accordion {
+    .accordion {
+      .accordion__item {
+        .accordion__button {
+          padding: 15px 20px 15px 40px;
+
+          &::before {
+            right: auto;
+            left: 10px;
+          }
+        }
+      }
+    }
+  }
+}
+
+.software-funfacts-item {
+  padding-left: 0;
+  padding-right: 145px;
+
+  .icon {
+    left: auto;
+    right: 0;
+  }
+}
+
+.text-start {
+  text-align: initial !important;
+  text-align: right !important;
+}
+
+.faq-img {
+  &.pl-30 {
+    padding-left: 0;
+    padding-right: 30px;
+  }
+}
+
+.softeware-app-download-content {
+  padding-left: 0;
+  padding-right: 15px;
+
+  .btn-box {
+    .playstore-btn {
+      margin-right: 0;
+      margin-left: 15px;
+    }
+  }
+}
+
+.portfolio-desc {
+  ul,
+  ol {
+    padding-right: 30px;
+  }
+}
+
+.coming-soon-content {
+  form {
+    .input-newsletter {
+      padding: 0 20px 0 15px;
+    }
+
+    .default-btn-two {
+      right: auto;
+      left: 5px;
+    }
+  }
+}
+
+/* Digital Marketing Home */
+.marketing-banner-content {
+  padding-right: 0;
+  padding-left: 25px;
+}
+
+.marketing-about-image {
+  margin-right: 0;
+  margin-left: 15px;
+}
+
+.marketing-about-content {
+  .box {
+    padding-left: 0;
+    padding-right: 25px;
+
+    i {
+      left: auto;
+      right: 0;
+    }
+  }
+}
+
+.dm-funfacts-box {
+  padding-left: 0;
+  padding-right: 110px;
+
+  i {
+    left: auto;
+    right: 35px;
+  }
+}
+
+.dm-pricing-box {
+  .features-list {
+    li {
+      padding-left: 0;
+      padding-right: 25px;
+
+      i {
+        left: auto;
+        right: 0;
+      }
+    }
+  }
+}
+
+/* End Digital Marketing Home */
+
+/* Business Business Home */
+.consulting-banner-area {
+  &::before {
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0), white);
+  }
+}
+
+.bc-features-item {
+  padding-left: 0;
+  padding-right: 70px;
+
+  .icon {
+    left: auto;
+    right: 0;
+  }
+}
+
+.bc-funfacts-box.text-center {
+  border-left: 2px dashed rgba(255, 255, 255, 0.2);
+  border-right: none;
+}
+
+/* End Business Business Home */
+
+/* Freelancer Portfolio Home */
+.fp-project-item {
+  .content {
+    padding-right: 0;
+    padding-left: 40px;
+
+    .link-btn {
+      right: auto;
+      left: 0;
+    }
+  }
+}
+
+/* End Freelancer Portfolio Home */
+
+/* App Showcase Home */
+.app-main-banner-inner {
+  .content {
+    padding-right: 0;
+    padding-left: 15px;
+  }
+}
+
+.app-about-content {
+  padding-left: 0;
+  padding-right: 30px;
+}
+
+.app-features-item {
+  padding: 40px 110px 35px 30px;
+
+  .icon {
+    left: auto;
+    right: 30px;
+  }
+}
+
+.app-download-inner {
+  .app-download-content {
+    .btn-box {
+      .playstore-btn {
+        margin-right: 0;
+        margin-left: 15px;
+      }
+    }
+  }
+}
+
+.app-feedback-box {
+  .client-info {
+    .title {
+      margin-left: 0;
+      margin-right: 15px;
+    }
+  }
+}
+
+.app-pricing-box {
+  .popular {
+    right: auto;
+    left: 20px;
+  }
+
+  .features-list {
+    li {
+      padding-left: 0;
+      padding-right: 25px;
+
+      i {
+        left: auto;
+        right: -2px;
+      }
+    }
+  }
+}
+
+.app-free-trial-content {
+  form {
+    .input-newsletter {
+      padding-left: 15px;
+      padding-right: 25px;
+    }
+
+    .app-default-btn {
+      right: auto;
+      left: 5px;
+    }
+  }
+}
+
+.app-blog-post {
+  .content {
+    ul {
+      li {
+        margin-right: 0;
+        margin-left: 15px;
+      }
+    }
+  }
+}
+
+/* End App Showcase Home */
+
+/* Personal Portfolio Home */
+.personal-portfolio-banner-content {
+  .sub-title {
+    padding: 0;
+
+    &::before {
+      display: none;
+    }
+  }
+}
+
+.section-title {
+  &.style-two {
+    padding-left: 0;
+    padding-right: 90px;
+
+    h2 {
+      &::before {
+        left: auto;
+        right: -90px;
+      }
+    }
+  }
+}
+
+.short-brief-content {
+  .timeline-item {
+    padding-left: 0;
+    padding-right: 40px;
+  }
+
+  .timeline-marker {
+    left: auto;
+    right: 0;
+  }
+}
+
+.pp-post-item {
+  .post-content {
+    .meta {
+      li {
+        margin-right: 0;
+        margin-left: 15px;
+      }
+    }
+  }
+}
+
+.pp-shape1 {
+  right: auto;
+  left: 40px;
+}
+
+/* End Personal Portfolio Home */
+
+/* SaaS Startup Home */
+.saas-banner-content {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.saas-about-image {
+  padding-right: 0;
+  padding-left: 15px;
+}
+
+.saas-about-content {
+  padding-left: 0;
+  padding-right: 15px;
+}
+
+.saas-about-content {
+  .features-list {
+    li {
+      padding-left: 0;
+      padding-right: 24px;
+
+      i {
+        left: auto;
+        right: 0;
+      }
+    }
+  }
+}
+
+.saas-how-it-works-content {
+  padding-right: 0;
+  padding-left: 30px;
+
+  ul {
+    li {
+      padding-left: 0;
+      padding-right: 65px;
+
+      i {
+        left: auto;
+        right: 0;
+      }
+    }
+  }
+}
+
+.saas-pricing-tabs {
+  .react-tabs {
+    .react-tabs__tab-list {
+      .react-tabs__tab {
+        &:first-child {
+          border-radius: 0 5px 5px 0;
+
+          &::before {
+            border-radius: 0 5px 5px 0;
+          }
+        }
+
+        &:last-child {
+          border-radius: 5px 0 0 5px;
+
+          &::before {
+            border-radius: 5px 0 0 5px;
+          }
+        }
+      }
+    }
+  }
+}
+
+.saas-testimonials-item {
+  .info {
+    .title {
+      margin-left: 0;
+      margin-right: 10px;
+    }
+
+    img {
+      margin-right: 0;
+      margin-left: 10px;
+    }
+  }
+}
+
+.saas-post-item {
+  .post-content {
+    .meta {
+      li {
+        margin-right: 0;
+        margin-left: 15px;
+      }
+    }
+  }
+}
+
+/* End SaaS Startup Home */
+
+/* Cyber Security Agency Home */
+.cs-banner-section {
+  &::before {
+    right: auto;
+    left: 0;
+  }
+}
+
+.cs-banner-content {
+  .banner-btn {
+    li {
+      margin-right: 0;
+      margin-left: 20px;
+    }
+  }
+}
+
+.cs-card-content {
+  h3 {
+    &::after {
+      left: auto;
+      right: 0;
+    }
+  }
+}
+
+.cs-about-area {
+  &::before {
+    left: auto;
+    right: 0;
+  }
+}
+
+.cs-about-content {
+  padding-left: 0;
+  padding-right: 35px;
+}
+
+.cs-banner-content {
+  .banner-btn {
+    li {
+      .video-btn {
+        i {
+          padding-left: 0;
+        }
+      }
+    }
+  }
+}
+
+.cs-choose-content {
+  .list {
+    li {
+      padding-right: 25px;
+      padding-left: 0;
+
+      i {
+        left: auto;
+        right: 0;
+      }
+    }
+  }
+}
+
+.cs-fun-facts-area {
+  &::before {
+    left: auto;
+    right: 0;
+  }
+}
+
+.cs-single-fun-facts {
+  &::before {
+    left: auto;
+    right: 0;
+  }
+}
+
+.leading-technology-content {
+  .features-list {
+    padding: 10px 38px 10px 10px;
+
+    &::before {
+      left: auto;
+      right: 15px;
+    }
+  }
+}
+
+.cs-single-feedback {
+  .client-info {
+    padding-left: 0;
+    padding-right: 70px;
+
+    img {
+      left: auto;
+      right: 0;
+    }
+  }
+
+  .quote {
+    right: auto;
+    left: 45px;
+  }
+}
+
+.cs-blog-card {
+  .post-meta {
+    li {
+      margin-right: 0;
+      margin-left: 20px;
+    }
+  }
+
+  .info {
+    padding-left: 0;
+    padding-right: 70px;
+
+    img {
+      left: auto;
+      right: 0;
+    }
+  }
+}
+
+.cs-about-content {
+  .cs-about-card {
+    h4 {
+      &::after {
+        left: auto;
+        right: 0;
+      }
+    }
+  }
+}
+
+/* End Cyber Security Agency Home */
+
+.hero-slider {
+  .swiper-button-next {
+    right: auto;
+    left: 30px;
+
+    &::after {
+      padding-left: 0;
+      padding-right: 3px;
+    }
+  }
+
+  .swiper-button-prev {
+    &::after {
+      padding-left: 3px;
+      padding-right: 0;
+    }
+  }
+}
+
+.team-slider {
+  .swiper-button-next {
+    &::after {
+      padding-left: 0;
+      padding-right: 3px;
+    }
+  }
+
+  .swiper-button-prev {
+    &::after {
+      padding-left: 3px;
+      padding-right: 0;
+    }
+  }
+}
+
+.work-slides {
+  .swiper-button-next {
+    right: auto;
+    left: 10px;
+
+    &::after {
+      padding-left: 0;
+      padding-right: 3px;
+    }
+  }
+
+  .swiper-button-prev {
+    &::after {
+      padding-left: 3px;
+      padding-right: 0;
+    }
+  }
+}
+
+.featured-services-slides {
+  .swiper-button-next {
+    right: auto;
+    left: 0;
+
+    &::after {
+      padding-left: 0;
+      padding-right: 3px;
+    }
+  }
+
+  .swiper-button-prev {
+    &::after {
+      padding-left: 3px;
+      padding-right: 0;
+    }
+  }
+}
+
+.pp-testimonials-slides {
+  .swiper-button-prev {
+    left: 10px;
+    right: auto;
+  }
+}
+
+.partner-slides {
+  .swiper-button-next {
+    right: auto;
+    left: -6px;
+  }
+}
+
+.saas-testimonials-slides {
+  .swiper-button-next {
+    right: auto;
+    left: 5px;
+  }
+}
+
+.cs-partner-slides {
+  .swiper-button-next {
+    right: auto;
+    left: 0;
+  }
+}
+
+.marketing-testimonials-content {
+  padding-right: 0;
+  padding-left: 50px;
+}
+
+.service-style-two {
+  .service-info {
+    .btn {
+      i {
+        margin-right: 0;
+        margin-left: 5px;
+      }
+    }
+  }
+}
+
+.form-check {
+  padding-left: 0;
+  padding-right: 1.5em;
+
+  .form-check-input {
+    float: right;
+    margin-left: 0;
+    margin-right: -1.5em;
+  }
+}
+
+/* Responsive CSS */
+@media only screen and (max-width: 767px) {
+  .navbar-area {
+    nav {
+      .navbar-nav {
+        padding-right: 0;
+        padding-left: 15px;
+      }
+    }
+
+    &.navbar-style-2 {
+      nav {
+        .navbar-nav {
+          .nav-item {
+            padding-right: 5px;
+            padding-left: 5px;
+          }
+        }
+      }
+    }
+  }
+  .main-banner-content {
+    padding-left: 0;
+
+    .btn-primary {
+      margin-left: 10px;
+    }
+  }
+  .about-content-two {
+    padding-right: 0;
+  }
+  .contact-cta-box {
+    padding: 25px;
+
+    .btn {
+      position: relative;
+      left: auto;
+      top: unset;
+      -webkit-transform: unset;
+      transform: unset;
+      margin-top: 15px;
+    }
+  }
+  .contact-info-box {
+    padding: 30px;
+
+    .icon {
+      right: auto;
+    }
+  }
+  .comments-area {
+    .comment-author {
+      .avatar {
+        right: 0;
+      }
+    }
+
+    .comment-body {
+      margin-left: 0;
+      margin-right: 0;
+    }
+  }
+
+  /* Software Startup Home */
+  .software-banner-content {
+    margin-left: auto;
+
+    p {
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+  .software-funfacts-item {
+    padding: 20px 15px;
+  }
+  .software-overview-box {
+    .overview-image {
+      &.left-img,
+      &.right-img {
+        padding-left: 15px;
+        padding-right: 15px;
+      }
+    }
+
+    .overview-content {
+      padding-left: 15px !important;
+      padding-right: 15px !important;
+    }
+  }
+  .faq-img.pl-30 {
+    padding-right: 0;
+  }
+  /* End Software Startup Home */
+
+  /* Digital Marketing Home */
+  .marketing-banner-content {
+    padding-left: 0;
+  }
+  .marketing-about-image {
+    margin-left: 0;
+  }
+  /* End Digital Marketing Home */
+
+  /* Business Business Home */
+  .bc-features-item {
+    padding: 30px 15px;
+  }
+  .bc-funfacts-box.text-center {
+    border: 1px solid #363636;
+    padding: 15px 10px;
+  }
+  /* End Business Business Home */
+
+  /* App Showcase Home */
+  .app-main-banner-inner {
+    .content {
+      padding-left: 0;
+    }
+  }
+  .app-about-content {
+    padding-right: 0;
+  }
+  .app-features-item {
+    padding: 30px 80px 25px 25px;
+
+    .icon {
+      right: 20px;
+    }
+  }
+  .app-download-inner {
+    .app-download-content {
+      .btn-box {
+        .playstore-btn {
+          margin-left: 6px;
+        }
+      }
+    }
+  }
+  /* End App Showcase Home */
+
+  /* Personal Portfolio Home */
+  .section-title.style-two {
+    padding-right: 30px;
+
+    h2 {
+      &::before {
+        right: -30px;
+      }
+    }
+  }
+  /* End Personal Portfolio Home */
+
+  /* SaaS Startup Home */
+  .saas-banner-content {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .saas-about-image {
+    padding-left: 0;
+  }
+  .saas-about-content {
+    padding-right: 0;
+  }
+  /* End SaaS Startup Home */
+
+  /* Cyber Security Agency Home */
+  .cs-about-content {
+    padding-right: 0;
+  }
+  .cs-choose-content {
+    padding-right: 0;
+  }
+  /* End Cyber Security Agency Home */
+  .marketing-testimonials-content {
+    padding-left: 0;
+  }
+}
+
+@media only screen and (min-width: 576px) and (max-width: 767px) {
+}
+
+@media only screen and (min-width: 768px) and (max-width: 991px) {
+  .navbar-area {
+    nav {
+      .navbar-nav {
+        .nav-item {
+          &:nth-last-child(1),
+          &:nth-last-child(2),
+          &:nth-last-child(3) {
+            .dropdown-menu {
+              right: auto;
+              left: 0;
+            }
+          }
+        }
+      }
+    }
+  }
+  .main-banner-content {
+    padding-left: 0;
+  }
+  .about-content-two {
+    padding-right: 0;
+  }
+
+  /* Software Startup Home */
+  .software-banner-content {
+    margin-left: auto;
+
+    p {
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+  .software-funfacts-item {
+    padding-right: 95px;
+  }
+  .software-overview-box {
+    .overview-image {
+      &.left-img,
+      &.right-img {
+        padding-left: 15px;
+        padding-right: 15px;
+      }
+    }
+
+    .overview-content {
+      padding-left: 15px !important;
+      padding-right: 15px !important;
+    }
+  }
+  .faq-img.pl-30 {
+    padding-right: 0;
+  }
+  /* End Software Startup Home */
+
+  /* Digital Marketing Home */
+  .marketing-banner-content {
+    padding-left: 0;
+  }
+  .marketing-about-image {
+    margin-left: 0;
+  }
+  /* End Digital Marketing Home */
+
+  /* Business Business Home */
+  .bc-features-item {
+    padding-right: 60px;
+  }
+  .bc-funfacts-box.text-center {
+    border: 1px solid #3e3636;
+    padding: 20px 10px;
+  }
+  .bc-funfacts-box {
+    .sub-title {
+      font-size: 13px;
+    }
+  }
+  /* End Business Business Home */
+
+  /* App Showcase Home */
+  .app-main-banner-inner {
+    .content {
+      padding: 0;
+    }
+  }
+  .app-about-content {
+    padding-right: 0;
+  }
+  /* End App Showcase Home */
+
+  /* SaaS Startup Home */
+  .saas-banner-content {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .saas-about-image {
+    padding-left: 0;
+  }
+  .saas-about-content {
+    padding-right: 0;
+  }
+  /* End SaaS Startup Home */
+
+  /* Cyber Security Agency Home */
+  .cs-about-content {
+    padding-right: 0;
+  }
+  .cs-choose-content {
+    padding-right: 0;
+  }
+  /* End Cyber Security Agency Home */
+}
+
+@media only screen and (min-width: 992px) and (max-width: 1199px) {
+  .main-banner-content {
+    padding-left: 0;
+  }
+  .about-content-two {
+    padding-right: 15px;
+  }
+  .contact-info-box {
+    padding: 30px;
+
+    .icon {
+      right: auto;
+    }
+  }
+
+  /* Software Startup Home */
+  .software-banner-image {
+    padding-left: 0;
+  }
+  /* End Software Startup Home */
+
+  /* App Showcase Home */
+  .app-about-content {
+    padding-right: 10px;
+  }
+  /* End App Showcase Home */
+
+  /* SaaS Startup Home */
+  .saas-post-item {
+    .post-content {
+      .meta {
+        li {
+          font-size: 13px;
+        }
+      }
+    }
+  }
+  /* End SaaS Startup Home */
+}
+
+@media only screen and (min-width: 992px) and (max-width: 1199px) {
+}

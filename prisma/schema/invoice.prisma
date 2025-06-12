@@ -1,0 +1,108 @@
+enum InvoiceStatus {
+  PENDING
+  PAID
+  CANCELED
+}
+
+enum PaymentStatus {
+  PENDING // در انتظار تایید
+  SUCCESS // موفق
+  FAILED // ناموفق
+  CANCELED // لغو شده
+}
+
+enum PaymentMethod {
+  CASH // در انتظار تایید
+  CARD // موفق
+  TRANSFER // ناموفق
+}
+
+enum InvoiceType {
+  SALES // فاکتور فروش
+  PURCHASE // فاکتور خرید
+  PROFORMA // پیش‌فاکتور
+  RETURN_SALES // برگشت از فروش
+  RETURN_PURCHASE // برگشت از خرید
+}
+
+enum PaymentType {
+  RECEIVE // دریافت
+  PAY // پرداخت
+}
+
+enum InvoiceItemType {
+  SERVICE
+  PRODUCT
+  CUSTOM
+}
+
+model Invoice {
+  id              Int           @id @unique @default(autoincrement())
+  requestId       Int?
+  request         Request?      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  items           InvoiceItem[]
+  type            InvoiceType   @default(SALES) // نوع فاکتور
+  subtotal        Float         @default(0)
+  tax             Float         @default(0)
+  taxPercent      Float         @default(0) // درصد مالیات
+  discount        Float         @default(0)
+  discountPercent Float         @default(0) // درصد تخفیف
+  total           Float
+  status          InvoiceStatus @default(PENDING)
+  dueDate         DateTime? // تاریخ سررسید پرداخت فاکتور
+  description     String?       @db.Text
+
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  paymentDate DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  payments    Payment[] // لیست پرداخت‌ها برای این فاکتور
+}
+
+model InvoiceItem {
+  id        Int     @id @unique @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  itemType InvoiceItemType @default(CUSTOM)
+
+  // For SERVICE type
+  serviceTypeId Int?
+  serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id])
+
+  // For PRODUCT type  
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  // Common fields
+  description     String
+  quantity        Int
+  price           Float
+  discount        Float    @default(0) // مقدار تخفیف روی هر آیتم
+  discountPercent Float    @default(0) // درصد تخفیف روی هر آیتم
+  tax             Float    @default(0) // مالیات هر آیتم به‌صورت جداگانه
+  taxPercent      Float    @default(0) // درصد مالیات هر آیتم
+  total           Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Payment {
+  id          Int           @id @unique @default(autoincrement())
+  userId      Int?
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  invoiceId   Int?
+  invoice     Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull) // پرداخت می‌تواند به فاکتور متصل باشد
+  amount      Float
+  type        PaymentType   @default(RECEIVE) // نوع پرداخت (دریافت یا پرداخت)
+  reference   String? // شماره تراکنش یا مرجع پرداخت
+  status      PaymentStatus @default(PENDING)
+  method      PaymentMethod @default(CARD)
+  paidAt      DateTime?
+  description String?       @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
