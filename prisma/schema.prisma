@@ -252,14 +252,15 @@ model Category {
 }
 
 model Brand {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  logoUrl     String?
-  website     String?
-  description String?
-  products    Product[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              Int              @id @default(autoincrement())
+  name            String           @unique
+  logoUrl         String?
+  website         String?
+  description     String?
+  products        Product[]
+  receivedDevices ReceivedDevice[] // Add this line
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
 model Attribute {
@@ -368,45 +369,39 @@ model Reminder {
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 // schema.prisma
 
+// مثال برای مدل Request برای کامل بودن فایل
 model Request {
-  id     Int  @id @unique @default(autoincrement())
-  userId Int
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  serviceTypeId Int?
-  serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
-
-  description   String    @db.Text
-  address       String?
-  preferredDate DateTime?
-  preferredTime DateTime?
-  note          String?
-
-  statusId Int?
-  status   Status? @relation(fields: [statusId], references: [id], onDelete: Cascade)
-
-  priority     String @default("متوسط") // پایین، متوسط، بالا
-  assignedToId Int? // اپراتور یا تکنسین مسئول
-  assignedTo   User?  @relation(name: "AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
-
-  estimatedPrice Float? // مبلغ تخمینی
-  actualPrice    Float? // مبلغ نهایی بعد از انجام کار
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  completedAt DateTime? // تاریخ تکمیل درخواست
-
-  notes         Note[]
-  invoices      Invoice[]
-  notifications Notification[]
-  attachments   RequestAttachment[]
-  statusHistory RequestStatusHistory[]
-  reviews       RequestReview[]
-  cancellations RequestCancellation[]
-
-  // Add form submission relation
-  formSubmission   FormSubmission? @relation(fields: [formSubmissionid], references: [id])
+  id               Int                    @id @unique @default(autoincrement())
+  userId           Int
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceTypeId    Int?
+  serviceType      ServiceType?           @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+  description      String                 @db.Text
+  address          String?
+  preferredDate    DateTime?
+  preferredTime    DateTime?
+  note             String?
+  statusId         Int?
+  status           Status?                @relation(fields: [statusId], references: [id], onDelete: Cascade)
+  priority         String                 @default("متوسط")
+  assignedToId     Int?
+  assignedTo       User?                  @relation(name: "AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  estimatedPrice   Float?
+  actualPrice      Float?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  completedAt      DateTime?
+  receivedDevice   ReceivedDevice?
+  notes            Note[]
+  invoices         Invoice[]
+  notifications    Notification[]
+  attachments      RequestAttachment[]
+  statusHistory    RequestStatusHistory[]
+  reviews          RequestReview[]
+  cancellations    RequestCancellation[]
+  formSubmission   FormSubmission?        @relation(fields: [formSubmissionid], references: [id])
   formSubmissionid Int?
+  trackingCode     String? // Add this if it's missing
 }
 
 model RequestAttachment {
@@ -492,20 +487,21 @@ model ServiceType {
 // schema.prisma
 
 model User {
-  id            Int            @id @unique @default(autoincrement())
-  name          String?
-  email         String?        @unique
-  phone         String         @unique
-  password      String? // Added password field
-  address       String         @default("")
-  role          Role           @default(USER)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  requests      Request[]
-  notifications Notification[]
-  labels        Label[]        @relation("UserLabels")
-  groups        UserGroup[]    @relation("UserGroups")
-  Review        Review[]
+  id              Int              @id @unique @default(autoincrement())
+  name            String?
+  email           String?          @unique
+  phone           String           @unique
+  password        String? // Added password field
+  address         String           @default("")
+  role            Role             @default(USER)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  receivedDevices ReceivedDevice[] // Add this line
+  requests        Request[]
+  notifications   Notification[]
+  labels          Label[]          @relation("UserLabels")
+  groups          UserGroup[]      @relation("UserGroups")
+  Review          Review[]
 
   RequestCancellation RequestCancellation[]
 
@@ -581,4 +577,43 @@ enum LabelColor {
   success
   neutral
   info
+}
+
+// ماژول وسائل دریافت شده
+
+model DeviceType {
+  id              Int              @id @default(autoincrement())
+  name            String           @unique
+  description     String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  receivedDevices ReceivedDevice[]
+}
+
+model ReceivedDevice {
+  id                 Int      @id @default(autoincrement())
+  model              String?
+  serialNumber       String?
+  receivedDate       DateTime @default(now())
+  problemDescription String   @db.Text
+  initialCondition   String   @db.Text
+  notes              String?  @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // --- Relations ---
+  deviceTypeId Int
+  deviceType   DeviceType @relation(fields: [deviceTypeId], references: [id])
+
+  brandId Int
+  brand   Brand @relation(fields: [brandId], references: [id])
+
+  // این فیلد اجباری باقی می‌ماند
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // ▼▼▼ تغییر اصلی در اینجا اعمال شده است ▼▼▼
+  // فیلد requestId اکنون اختیاری است
+  requestId Int?     @unique
+  request   Request? @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }

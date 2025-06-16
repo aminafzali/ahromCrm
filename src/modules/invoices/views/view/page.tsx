@@ -85,7 +85,7 @@ export default function DetailPage({ id, isAdmin }: InvoiceDetailsViewProps) {
           <CreatePaymentPage
             defaultValues={{
               invoice: invoice,
-              user: invoice.request.user,
+              user: invoice.request?.user,
               amount: invoice.total,
             }}
             back={false}

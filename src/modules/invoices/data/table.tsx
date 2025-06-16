@@ -10,13 +10,14 @@ export const columnsForAdmin: Column[] = [
     name: "customer",
     field: "request.user.name",
     label: "نام مشتری",
-    render: (row) => row.request.user.name || "نامشخص",
+    render: (row) => row.request?.user.name || row.user.name || "نامشخص",
   },
   {
     name: "service",
     field: "request.serviceType.name",
     label: "نوع خدمات",
-    render: (row) => row.request.serviceType.name,
+    render: (row) =>
+      row.request?.serviceType.name || "خدمتی به این فاکتور نسبت داده نشده است",
   },
   {
     name: "total",

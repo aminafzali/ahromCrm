@@ -1,3 +1,5 @@
+// src/lib/data.tsx
+
 import DIcon from "@/@Client/Components/common/DIcon";
 
 export const dashboardMenuItems = [
@@ -7,6 +9,63 @@ export const dashboardMenuItems = [
     icon: <DIcon icon="fa-grid" cdi={false}></DIcon>,
     href: "/dashboard",
   },
+
+  // =================================================================
+  // ▼ گروه جدید "مدیریت خدمات" که آیتم‌های مرتبط را در خود جای داده است
+  // =================================================================
+  {
+    id: "serviceManagement",
+    label: "مدیریت خدمات",
+    icon: <DIcon icon="fa-concierge-bell" cdi={false}></DIcon>,
+    children: [
+      // 1. درخواست‌ها (منتقل شده به اینجا)
+      {
+        id: "hand",
+        label: "درخواست‌ها",
+        icon: <DIcon icon="fa-hand" cdi={false}></DIcon>,
+        href: "/dashboard/requests",
+      },
+      // 2. خدمات و زیرمجموعه‌هایش (منتقل شده به اینجا)
+      {
+        id: "service-types-group", // شناسه برای جلوگیری از تداخل
+        label: "خدمات",
+        icon: <DIcon icon="fa-wrench" cdi={false}></DIcon>,
+        children: [
+          {
+            id: "settings",
+            label: "وضعیت ها",
+            icon: <DIcon icon="fa-octagon-check" cdi={false}></DIcon>,
+            href: "/dashboard/statuses",
+          },
+          {
+            id: "service-types",
+            label: "انواع خدمات",
+            icon: <DIcon icon="fa-screwdriver-wrench" cdi={false}></DIcon>,
+            href: "/dashboard/service-types",
+          },
+        ],
+      },
+      // 3. انواع دستگاه (آیتم جدید)
+      {
+        id: "device-types",
+        label: "انواع دستگاه",
+        icon: <DIcon icon="fa-tags" cdi={false}></DIcon>,
+        href: "/dashboard/device-types",
+      },
+    ],
+  },
+  // =================================================================
+  // ▲ پایان گروه جدید
+  // =================================================================
+
+  // دستگاه‌های دریافتی به عنوان یک آیتم اصلی جدید اضافه شده است
+  {
+    id: "received-devices",
+    label: "دستگاه‌های دریافتی",
+    icon: <DIcon icon="fa-dolly" cdi={false}></DIcon>,
+    href: "/dashboard/received-devices",
+  },
+
   {
     id: "adminDivider",
     label: "کاربران",
@@ -37,35 +96,10 @@ export const dashboardMenuItems = [
     divider: true,
     href: "/settingDivider",
   },
-  {
-    id: "hand",
-    label: "درخواست‌ها",
-    icon: <DIcon icon="fa-hand" cdi={false}></DIcon>,
-    href: "/dashboard/requests",
-  },
-  {
-    id: "service-types",
-    label: "خدمات",
-    icon: <DIcon icon="fa-wrench" cdi={false}></DIcon>,
-    children: [
-      {
-        id: "settings",
-        label: "وضعیت ها",
-        icon: <DIcon icon="fa-octagon-check" cdi={false}></DIcon>,
-        href: "/dashboard/statuses",
-      },
-      {
-        id: "service-types",
-        label: "خدمات",
-        icon: <DIcon icon="fa-screwdriver-wrench" cdi={false}></DIcon>,
-        href: "/dashboard/service-types",
-      },
-    ],
-  },
+  // آیتم‌های "درخواست‌ها" و "خدمات" از اینجا حذف شدند چون به گروه بالا منتقل شدند
   {
     id: "p",
     label: "فروشگاه",
-
     icon: <DIcon icon="fa-shop" cdi={false}></DIcon>,
     children: [
       {
@@ -91,12 +125,11 @@ export const dashboardMenuItems = [
   {
     id: "f",
     label: "فرم",
-
     icon: <DIcon icon="fa-rectangle-list" cdi={false}></DIcon>,
     children: [
       {
         id: "forms",
-        label: "فرم  ها",
+        label: "فرم ‌ها",
         icon: <DIcon icon="fa-rectangle-list" cdi={false}></DIcon>,
         href: "/dashboard/forms",
       },
@@ -111,7 +144,6 @@ export const dashboardMenuItems = [
   {
     id: "fi",
     label: "مالی",
-
     icon: <DIcon icon="fa-coins" cdi={false}></DIcon>,
     children: [
       {
