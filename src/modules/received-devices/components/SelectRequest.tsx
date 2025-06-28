@@ -2,9 +2,9 @@
 
 "use client";
 
-import ButtonSelectWithTable from "@/@Client/Components/common/ButtonSelectWithTable";
-import { useRequest } from "@/modules/requests/hooks/useRequest";
 import { columnsForUser as requestColumns } from "@/modules/requests/data/table";
+import { useRequest } from "@/modules/requests/hooks/useRequest";
+import { ButtonSelectWithTable } from "ndui-ahrom";
 
 // این کامپوننت فقط مسئول اتصال هوک به کامپوننت UI است
 export default function SelectRequest(props: any) {

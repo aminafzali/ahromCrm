@@ -9,7 +9,7 @@ interface SelectRequestProps {
   buttonProps?: Omit<React.ComponentProps<typeof Button>, "onClick">;
 }
 
-const SelectUser: React.FC<SelectRequestProps> = ({
+const SelectUser2: React.FC<SelectRequestProps> = ({
   onSelect,
   buttonProps,
 }) => {
@@ -49,4 +49,4 @@ const SelectUser: React.FC<SelectRequestProps> = ({
   );
 };
 
-export default SelectUser;
+export default SelectUser2;

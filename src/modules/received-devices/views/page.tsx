@@ -7,7 +7,6 @@ import { useState } from "react";
 import { columnsForAdmin, listItemRender } from "../data/table";
 import { useReceivedDevice } from "../hooks/useReceivedDevice";
 import { ReceivedDeviceWithRelations } from "../types";
-import ReceivedDeviceFilters from "../components/ReceivedDeviceFilters";
 
 export default function IndexPage({ title = "دستگاه‌های دریافتی" }) {
   const { getAll, loading, error } = useReceivedDevice();
@@ -16,7 +15,7 @@ export default function IndexPage({ title = "دستگاه‌های دریافت�
   const handleFilterChange = (newFilters: any) => {
     // فقط فیلترهای دارای مقدار را نگه می‌داریم
     const activeFilters = Object.fromEntries(
-      Object.entries(newFilters).filter(([_, v]) => v != null && v !== '')
+      Object.entries(newFilters).filter(([_, v]) => v != null && v !== "")
     );
     setFilters(activeFilters);
   };
@@ -27,11 +26,12 @@ export default function IndexPage({ title = "دستگاه‌های دریافت�
   return (
     <div>
       {/* کامپوننت فیلتر در اینجا اضافه شده است */}
-      <ReceivedDeviceFilters onFilterChange={handleFilterChange} />
+      {/* <ReceivedDeviceFilters onFilterChange={handleFilterChange} /> */}
 
       <DataTableWrapper<ReceivedDeviceWithRelations>
         columns={columnsForAdmin}
         createUrl="/dashboard/received-devices/create"
+        showIconViews={true}
         loading={loading}
         error={error}
         title={title}

@@ -16,7 +16,7 @@ export function useReceivedDevice() {
   const hook = useCrud<
     ReceivedDeviceWithRelations,
     z.infer<typeof createReceivedDeviceSchema>,
-    z.infer<typeof updateReceivedDeviceSchema>,
+    z.infer<typeof createReceivedDeviceSchema>,
     any
   >(repo);
   return { ...hook };

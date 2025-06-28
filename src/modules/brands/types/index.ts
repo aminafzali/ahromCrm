@@ -1,4 +1,6 @@
-import { Brand, Product } from "@prisma/client";
+import { Brand as PrismaBrand, Product } from "@prisma/client";
+
+export type Brand = PrismaBrand;
 
 export type BrandWithRelations = Brand & {
   products?: Product[];

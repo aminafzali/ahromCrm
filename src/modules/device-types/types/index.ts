@@ -1,6 +1,7 @@
 // src/modules/device-types/types/index.ts
+import { DeviceType as PrismaDeviceType } from "@prisma/client";
 
-import { DeviceType } from "@prisma/client";
+export type DeviceType = PrismaDeviceType;
 
 /**
  * تایپ DeviceType که با شمارشگر روابط آن گسترش یافته است.

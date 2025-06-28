@@ -4,10 +4,10 @@ import { z } from "zod";
 
 const baseSchema = z.object({
   model: z.string().optional().nullable(),
-  serialNumber: z.string().optional().nullable(),
+  // serialNumber: z.string().optional().nullable(),
   problemDescription: z.string().min(1, "توضیح مشکل الزامی است."),
   initialCondition: z.string().min(1, "شرح وضعیت ظاهری اولیه الزامی است."),
-  notes: z.string().optional().nullable(),
+  // notes: z.string().optional().nullable(),
 });
 
 export const createReceivedDeviceSchema = baseSchema.extend({

@@ -1,128 +1,74 @@
 // src/modules/received-devices/views/view/update/page.tsx
-
 "use client";
 
+import DIcon from "@/@Client/Components/common/DIcon";
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
-import DynamicUpdateWrapper from "@/@Client/Components/wrappers/DynamicUpdateWrapper";
-import { useBrand } from "@/modules/brands/hooks/useBrand";
-import { useDeviceType } from "@/modules/device-types/hooks/useDeviceType";
-import { useRequest } from "@/modules/requests/hooks/useRequest";
-import { useUser } from "@/modules/users/hooks/useUser";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { z } from "zod";
-import { getReceivedDeviceFormConfig } from "../../../data/form";
+import { useEffect, useState } from "react";
+import ReceivedDevice2Form from "../../../components/ReceivedDevice2Form";
 import { useReceivedDevice } from "../../../hooks/useReceivedDevice";
-import { updateReceivedDeviceSchema } from "../../../validation/schema";
 
-interface UpdatePageProps {
+interface UpdateReceivedDevicePageProps {
   id: number;
 }
 
-export default function UpdatePage({ id }: UpdatePageProps) {
+export default function UpdateInvoicePage({
+  id,
+}: UpdateReceivedDevicePageProps) {
   const router = useRouter();
   const {
     getById,
     update,
-    submitting,
+    submitting: loading,
     error,
     success,
     loading: dataLoading,
     statusCode,
   } = useReceivedDevice();
-  const { getAll: getAllRequests } = useRequest();
-  const { getAll: getAllUsers } = useUser();
-  const { getAll: getAllBrands } = useBrand();
-  const { getAll: getAllDeviceTypes } = useDeviceType();
-
-  const [defaultValues, setDefaultValues] = useState<any>(null);
-  const [relatedData, setRelatedData] = useState<Map<string, any>>(new Map());
-  const [isLoading, setIsLoading] = useState(true);
-
-  const formConfig = useMemo(() => {
-    const config = getReceivedDeviceFormConfig(relatedData);
-    config.validation = updateReceivedDeviceSchema;
-    return config;
-  }, [relatedData]);
+  const [ReceivedDeviceData, setReceivedDeviceData] = useState<any>(null);
 
   useEffect(() => {
-    // ▼▼▼ اصلاح اصلی در اینجا اعمال شده است ▼▼▼
-    // تابع واکشی فقط زمانی اجرا می‌شود که id یک عدد معتبر و مثبت باشد
-    if (id && !isNaN(id) && id > 0) {
-      fetchInitialData();
-    } else {
-      // اگر id معتبر نبود، لودینگ را متوقف می‌کنیم تا صفحه گیر نکند
-      setIsLoading(false);
-    }
+    fetchData();
   }, [id]);
 
-  const fetchInitialData = async () => {
-    setIsLoading(true);
+  const fetchData = async () => {
     try {
-      const [mainData, requests, users, brands, deviceTypes] =
-        await Promise.all([
-          getById(id),
-          // پارامتر اضافی include از اینجا حذف شده است
-          getAllRequests({ page: 1, limit: 200 }),
-          getAllUsers({ page: 1, limit: 200 }),
-          getAllBrands({ page: 1, limit: 200 }),
-          getAllDeviceTypes({ page: 1, limit: 200 }),
-        ]);
-      setDefaultValues(mainData);
-
-      const dataMap = new Map<string, any>();
-      dataMap.set(
-        "requests",
-        requests.data.map((req: any) => ({
-          ...req,
-          name: req.serviceType?.name || `درخواست #${req.trackingCode}`,
-        }))
-      );
-      dataMap.set(
-        "users",
-        users.data.map((user: any) => ({
-          ...user,
-          name: user.name || user.phone,
-        }))
-      );
-      dataMap.set("brands", brands.data);
-      dataMap.set("deviceTypes", deviceTypes.data);
-      setRelatedData(dataMap);
-    } catch (err) {
-      console.error("Failed to fetch related data for update page:", err);
-    } finally {
-      setIsLoading(false);
+      const data = await getById(id);
+      setReceivedDeviceData(data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
     }
   };
 
-  const handleSubmit = async (
-    data: z.infer<typeof updateReceivedDeviceSchema>
-  ) => {
+  const handleSubmit = async (data: any) => {
     try {
       await update(id, data);
       router.push("/dashboard/received-devices");
     } catch (error) {
-      console.error("Error updating received device:", error);
+      console.error("Error updating invoice:", error);
     }
   };
 
-  if (isLoading || (dataLoading && !defaultValues)) return <Loading />;
+  if (dataLoading) return <Loading />;
   if (statusCode === 404) return <NotFound />;
 
   return (
-    <div className="space-y-6">
-      <DynamicUpdateWrapper
-        title="ویرایش دستگاه دریافتی"
-        backUrl="/dashboard/received-devices"
-        formConfig={formConfig}
-        defaultValues={defaultValues}
+    <>
+      <h2 className="text-xl font-bold mb-4">ویرایش دستگاه دریافتی</h2>
+
+      <Link href="./" className="flex justify-start items-center mb-6">
+        <button className="btn btn-ghost">
+          <DIcon icon="fa-arrow-right" cdi={false} classCustom="ml-2" />
+          {"بازگشت"}
+        </button>
+      </Link>
+      <ReceivedDevice2Form
         onSubmit={handleSubmit}
-        entityId={id}
-        isLoading={submitting}
-        error={error}
-        success={success}
+        defaultValues={ReceivedDeviceData}
+        loading={loading}
       />
-    </div>
+    </>
   );
 }

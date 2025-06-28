@@ -116,5 +116,9 @@
   "serviceType": "نوع خدمت",
   "website": "آدرس وبسایت",
   "repairStatus": "وضعیت تعمیر",
-  "userGroups": "گروه های کاربران"
+  "userGroups": "گروه های کاربران",
+  "model":"مدل",
+  "receivedDate":"تاریخ دریافت",
+  "problemDescription":"توضیح مشکل",
+  "initialCondition":"شرح وضعیت ظاهری "
 }

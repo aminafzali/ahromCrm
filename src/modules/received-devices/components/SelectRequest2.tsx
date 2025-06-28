@@ -1,6 +1,6 @@
 import IndexWrapper from "@/@Client/Components/wrappers/IndexWrapper/Index";
-import { columnsForSelect } from "@/modules/users/data/table";
-import { UserRepository } from "@/modules/users/repo/UserRepository";
+import { columnsForAdmin } from "@/modules/requests/data/table";
+import { RequestRepository } from "@/modules/requests/repo/RequestRepository";
 import { Button, Modal } from "ndui-ahrom";
 import React, { useState } from "react";
 
@@ -9,7 +9,7 @@ interface SelectRequestProps {
   buttonProps?: Omit<React.ComponentProps<typeof Button>, "onClick">;
 }
 
-const SelectUser: React.FC<SelectRequestProps> = ({
+const SelectRequest2: React.FC<SelectRequestProps> = ({
   onSelect,
   buttonProps,
 }) => {
@@ -18,6 +18,7 @@ const SelectUser: React.FC<SelectRequestProps> = ({
   const handleSelect = (selectedItems: any[]) => {
     onSelect(selectedItems[0]);
     setIsModalOpen(false); // Close modal after selection
+    
   };
 
   return (
@@ -27,7 +28,7 @@ const SelectUser: React.FC<SelectRequestProps> = ({
         {...buttonProps}
         onClick={() => setIsModalOpen(true)}
       >
-        انتخاب کاربر{" "}
+        انتخاب درخواست
       </Button>
 
       <Modal
@@ -36,8 +37,8 @@ const SelectUser: React.FC<SelectRequestProps> = ({
         onClose={() => setIsModalOpen(false)}
       >
         <IndexWrapper
-          columns={columnsForSelect}
-          repo={new UserRepository()}
+          columns={columnsForAdmin}
+          repo={new RequestRepository()}
           selectionMode="single"
           onSelect={handleSelect} // Call both onSelect and closeModal
           createUrl={false}
@@ -49,4 +50,4 @@ const SelectUser: React.FC<SelectRequestProps> = ({
   );
 };
 
-export default SelectUser;
+export default SelectRequest2;
