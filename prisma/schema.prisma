@@ -11,6 +11,147 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// +++ مدل جدید برای خدمات واقعی و قابل قیمت‌گذاری +++
+model ActualService {
+  id          Int     @id @default(autoincrement())
+  name        String
+  price       Float
+  description String? @db.Text
+
+  // --- روابط ---
+  // هر خدمت واقعی زیرمجموعه یک نوع خدمت است
+  serviceTypeId Int
+  serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id])
+
+  // هر خدمت واقعی می تواند در چندین درخواست استفاده شود
+  requests ActualServiceOnRequest[]
+
+  // هر خدمت واقعی می تواند در چندین قلم فاکتور استفاده شود
+  invoiceItems InvoiceItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// +++ جدول واسط برای اتصال "درخواست" و "خدمات واقعی" +++
+model ActualServiceOnRequest {
+  id       Int   @id @default(autoincrement())
+  quantity Int   @default(1)
+  price    Float // قیمت خدمت در لحظه افزودن به درخواست (می تواند با قیمت پیش فرض متفاوت باشد)
+
+  requestId Int
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  actualServiceId Int
+  actualService   ActualService @relation(fields: [actualServiceId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([requestId, actualServiceId]) // جلوگیری از افزودن یک خدمت تکراری به یک درخواست
+}
+
+// --- اصلاح مدل ServiceType ---
+model ServiceType {
+  id          Int       @id @unique @default(autoincrement())
+  name        String    @unique
+  description String?   @db.Text
+  basePrice   Float     @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  requests    Request[]
+
+  // --- اصلاحات ---
+  // InvoiceItem دیگر مستقیما به ServiceType وصل نیست
+  // InvoiceItem InvoiceItem[]  // --- این خط حذف یا کامنت شود ---
+
+  // +++ رابطه جدید: هر نوع خدمت، چندین خدمت واقعی دارد +++
+  actualServices ActualService[]
+}
+
+// --- اصلاح مدل Request ---
+model Request {
+  id Int @id @unique @default(autoincrement())
+  // ... سایر فیلدهای شما
+
+  // +++ رابطه جدید: هر درخواست شامل لیستی از خدمات واقعی است که باید انجام شود +++
+  actualServices ActualServiceOnRequest[]
+
+  // ... بقیه فیلدها و روابط شما دست نخورده باقی می مانند
+  userId           Int
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceTypeId    Int?
+  serviceType      ServiceType?           @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+  description      String                 @db.Text
+  address          String?
+  preferredDate    DateTime?
+  preferredTime    DateTime?
+  note             String?
+  statusId         Int?
+  status           Status?                @relation(fields: [statusId], references: [id], onDelete: Cascade)
+  priority         String                 @default("متوسط")
+  assignedToId     Int?
+  assignedTo       User?                  @relation(name: "AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  estimatedPrice   Float?
+  actualPrice      Float?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  completedAt      DateTime?
+  receivedDevice   ReceivedDevice?
+  notes            Note[]
+  invoices         Invoice[]
+  notifications    Notification[]
+  attachments      RequestAttachment[]
+  statusHistory    RequestStatusHistory[]
+  reviews          RequestReview[]
+  cancellations    RequestCancellation[]
+  formSubmission   FormSubmission?        @relation(fields: [formSubmissionid], references: [id])
+  formSubmissionid Int?
+  trackingCode     String?
+}
+
+// --- اصلاح مدل InvoiceItem ---
+model InvoiceItem {
+  id        Int             @id @unique @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  itemType  InvoiceItemType @default(SERVICE) // +++ پیش فرض را به SERVICE تغییر دادم که منطقی تر است +++
+
+  // --- اصلاحات کلیدی ---
+  // 1. serviceTypeId حذف می شود چون دیگر به نوع خدمت کلی وصل نیستیم.
+  // serviceTypeId Int?
+  // serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id])
+
+  // +++ 2. اتصال جدید به مدل ActualService +++
+  actualServiceId Int?
+  actualService   ActualService? @relation(fields: [actualServiceId], references: [id])
+
+  // For PRODUCT type (این بخش دست نخورده باقی می ماند)
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  // Common fields (این بخش دست نخورده باقی می ماند)
+  description     String
+  quantity        Int
+  price           Float
+  discount        Float    @default(0)
+  discountPercent Float    @default(0)
+  tax             Float    @default(0)
+  taxPercent      Float    @default(0)
+  total           Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ----------------------------------------------------------------
+// ##### تمام مدل های دیگر شما بدون هیچ تغییری باقی می مانند #####
+// (User, Invoice, Product, Form, Reminder, etc.)
+// ----------------------------------------------------------------
+
+// کپی کامل بقیه مدل های شما برای کامل بودن فایل...
+// (من فقط مدل هایی که تغییر کرده اند را در بالا آوردم، شما باید بقیه مدل هایتان را در اینجا داشته باشید)
+
 enum FieldType {
   text
   number
@@ -148,34 +289,6 @@ model Invoice {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   payments    Payment[] // لیست پرداخت‌ها برای این فاکتور
-}
-
-model InvoiceItem {
-  id        Int     @id @unique @default(autoincrement())
-  invoiceId Int
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  itemType InvoiceItemType @default(CUSTOM)
-
-  // For SERVICE type
-  serviceTypeId Int?
-  serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id])
-
-  // For PRODUCT type  
-  productId Int?
-  product   Product? @relation(fields: [productId], references: [id])
-
-  // Common fields
-  description     String
-  quantity        Int
-  price           Float
-  discount        Float    @default(0) // مقدار تخفیف روی هر آیتم
-  discountPercent Float    @default(0) // درصد تخفیف روی هر آیتم
-  tax             Float    @default(0) // مالیات هر آیتم به‌صورت جداگانه
-  taxPercent      Float    @default(0) // درصد مالیات هر آیتم
-  total           Float
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
 }
 
 model Payment {
@@ -365,45 +478,6 @@ model Reminder {
   timezone             String              @default("UTC")
 }
 
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-// schema.prisma
-
-// مثال برای مدل Request برای کامل بودن فایل
-model Request {
-  id               Int                    @id @unique @default(autoincrement())
-  userId           Int
-  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  serviceTypeId    Int?
-  serviceType      ServiceType?           @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
-  description      String                 @db.Text
-  address          String?
-  preferredDate    DateTime?
-  preferredTime    DateTime?
-  note             String?
-  statusId         Int?
-  status           Status?                @relation(fields: [statusId], references: [id], onDelete: Cascade)
-  priority         String                 @default("متوسط")
-  assignedToId     Int?
-  assignedTo       User?                  @relation(name: "AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
-  estimatedPrice   Float?
-  actualPrice      Float?
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-  completedAt      DateTime?
-  receivedDevice   ReceivedDevice?
-  notes            Note[]
-  invoices         Invoice[]
-  notifications    Notification[]
-  attachments      RequestAttachment[]
-  statusHistory    RequestStatusHistory[]
-  reviews          RequestReview[]
-  cancellations    RequestCancellation[]
-  formSubmission   FormSubmission?        @relation(fields: [formSubmissionid], references: [id])
-  formSubmissionid Int?
-  trackingCode     String? // Add this if it's missing
-}
-
 model RequestAttachment {
   id         Int      @id @unique @default(autoincrement())
   requestId  Int
@@ -468,23 +542,6 @@ model Status {
 
   RequestStatusHistoryOld RequestStatusHistory[] @relation(name: "oldStatus")
 }
-
-model ServiceType {
-  id          Int       @id @unique @default(autoincrement())
-  name        String    @unique
-  description String?   @db.Text
-  basePrice   Float     @default(0)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  requests    Request[]
-
-  InvoiceItem InvoiceItem[]
-}
-
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-// schema.prisma
 
 model User {
   id              Int              @id @unique @default(autoincrement())
@@ -598,8 +655,12 @@ model ReceivedDevice {
   problemDescription String   @db.Text
   initialCondition   String   @db.Text
   notes              String?  @db.Text
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+
+  // +++ فیلد جدید برای وضعیت تحویل +++
+  isDelivered Boolean @default(false) // به صورت پیش‌فرض، دستگاه تحویل نشده است
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // --- Relations ---
   deviceTypeId Int
@@ -608,12 +669,9 @@ model ReceivedDevice {
   brandId Int
   brand   Brand @relation(fields: [brandId], references: [id])
 
-  // این فیلد اجباری باقی می‌ماند
   userId Int
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // ▼▼▼ تغییر اصلی در اینجا اعمال شده است ▼▼▼
-  // فیلد requestId اکنون اختیاری است
   requestId Int?     @unique
   request   Request? @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }
