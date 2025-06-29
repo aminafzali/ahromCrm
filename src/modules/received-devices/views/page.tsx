@@ -1,45 +1,101 @@
-// src/modules/received-devices/views/page.tsx
-
 "use client";
 
-import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper";
-import { useState } from "react";
+import Loading from "@/@Client/Components/common/Loading";
+import IndexWrapper from "@/@Client/Components/wrappers/IndexWrapper/Index";
+import { FilterOption } from "@/@Client/types";
+import { useBrand } from "@/modules/brands/hooks/useBrand";
+import { BrandWithRelations } from "@/modules/brands/types";
+import { useDeviceType } from "@/modules/device-types/hooks/useDeviceType";
+import { DeviceTypeWithRelations } from "@/modules/device-types/types";
+import { useStatus } from "@/modules/statuses/hooks/useStatus";
+import { Status } from "@/modules/statuses/types";
+import { useEffect, useState } from "react";
 import { columnsForAdmin, listItemRender } from "../data/table";
-import { useReceivedDevice } from "../hooks/useReceivedDevice";
-import { ReceivedDeviceWithRelations } from "../types";
+import { ReceivedDeviceRepository } from "../repo/ReceivedDeviceRepository";
 
 export default function IndexPage({ title = "دستگاه‌های دریافتی" }) {
-  const { getAll, loading, error } = useReceivedDevice();
-  const [filters, setFilters] = useState({});
+  const { getAll: getAllDeviceTypes, loading: loadingDeviceTypes } =
+    useDeviceType();
+  const { getAll: getAllBrands, loading: loadingBrands } = useBrand();
+  const { getAll: getAllStatuses, loading: loadingStatuses } = useStatus();
 
-  const handleFilterChange = (newFilters: any) => {
-    // فقط فیلترهای دارای مقدار را نگه می‌داریم
-    const activeFilters = Object.fromEntries(
-      Object.entries(newFilters).filter(([_, v]) => v != null && v !== "")
-    );
-    setFilters(activeFilters);
-  };
+  const [deviceTypes, setDeviceTypes] = useState<DeviceTypeWithRelations[]>([]);
+  const [brands, setBrands] = useState<BrandWithRelations[]>([]);
+  const [statuses, setStatuses] = useState<Status[]>([]);
 
-  // تابع fetcher اکنون فیلترها را نیز ارسال می‌کند
-  const fetcher = (params: any) => getAll({ ...params, ...filters });
+  useEffect(() => {
+    const get = async () => {
+      try {
+        const [deviceTypesRes, brandsRes, statusesRes] = await Promise.all([
+          getAllDeviceTypes(),
+          getAllBrands(),
+          getAllStatuses(),
+        ]);
+        setDeviceTypes(deviceTypesRes?.data || []);
+        setBrands(brandsRes?.data || []);
+        setStatuses(statusesRes?.data || []);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    get();
+  }, []);
+
+  if (loadingDeviceTypes || loadingBrands || loadingStatuses) {
+    return <Loading />;
+  }
+
+  const filters: FilterOption[] = [];
+
+  if (deviceTypes.length > 0) {
+    filters.push({
+      name: "deviceTypeId",
+      label: "نوع دستگاه",
+      options: [
+        { value: "all", label: "همه" },
+        ...deviceTypes.map((item) => ({
+          value: String(item.id),
+          label: item.name,
+        })),
+      ],
+    });
+  }
+
+  if (brands.length > 0) {
+    filters.push({
+      name: "brandId",
+      label: "برند",
+      options: [
+        { value: "all", label: "همه" },
+        ...brands.map((item) => ({ value: String(item.id), label: item.name })),
+      ],
+    });
+  }
+
+  // هشدار: این فیلتر تا زمانی که منطق تو در توی آن در بک‌اند پیاده‌سازی نشود، کار نخواهد کرد
+  if (statuses.length > 0) {
+    filters.push({
+      name: "statusId",
+      label: "وضعیت درخواست",
+      options: [
+        { value: "all", label: "همه" },
+        ...statuses.map((item) => ({
+          value: String(item.id),
+          label: item.name,
+        })),
+      ],
+    });
+  }
 
   return (
-    <div>
-      {/* کامپوننت فیلتر در اینجا اضافه شده است */}
-      {/* <ReceivedDeviceFilters onFilterChange={handleFilterChange} /> */}
-
-      <DataTableWrapper<ReceivedDeviceWithRelations>
-        columns={columnsForAdmin}
-        createUrl="/dashboard/received-devices/create"
-        showIconViews={true}
-        loading={loading}
-        error={error}
-        title={title}
-        fetcher={fetcher}
-        // تابع رندر نمای کارتی به Wrapper پاس داده می‌شود
-        listItemRender={listItemRender}
-        listClassName="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
-      />
-    </div>
+    <IndexWrapper
+      title={title}
+      columns={columnsForAdmin}
+      listItemRender={listItemRender}
+      filterOptions={filters.length > 0 ? filters : undefined}
+      repo={new ReceivedDeviceRepository()}
+      createUrl={true}
+      listClassName="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+    />
   );
 }

@@ -1,5 +1,8 @@
 
 export class QueryBuilder {
+  buildPrismaQuery(): { [x: string]: any; where: any; } {
+    throw new Error("Method not implemented.");
+  }
   private where: any = {};
   private orderBy: any = { createdAt: 'desc' };
   private include: any = {};

@@ -14,8 +14,8 @@ const defaultStatusMap: Record<string, { label: string; color: string }> = {
   PENDING: { label: "در انتظار", color: "primary text-white" },
   CASH: { label: "نقدی", color: "primary text-white" },
   processing: { label: "در حال پردازش", color: "primary text-white" },
-  "در حال بررسی": { label: "در حال پردازش", color: "primary text-white" },
-  "در انتظار بررسی": { label: "در حال پردازش", color: "primary text-white" },
+  "در حال بررسی": { label: "در حال بررسی", color: "primary text-white" },
+  "در انتظار بررسی": { label: "در انتظار بررسی", color: "primary text-white" },
   "در حال انجام": { label: "در حال انجام", color: "primary/30 text-primary" },
   TRANSFER: { label: "انتقال", color: "primary/30 text-primary" },
   completed: { label: "تکمیل شده", color: "success" },
@@ -33,6 +33,14 @@ const defaultStatusMap: Record<string, { label: string; color: string }> = {
   paid: { label: "پرداخت شده", color: "success" },
   unpaid: { label: "پرداخت نشده", color: "error" },
   partial: { label: "پرداخت جزئی", color: "warning" },
+  "تکمیل شده(دستگاه تحویل داده شده است)": {
+    label: "(دستگاه تحویل داده شده )تکمیل شده",
+    color: "success",
+  },
+  "رد شده (دستگاه تحویل داده نشده است)": {
+    label: "رد شده (دستگاه تحویل داده نشده است)",
+    color: "error",
+  },
 };
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({

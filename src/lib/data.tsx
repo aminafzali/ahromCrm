@@ -10,62 +10,6 @@ export const dashboardMenuItems = [
     href: "/dashboard",
   },
 
-  // =================================================================
-  // ▼ گروه جدید "مدیریت خدمات" که آیتم‌های مرتبط را در خود جای داده است
-  // =================================================================
-  {
-    id: "serviceManagement",
-    label: "مدیریت خدمات",
-    icon: <DIcon icon="fa-concierge-bell" cdi={false}></DIcon>,
-    children: [
-      // 1. درخواست‌ها (منتقل شده به اینجا)
-      {
-        id: "hand",
-        label: "درخواست‌ها",
-        icon: <DIcon icon="fa-hand" cdi={false}></DIcon>,
-        href: "/dashboard/requests",
-      },
-      // 2. خدمات و زیرمجموعه‌هایش (منتقل شده به اینجا)
-      {
-        id: "service-types-group", // شناسه برای جلوگیری از تداخل
-        label: "خدمات",
-        icon: <DIcon icon="fa-wrench" cdi={false}></DIcon>,
-        children: [
-          {
-            id: "settings",
-            label: "وضعیت ها",
-            icon: <DIcon icon="fa-octagon-check" cdi={false}></DIcon>,
-            href: "/dashboard/statuses",
-          },
-          {
-            id: "service-types",
-            label: "انواع خدمات",
-            icon: <DIcon icon="fa-screwdriver-wrench" cdi={false}></DIcon>,
-            href: "/dashboard/service-types",
-          },
-        ],
-      },
-      // 3. انواع دستگاه (آیتم جدید)
-      {
-        id: "device-types",
-        label: "انواع دستگاه",
-        icon: <DIcon icon="fa-tags" cdi={false}></DIcon>,
-        href: "/dashboard/device-types",
-      },
-    ],
-  },
-  // =================================================================
-  // ▲ پایان گروه جدید
-  // =================================================================
-
-  // دستگاه‌های دریافتی به عنوان یک آیتم اصلی جدید اضافه شده است
-  {
-    id: "received-devices",
-    label: "دستگاه‌های دریافتی",
-    icon: <DIcon icon="fa-dolly" cdi={false}></DIcon>,
-    href: "/dashboard/received-devices",
-  },
-
   {
     id: "adminDivider",
     label: "کاربران",
@@ -91,74 +35,112 @@ export const dashboardMenuItems = [
     href: "/dashboard/labels",
   },
   {
+    id: "mkh",
+    label: "مدیریت خدمات",
+    divider: true,
+    href: "/mkh",
+  },
+  {
+    id: "hand",
+    label: "درخواست‌ها",
+    icon: <DIcon icon="fa-hand" cdi={false}></DIcon>,
+    href: "/dashboard/requests",
+  },
+  // 2. خدمات و زیرمجموعه‌هایش (منتقل شده به اینجا)
+  {
+    id: "service-types-group", // شناسه برای جلوگیری از تداخل
+    label: "خدمات",
+    icon: <DIcon icon="fa-wrench" cdi={false}></DIcon>,
+    children: [
+      {
+        id: "settings",
+        label: "وضعیت ها",
+        icon: <DIcon icon="fa-octagon-check" cdi={false}></DIcon>,
+        href: "/dashboard/statuses",
+      },
+      {
+        id: "service-types",
+        label: "انواع خدمات",
+        icon: <DIcon icon="fa-screwdriver-wrench" cdi={false}></DIcon>,
+        href: "/dashboard/service-types",
+      },
+    ],
+  },
+  // 3. انواع دستگاه (آیتم جدید)
+  {
+    id: "device-types",
+    label: "انواع دستگاه",
+    icon: <DIcon icon="fa-tags" cdi={false}></DIcon>,
+    href: "/dashboard/device-types",
+  },
+  {
+    id: "received-devices",
+    label: "دستگاه‌های دریافتی",
+    icon: <DIcon icon="fa-dolly" cdi={false}></DIcon>,
+    href: "/dashboard/received-devices",
+  },
+  {
     id: "settingDivider",
-    label: "مدیریت",
+    label: "فروشگاه",
     divider: true,
     href: "/settingDivider",
   },
   // آیتم‌های "درخواست‌ها" و "خدمات" از اینجا حذف شدند چون به گروه بالا منتقل شدند
+
   {
-    id: "p",
-    label: "فروشگاه",
-    icon: <DIcon icon="fa-shop" cdi={false}></DIcon>,
-    children: [
-      {
-        id: "categories",
-        label: "دسته بندی ها",
-        icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
-        href: "/dashboard/categories",
-      },
-      {
-        id: "products",
-        label: "محصولات",
-        icon: <DIcon icon="fa-box" cdi={false}></DIcon>,
-        href: "/dashboard/products",
-      },
-      {
-        id: "brands",
-        label: "برند",
-        icon: <DIcon icon="fa-copyright" cdi={false}></DIcon>,
-        href: "/dashboard/brands",
-      },
-    ],
+    id: "categories",
+    label: "دسته بندی ها",
+    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+    href: "/dashboard/categories",
   },
   {
-    id: "f",
-    label: "فرم",
-    icon: <DIcon icon="fa-rectangle-list" cdi={false}></DIcon>,
-    children: [
-      {
-        id: "forms",
-        label: "فرم ‌ها",
-        icon: <DIcon icon="fa-rectangle-list" cdi={false}></DIcon>,
-        href: "/dashboard/forms",
-      },
-      {
-        id: "formFileds",
-        label: "فیلد ها ",
-        icon: <DIcon icon="fa-input-numeric" cdi={false}></DIcon>,
-        href: "/dashboard/fields",
-      },
-    ],
+    id: "brands",
+    label: "برند",
+    icon: <DIcon icon="fa-copyright" cdi={false}></DIcon>,
+    href: "/dashboard/brands",
   },
   {
-    id: "fi",
+    id: "products",
+    label: "محصولات",
+    icon: <DIcon icon="fa-box" cdi={false}></DIcon>,
+    href: "/dashboard/products",
+  },
+  // {
+  //   id: "f",
+  //   label: "فرم",
+  //   icon: <DIcon icon="fa-rectangle-list" cdi={false}></DIcon>,
+  //   children: [
+  //     {
+  //       id: "forms",
+  //       label: "فرم ‌ها",
+  //       icon: <DIcon icon="fa-rectangle-list" cdi={false}></DIcon>,
+  //       href: "/dashboard/forms",
+  //     },
+  //     {
+  //       id: "formFileds",
+  //       label: "فیلد ها ",
+  //       icon: <DIcon icon="fa-input-numeric" cdi={false}></DIcon>,
+  //       href: "/dashboard/fields",
+  //     },
+  //   ],
+  // },
+  {
+    id: "mali",
     label: "مالی",
-    icon: <DIcon icon="fa-coins" cdi={false}></DIcon>,
-    children: [
-      {
-        id: "invoice",
-        label: "فاکتور",
-        icon: <DIcon icon="fa-file-lines" cdi={false}></DIcon>,
-        href: "/dashboard/invoices",
-      },
-      {
-        id: "receive",
-        label: "دریافتی و پرداخت ",
-        icon: <DIcon icon="fa-inbox-in" cdi={false}></DIcon>,
-        href: "/dashboard/payments",
-      },
-    ],
+    divider: true,
+    href: "/mali",
+  },
+  {
+    id: "invoice",
+    label: "فاکتور",
+    icon: <DIcon icon="fa-file-lines" cdi={false}></DIcon>,
+    href: "/dashboard/invoices",
+  },
+  {
+    id: "receive",
+    label: "دریافتی و پرداخت ",
+    icon: <DIcon icon="fa-inbox-in" cdi={false}></DIcon>,
+    href: "/dashboard/payments",
   },
 ];
 

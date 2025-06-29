@@ -36,7 +36,8 @@ export abstract class BaseController<T> {
     const page = parseInt(searchParams.get("page") || "1");
     const search = searchParams.get("search") || undefined;
     const orderField = searchParams.get("orderBy") || "createdAt";
-    const orderDirection = searchParams.get("orderDirection") === "asc" ? "asc" : "desc";
+    const orderDirection =
+      searchParams.get("orderDirection") === "asc" ? "asc" : "desc";
     const startDate = searchParams.get("startDate") || undefined;
     const endDate = searchParams.get("endDate") || undefined;
 
@@ -69,7 +70,8 @@ export abstract class BaseController<T> {
             key === "statusId" ||
             key === "serviceTypeId" ||
             key === "categoryId" ||
-            key === "brandId"
+            key === "brandId" ||
+            key === "deviceTypeId"
           ) {
             filters[key] = parseInt(value); // مقدار را به عدد تبدیل کن
           } else {
@@ -284,13 +286,10 @@ export abstract class BaseController<T> {
       await AuthProvider.isAdmin(req);
       const body = await req.json();
       try {
-        await this.service.createReminder(
-          id,
-          body
-        );
+        await this.service.createReminder(id, body);
         return this.success("با موفقیت یاد آور ساخته شد", 201);
       } catch (error) {
-        console.log(error)
+        console.log(error);
         if (error instanceof NotFoundException) {
           throw error;
         }
