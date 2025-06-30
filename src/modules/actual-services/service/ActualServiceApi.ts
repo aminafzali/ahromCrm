@@ -24,6 +24,7 @@ export class ActualServiceApi extends BaseService<any> {
       searchFileds,
       relations
     );
+
     this.repository = new Repository();
   }
 }

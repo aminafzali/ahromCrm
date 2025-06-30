@@ -2,12 +2,13 @@
 
 "use client";
 import CreateWrapper from "@/@Client/Components/wrappers/V2/CreateWrapper";
+import { CreatePageProps } from "@/@Client/types/crud";
 import { useServiceType } from "@/modules/service-types/hooks/useServiceType";
 import { getActualServiceFormConfig } from "../../data/form";
 import { ActualServiceRepository } from "../../repo/ActualServiceRepository";
 import { createActualServiceSchema } from "../../validation/schema";
 
-const CreateActualServicePage = () => {
+const CreateActualServicePage = ({ back = true, after }: CreatePageProps) => {
   const { getAll } = useServiceType();
 
   return (
@@ -19,6 +20,8 @@ const CreateActualServicePage = () => {
         },
       ]}
       title="افزودن خدمت جدید"
+      backUrl={back}
+      after={after}
       repo={new ActualServiceRepository()}
       formConfig={getActualServiceFormConfig}
       schema={createActualServiceSchema}

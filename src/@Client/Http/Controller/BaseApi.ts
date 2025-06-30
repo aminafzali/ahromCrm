@@ -102,6 +102,11 @@ export class BaseApi {
       const response = await fetch(url, mergedOptions);
       let data;
 
+      //TODO: این خط باید پاک شود
+      console.log(response);
+      console.log(response.json);
+      console.log(response.text);
+
       // Try to parse JSON response, but handle empty responses too
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
@@ -150,10 +155,7 @@ export class BaseApi {
         Authorization: `Bearer ${token}`,
       };
     } else {
-      const {  ...headers } = this.defaultHeaders as Record<
-        string,
-        string
-      >;
+      const { ...headers } = this.defaultHeaders as Record<string, string>;
       this.defaultHeaders = headers;
     }
   }

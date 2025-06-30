@@ -5,5 +5,7 @@ export const searchFileds = ["name", "description"];
 export const relations = ["serviceType"];
 
 export const include = {
-  serviceType: true,
+  serviceType: {
+    select: { id: true, name: true },
+  },
 };

@@ -23,7 +23,7 @@ export const getActualServiceFormConfig = (
         required: true,
       },
       {
-        name: "serviceTypeId",
+        name: "serviceType",
         label: "نوع خدمت ",
         type: "dataTable",
         data: data?.get("service-types") || [],

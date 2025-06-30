@@ -74,6 +74,8 @@ const CreateWrapper = <
   }, []);
 
   const handleSubmit = async (formData: T) => {
+    console.log("formData1");
+    console.log(formData);
     const result: any = await create(formData);
     after?.();
     if (backUrl && result.data.id) router.push(`./${result.data.id}`);

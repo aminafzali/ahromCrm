@@ -112,9 +112,16 @@ export abstract class BaseService<T> {
    */
   async create(data: any): Promise<T> {
     if (this.createSchema) {
+      //TODO: خط زیر باید برداشته شود
+      console.log("" + this.createSchema);
+
       data = this.validate(this.createSchema, data);
+
+      //TODO: خط زیر باید برداشته شود
+      console.log("" + data);
     }
     data = await this.processDynamicFields(data);
+
     if (this.beforeCreate) {
       data = await this.beforeCreate(data);
     }
@@ -124,7 +131,8 @@ export abstract class BaseService<T> {
     if (this.afterCreate) {
       await this.afterCreate(entity, data);
     }
-
+    //TODO: خط زیر باید برداشته شود
+    console.log("" + entity);
     return entity;
   }
 
@@ -197,8 +205,7 @@ export abstract class BaseService<T> {
     console.log("entityData", entityData);
 
     const rawDueDate = data.dueDate; // "2025-05-30T01:58"
-const dueDate = new Date(rawDueDate); // Converts to valid Date object
-
+    const dueDate = new Date(rawDueDate); // Converts to valid Date object
 
     data = {
       title: data.title,
@@ -214,7 +221,7 @@ const dueDate = new Date(rawDueDate); // Converts to valid Date object
 
     console.log("newReminder", data);
 
-    const entity = await prisma.reminder.create({data})
+    const entity = await prisma.reminder.create({ data });
 
     return entity;
   }
