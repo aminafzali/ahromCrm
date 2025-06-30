@@ -48,6 +48,19 @@ export const columns: Column[] = [
   },
 ];
 
+export const columnsForSelect: Column[] = [
+  {
+    name: "name",
+    field: "name",
+    label: "نام خدمت",
+  },
+  {
+    name: "description",
+    field: "description",
+    label: "توضیحات",
+  },
+];
+
 export const listItemRender = (row: any) => (
   <div className="bg-white p-4 rounded-lg border-2 shadow-sm hover:shadow-md transition-shadow">
     <Link href={`/dashboard/service-types/${row.id}`}>
