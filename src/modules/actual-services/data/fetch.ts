@@ -2,7 +2,9 @@
 
 export const searchFileds = ["name", "description"];
 
-export const relations = ["serviceType"];
+export const relations = [];
+
+export const connects = ["serviceType"];
 
 export const include = {
   serviceType: {

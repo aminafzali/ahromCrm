@@ -47,7 +47,14 @@ export const include = {
       createdAt: true,
     },
   },
+  // +++ این بخش را اضافه کنید +++
+  actualServices: {
+    include: {
+      actualService: true, // جزئیات کامل هر خدمت را هم می‌گیریم
+    },
+  },
 };
 
 export const searchFileds = ["serviceType", "status", "description"];
 export const relations = ["notes", "notifications", "formSubmission"];
+export const connects = ["user", "serviceType", "status"];

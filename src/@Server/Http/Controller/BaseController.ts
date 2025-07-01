@@ -72,7 +72,7 @@ export abstract class BaseController<T> {
             key === "categoryId" ||
             key === "brandId" ||
             key === "deviceTypeId" ||
-            key === "actualServiceId" 
+            key === "actualServiceId"
           ) {
             filters[key] = parseInt(value); // مقدار را به عدد تبدیل کن
           } else {
@@ -256,7 +256,7 @@ export abstract class BaseController<T> {
   }
 
   /**
-   * Delete a record
+   * update Status
    */
   async updateStatus(req: NextRequest, id: number): Promise<NextResponse> {
     return this.executeAction(req, async () => {
@@ -363,6 +363,10 @@ export abstract class BaseController<T> {
    * Handle exceptions
    */
   protected handleException(error: unknown): NextResponse {
+    // --- لطفاً فقط این یک خط را اضافه کنید ---
+    console.error("====== SERVER ERROR (BaseController) ======", error);
+    // --- پایان تغییر ---
+
     if (error instanceof BaseException) {
       return NextResponse.json(
         { error: error.message, ...(error.errors && { errors: error.errors }) },

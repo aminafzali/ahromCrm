@@ -1,17 +1,27 @@
+"use client";
+
+// ایمپورت‌های اصلی شما دست‌نخورده باقی می‌مانند
 import DIcon from "@/@Client/Components/common/DIcon";
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
 import { DetailWrapper } from "@/@Client/Components/wrappers";
 import { ActionButton } from "@/@Client/types";
 import { listItemRender2 } from "@/modules/notifications/data/table";
-import { Card } from "ndui-ahrom";
-import Link from "next/link";
+import { Button, Card } from "ndui-ahrom"; // Button اضافه شده است
 import { useEffect, useState } from "react";
-import FormSubmissionView from "../../components/FormSubmissionView";
 import ReminderButton from "../../components/ReminderButton";
 import RequestStatusForm from "../../components/RequestStatusForm";
 import { useRequest } from "../../hooks/useRequest";
 import { RequestWithRelations } from "../../types";
+
+// +++ ایمپورت‌های جدید برای قابلیت ویرایش +++
+import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import FormSubmissionView from "../../components/FormSubmissionView";
+import RequestServicesManager from "../../components/RequestServicesManager"; // کامپوننت زیبای ما
+import { createRequestSchema } from "../../validation/schema";
 
 interface RequestDetailsViewProps {
   id: number;
@@ -19,7 +29,11 @@ interface RequestDetailsViewProps {
   backUrl: string;
 }
 
+// استخراج نوع داده فرم از Zod Schema
+type RequestFormData = z.infer<typeof createRequestSchema>;
+
 export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
+  // --- هوک‌ها و stateهای اصلی شما بدون تغییر ---
   const {
     getById,
     update,
@@ -34,6 +48,12 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
   );
   const [showStatusForm, setShowStatusForm] = useState(false);
 
+  // +++ راه‌اندازی React Hook Form برای مدیریت فرم ویرایش +++
+  const { control, register, handleSubmit, reset, formState } =
+    useForm<RequestFormData>({
+      resolver: zodResolver(createRequestSchema.partial()), // استفاده از partial برای آپدیت
+    });
+
   useEffect(() => {
     if (id) {
       fetchRequestDetails();
@@ -43,24 +63,55 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
   const fetchRequestDetails = async () => {
     try {
       const data = await getById(id);
-      setRequest(data);
+      setRequest(data); // state برای نمایش اطلاعات در DetailWrapper آپدیت می‌شود
+
+      // ++ راه‌حل نهایی: ساخت یک آبجکت تمیز فقط با فیلدهای مورد نیاز فرم ++
+      const formValues = {
+        userId: data.userId,
+        description: data.description,
+        // تبدیل null به undefined برای جلوگیری از خطا
+        serviceTypeId: data.serviceTypeId ?? undefined,
+        statusId: data.statusId ?? undefined,
+        address: data.address ?? undefined,
+        formSubmissionid: data.formSubmissionid ?? undefined,
+
+        // تبدیل آبجکت Date به رشته متنی برای ورودی‌های تاریخ و زمان
+        preferredDate: data.preferredDate
+          ? new Date(data.preferredDate).toISOString().split("T")[0]
+          : undefined,
+        preferredTime: data.preferredTime
+          ? new Date(data.preferredTime)
+              .toISOString()
+              .split("T")[1]
+              .substring(0, 5)
+          : undefined,
+
+        // تبدیل ساختار خدمات به ساختاری که فرم انتظار دارد
+        actualServices:
+          data.actualServices?.map((item) => ({
+            actualServiceId: item.actualServiceId,
+            quantity: item.quantity,
+            price: item.price,
+          })) || [],
+      };
+
+      reset(formValues); // فرم با مقادیر صحیح و تمیز پر می‌شود
     } catch (error) {
       console.error("Error fetching request details:", error);
     }
   };
 
-  // const handleFormSubmit = async (formData: any) => {
-  //   try {
-  //     await update(id, {
-  //       formSubmissionid: formData.formId,
-  //       formData: formData.data,
-  //     });
-  //     fetchRequestDetails();
-  //   } catch (error) {
-  //     console.error("Error submitting form:", error);
-  //   }
-  // };
+  // تابع برای ارسال تغییرات به سرور
+  const onSaveChanges = async (data: RequestFormData) => {
+    try {
+      await update(id, data);
+      fetchRequestDetails();
+    } catch (err) {
+      console.error("Update failed", err);
+    }
+  };
 
+  // --- بقیه توابع شما بدون تغییر باقی می‌مانند ---
   const handleStatusUpdateSuccess = () => {
     setShowStatusForm(false);
     fetchRequestDetails();
@@ -68,7 +119,6 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
 
   const getActionButtons = (): ActionButton[] => {
     const buttons: ActionButton[] = [];
-
     if (isAdmin) {
       buttons.push({
         label: "تغییر وضعیت",
@@ -77,7 +127,6 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
         variant: "primary",
       });
     }
-
     return buttons;
   };
 
@@ -138,36 +187,6 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
     ),
   };
 
-  const renderStatusForm = () => {
-    if (!showStatusForm) return null;
-
-    return (
-      <Card className="mb-6">
-        <RequestStatusForm
-          requestId={id}
-          currentStatus={request.status.id}
-          onSuccess={handleStatusUpdateSuccess}
-        />
-      </Card>
-    );
-  };
-
-  const renderTimeline = () => {
-    if (!request.notifications || request.notifications.length === 0)
-      return null;
-
-    return (
-      <div className="my-6">
-        <h2 className="text-xl font-semibold mb-4 py-2">گزارش وضعیت</h2>
-        <div className="grid gap-2 py-2">
-          {request.notifications.map((note) => (
-            <div key={note.id}>{listItemRender2(note)}</div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   if (dataLoading) return <Loading />;
   if (statusCode === 404) return <NotFound />;
 
@@ -178,27 +197,76 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
     "notes",
     "userId",
     "notifications",
+    "actualServices",
   ];
-
   if (!isAdmin) excludeFields.push("user");
 
   return (
-    <div>
-      {renderStatusForm()}
+    // کل کامپوننت را در یک فرم قرار می‌دهیم تا دکمه ذخیره کار کند
+    <form onSubmit={handleSubmit(onSaveChanges)}>
+      {showStatusForm && (
+        <Card className="mb-6">
+          <RequestStatusForm
+            requestId={id}
+            currentStatus={request.status?.id}
+            onSuccess={handleStatusUpdateSuccess}
+          />
+        </Card>
+      )}
+
+      {/* DetailWrapper شما بدون تغییر باقی می‌ماند */}
       <DetailWrapper
         data={request}
         title="جزئیات درخواست"
         excludeFields={excludeFields}
         actionButtons={getActionButtons()}
         loading={loading}
-        headerContent={<ReminderButton requestId={id} userId={request.user.id} />
-      }
+        headerContent={
+          request.user && (
+            <ReminderButton requestId={id} userId={request.user.id} />
+          )
+        }
         error={error}
         success={success}
         customRenderers={customRenderers}
       />
 
-      {renderTimeline()}
-    </div>
+      {/* کامپوننت جدید و زیبای مدیریت خدمات */}
+      {isAdmin && (
+        <RequestServicesManager
+          control={control}
+          register={register}
+          formState={formState}
+        />
+      )}
+
+      {/* دکمه ذخیره تغییرات */}
+      {isAdmin && (
+        <div className="mt-4 flex justify-end">
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            disabled={formState.isSubmitting}
+            loading={formState.isSubmitting}
+            icon={<DIcon icon="fa-save" cdi={false} classCustom="ml-2" />}
+          >
+            ذخیره تغییرات
+          </Button>
+        </div>
+      )}
+
+      {/* تایم‌لاین شما بدون تغییر */}
+      {request.notifications && request.notifications.length > 0 && (
+        <div className="my-6">
+          <h2 className="text-xl font-semibold mb-4 py-2">گزارش وضعیت</h2>
+          <div className="grid gap-2 py-2">
+            {request.notifications.map((note) => (
+              <div key={note.id}>{listItemRender2(note)}</div>
+            ))}
+          </div>
+        </div>
+      )}
+    </form>
   );
 }

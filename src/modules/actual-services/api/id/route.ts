@@ -15,23 +15,18 @@ class ActualServiceController extends BaseController<any> {
 
 const controller = new ActualServiceController();
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: number } }
-) {
-  return controller.getById(req, params.id);
+// --- شروع اصلاحات ---
+// امضای توابع دقیقاً مانند ماژول‌های دیگر اصلاح شد
+
+export async function GET(req: NextRequest, id: number) {
+  return controller.getById(req, id);
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: number } }
-) {
-  return controller.update(req, params.id);
+export async function PATCH(req: NextRequest, id: number) {
+  return controller.update(req, id);
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: number } }
-) {
-  return controller.delete(req, params.id);
+export async function DELETE(req: NextRequest, id: number) {
+  return controller.delete(req, id);
 }
+// --- پایان اصلاحات ---

@@ -2,7 +2,7 @@
 
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
-import { relations, searchFileds } from "../data/fetch";
+import { connects, relations, searchFileds } from "../data/fetch";
 import {
   createActualServiceSchema,
   updateActualServiceSchema,
@@ -11,7 +11,7 @@ import {
 class Repository extends BaseRepository<any> {
   constructor() {
     // دقیقا طبق الگو، نام مدل به صورت رشته پاس داده می‌شود
-    super("ActualService");
+    super("actualService");
   }
 }
 
@@ -24,7 +24,7 @@ export class ActualServiceApi extends BaseService<any> {
       searchFileds,
       relations
     );
-
+    this.connect = connects;
     this.repository = new Repository();
   }
 }
