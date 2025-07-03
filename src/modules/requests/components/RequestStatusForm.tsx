@@ -30,6 +30,8 @@ export default function RequestStatusForm({
   const fetchStatuses = async () => {
     try {
       const response = await getStatuses();
+      console.log("response in RequestStatusForm", response);
+
       setStatusOptions(
         response.data.map((status: { id: number; name: string }) => ({
           value: status.id,
@@ -45,12 +47,19 @@ export default function RequestStatusForm({
     data: z.infer<typeof updateRequestStatusSchema>
   ) => {
     try {
+      console.log(
+        "Submitted statusId in RequestStatusForm",
+        data.statusId,
+        typeof data.statusId
+      );
+      console.log("data in RequestStatusForm", data);
       await updateStatus(requestId, {
         statusId: data.statusId,
         note: data.note || "",
         sendSms: data.sendSms,
       });
-      onSuccess();
+      //TODO:T1 خط کامنت شده زیر را درست باید کرد
+       onSuccess();
     } catch (error) {
       console.error("Error updating request status:", error);
     }

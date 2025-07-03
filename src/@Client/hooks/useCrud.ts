@@ -8,14 +8,12 @@ import { useCallback, useState } from "react";
  * هوک جنریک برای مدیریت عملیات CRUD
  */
 export function useCrud<
-  T, 
-  CreateInput = any, 
-  UpdateInput = any, 
+  T,
+  CreateInput = any,
+  UpdateInput = any,
   UpdateStatus = any,
-  createFormSchema = any,
->(
-  repository: BaseRepository<T, number>
-) {
+  createFormSchema = any
+>(repository: BaseRepository<T, number>) {
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +73,7 @@ export function useCrud<
       try {
         const result = await repository.create(data);
         setSuccess(" با موفقیت ایجاد شد");
-        showToast(" با موفقیت ایجاد شد" , "success");
+        showToast(" با موفقیت ایجاد شد", "success");
         return result;
       } catch (error) {
         handleError(error);
@@ -89,7 +87,7 @@ export function useCrud<
   );
 
   /**
-   * به‌روزرسانی 
+   * به‌روزرسانی
    */
   const update = useCallback(
     async (id: number, data: UpdateInput) => {
@@ -100,7 +98,7 @@ export function useCrud<
       try {
         const result = await repository.update<UpdateInput>(id, data);
         setSuccess(" با موفقیت به‌روزرسانی شد");
-        showToast(" با موفقیت به‌روزرسانی شد" , "info");
+        showToast(" با موفقیت به‌روزرسانی شد", "info");
         return result;
       } catch (error) {
         handleError(error);
@@ -112,7 +110,7 @@ export function useCrud<
     [repository]
   );
   /**
-   * به‌روزرسانی 
+   * به‌روزرسانی
    */
   const Put = useCallback(
     async (id: number, data: any) => {
@@ -123,7 +121,7 @@ export function useCrud<
       try {
         const result = await repository.Put(id, data);
         setSuccess(" با موفقیت به‌روزرسانی شد");
-        showToast(" با موفقیت به‌روزرسانی شد" , "info");
+        showToast(" با موفقیت به‌روزرسانی شد", "info");
         return result;
       } catch (error) {
         handleError(error);
@@ -136,7 +134,7 @@ export function useCrud<
   );
 
   /**
-   * به‌روزرسانی 
+   * به‌روزرسانی
    */
   const link = useCallback(
     async (id: number, data: any) => {
@@ -147,7 +145,7 @@ export function useCrud<
       try {
         const result = await repository.link(id, data);
         setSuccess(" با موفقیت به‌روزرسانی شد");
-        showToast(" با موفقیت به‌روزرسانی شد" , "info");
+        showToast(" با موفقیت به‌روزرسانی شد", "info");
         return result;
       } catch (error) {
         handleError(error);
@@ -159,9 +157,8 @@ export function useCrud<
     [repository]
   );
 
-
   /**
-   * به‌روزرسانی 
+   * به‌روزرسانی
    */
   const unlink = useCallback(
     async (id: number, data: any) => {
@@ -172,7 +169,7 @@ export function useCrud<
       try {
         const result = await repository.unlink(id, data);
         setSuccess(" با موفقیت به‌روزرسانی شد");
-        showToast(" با موفقیت به‌روزرسانی شد" , "info");
+        showToast(" با موفقیت به‌روزرسانی شد", "info");
         return result;
       } catch (error) {
         handleError(error);
@@ -185,7 +182,7 @@ export function useCrud<
   );
 
   /**
-   * حذف 
+   * حذف
    */
   const remove = useCallback(
     async (id: number) => {
@@ -194,7 +191,7 @@ export function useCrud<
       try {
         await repository.delete(id);
         setSuccess(" با موفقیت حذف شد");
-        showToast(" با موفقیت حذف شد" , "error");
+        showToast(" با موفقیت حذف شد", "error");
       } catch (error) {
         handleError(error);
         throw error;
@@ -210,21 +207,28 @@ export function useCrud<
    */
   const updateStatus = useCallback(
     async (id: number, data: UpdateStatus) => {
+      //TODO:T1 خط زیر کامنت شده راه حل اصلاحی نیاز است
       setSubmitting(true);
       setError(null);
       setSuccess(null);
+      console.log("id in updateStatus", id);
+      console.log("data in updateStatus", data);
+
       try {
         const result = await repository.updateStatus<UpdateStatus>(id, data);
         setSuccess("وضعیت با موفقیت بروزرسانی شد");
-        showToast("وضعیت با موفقیت بروزرسانی شد" , "warning");
+        showToast("وضعیت با موفقیت بروزرسانی شد", "warning");
         return result;
       } catch (error) {
         handleError(error);
+        console.log("error in updateStatus :" + error);
         throw error;
       } finally {
+        //TODO:T1 خط زیر کامنت شده راه حل اصلاحی نیاز است
         setSubmitting(false);
       }
     },
+    //TODO : بررسی کن چرا آرایه دارای ریپازیتوری نیست در حالی که از آن استفاده شده است
     []
   );
 
@@ -234,14 +238,13 @@ export function useCrud<
   const handleError = (error: unknown) => {
     if (error instanceof ApiError) {
       setError(error.message);
-      setStatus(error.statusCode)
+      setStatus(error.statusCode);
     } else {
       setError(
         error instanceof Error ? error.message : "An unexpected error occurred"
       );
     }
   };
-
 
   const createReminder = async (data: any) => {
     try {
@@ -250,7 +253,6 @@ export function useCrud<
       throw error;
     }
   };
-
 
   return {
     statusCode,

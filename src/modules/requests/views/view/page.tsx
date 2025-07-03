@@ -63,6 +63,7 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
   const fetchRequestDetails = async () => {
     try {
       const data = await getById(id);
+      console.log("fetchRequestDetail data :", data);
       setRequest(data); // state برای نمایش اطلاعات در DetailWrapper آپدیت می‌شود
 
       // ++ راه‌حل نهایی: ساخت یک آبجکت تمیز فقط با فیلدهای مورد نیاز فرم ++
@@ -94,7 +95,7 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
             price: item.price,
           })) || [],
       };
-
+      console.log("fetchRequestDetail formValues :", formValues);
       reset(formValues); // فرم با مقادیر صحیح و تمیز پر می‌شود
     } catch (error) {
       console.error("Error fetching request details:", error);
@@ -104,7 +105,9 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
   // تابع برای ارسال تغییرات به سرور
   const onSaveChanges = async (data: RequestFormData) => {
     try {
+      console.log("data in onSaveChanges", data);
       await update(id, data);
+
       fetchRequestDetails();
     } catch (err) {
       console.error("Update failed", err);
@@ -202,8 +205,7 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
   if (!isAdmin) excludeFields.push("user");
 
   return (
-    // کل کامپوننت را در یک فرم قرار می‌دهیم تا دکمه ذخیره کار کند
-    <form onSubmit={handleSubmit(onSaveChanges)}>
+    <div>
       {showStatusForm && (
         <Card className="mb-6">
           <RequestStatusForm
@@ -213,60 +215,63 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
           />
         </Card>
       )}
-
-      {/* DetailWrapper شما بدون تغییر باقی می‌ماند */}
-      <DetailWrapper
-        data={request}
-        title="جزئیات درخواست"
-        excludeFields={excludeFields}
-        actionButtons={getActionButtons()}
-        loading={loading}
-        headerContent={
-          request.user && (
-            <ReminderButton requestId={id} userId={request.user.id} />
-          )
-        }
-        error={error}
-        success={success}
-        customRenderers={customRenderers}
-      />
-
-      {/* کامپوننت جدید و زیبای مدیریت خدمات */}
-      {isAdmin && (
-        <RequestServicesManager
-          control={control}
-          register={register}
-          formState={formState}
+       {/* کل کامپوننت را در یک فرم قرار می‌دهیم تا دکمه ذخیره کار کند */}
+      <form onSubmit={handleSubmit(onSaveChanges)}>
+        {/* DetailWrapper شما بدون تغییر باقی می‌ماند */}
+        <DetailWrapper
+          data={request}
+          title="جزئیات درخواست"
+          excludeFields={excludeFields}
+          actionButtons={getActionButtons()}
+          loading={loading}
+          headerContent={
+            request.user && (
+              <ReminderButton requestId={id} userId={request.user.id} />
+            )
+          }
+          error={error}
+          success={success}
+          customRenderers={customRenderers}
         />
-      )}
 
-      {/* دکمه ذخیره تغییرات */}
-      {isAdmin && (
-        <div className="mt-4 flex justify-end">
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            disabled={formState.isSubmitting}
-            loading={formState.isSubmitting}
-            icon={<DIcon icon="fa-save" cdi={false} classCustom="ml-2" />}
-          >
-            ذخیره تغییرات
-          </Button>
-        </div>
-      )}
+        {/* کامپوننت جدید و زیبای مدیریت خدمات */}
 
-      {/* تایم‌لاین شما بدون تغییر */}
-      {request.notifications && request.notifications.length > 0 && (
-        <div className="my-6">
-          <h2 className="text-xl font-semibold mb-4 py-2">گزارش وضعیت</h2>
-          <div className="grid gap-2 py-2">
-            {request.notifications.map((note) => (
-              <div key={note.id}>{listItemRender2(note)}</div>
-            ))}
+        {isAdmin && (
+          <RequestServicesManager
+            control={control}
+            register={register}
+            formState={formState}
+          />
+        )}
+
+        {/* دکمه ذخیره تغییرات */}
+        {isAdmin && (
+          <div className="mt-4 flex justify-end">
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              disabled={formState.isSubmitting}
+              loading={formState.isSubmitting}
+              icon={<DIcon icon="fa-save" cdi={false} classCustom="ml-2" />}
+            >
+              ذخیره تغییرات
+            </Button>
           </div>
-        </div>
-      )}
-    </form>
+        )}
+
+        {/* تایم‌لاین شما بدون تغییر */}
+        {request.notifications && request.notifications.length > 0 && (
+          <div className="my-6">
+            <h2 className="text-xl font-semibold mb-4 py-2">گزارش وضعیت</h2>
+            <div className="grid gap-2 py-2">
+              {request.notifications.map((note) => (
+                <div key={note.id}>{listItemRender2(note)}</div>
+              ))}
+            </div>
+          </div>
+        )}
+      </form>
+    </div>
   );
 }

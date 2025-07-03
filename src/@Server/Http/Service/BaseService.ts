@@ -345,6 +345,10 @@ export abstract class BaseService<T> {
     });
     const oldStatus = (entity as any).status.name;
 
+    console.log(">> Update Status: ID:", id);
+    console.log(">> StatusId:", statusId, typeof statusId);
+    console.log(">> Note:", note);
+
     // Update the status
     await this.repository.update(id, {
       statusId,

@@ -18,14 +18,15 @@ export class RequestServiceApi extends BaseService<any> {
     super(
       new Repository(),
       createRequestSchema,
-      createRequestSchema.partial(),
+      createRequestSchema,
       searchFileds,
       relations
     );
     // ++ پیکربندی BaseService برای مدیریت روابط، دقیقا طبق الگوی شما ++
-    this.connect = connects;
+    //this.connect = connects;
     this.repository = new Repository();
     this.notifRepo = new NotificationServiceApi();
+    this.connect = connects;
 
     // ++ استفاده از سیستم هوک برای افزودن قابلیت جدید بدون شکستن کد اصلی ++
     this.afterCreate = this.handleServicesOnCreate;
@@ -111,6 +112,10 @@ export class RequestServiceApi extends BaseService<any> {
   }
 
   private async handleAfterChangeStatus(entity: any, data: any): Promise<void> {
+    //TODO: بنظر می آید خط زیر ایراداتی دارد!
+    console.log("handleAfterChangeStatus data", data);
+    console.log("handleAfterChangeStatus entity", entity);
+
     let baseLink = process.env.NEXTAUTH_URL || "http://localhost:3011";
     baseLink += "/panel/requests/" + entity.id;
     let message = `درخواست شما به روز رسانی شد از وضعیت ${data.oldStatus} به ${data.newStatus}`;
@@ -125,4 +130,15 @@ export class RequestServiceApi extends BaseService<any> {
       sendSms: data.sendSms,
     });
   }
+
+  // async update(id: number, data: any) {
+  //   const updateData: any = { ...data };
+
+  //   // Handle form submission
+  //   if (data.formSubmissionid) {
+  //     updateData.formSubmissionid = data.formSubmissionid;
+  //   }
+  //   const entity = await this.repository.update(id, updateData);
+  //   return entity;
+  // }
 }

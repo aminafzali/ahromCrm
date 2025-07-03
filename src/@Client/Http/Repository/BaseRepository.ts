@@ -109,10 +109,12 @@ export abstract class BaseRepository<T, ID = number> extends BaseApi {
    * Update status
    */
   async updateStatus<T>(id: ID, data: Partial<T>): Promise<T> {
+    console.log("id in baseRepository updateStatus ", id);
+    console.log("data in baseRepository updateStatus ", data);
+    console.log("endpoint in baseRepository updateStatus ", this.endpoint);
+
     return this.patch<T>(`${this.endpoint}/${id}/update-status`, data);
   }
-
-
 
   /**
    * Update a record
