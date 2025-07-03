@@ -215,7 +215,7 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
           />
         </Card>
       )}
-       {/* کل کامپوننت را در یک فرم قرار می‌دهیم تا دکمه ذخیره کار کند */}
+      {/* کل کامپوننت را در یک فرم قرار می‌دهیم تا دکمه ذخیره کار کند */}
       <form onSubmit={handleSubmit(onSaveChanges)}>
         {/* DetailWrapper شما بدون تغییر باقی می‌ماند */}
         <DetailWrapper
@@ -235,30 +235,32 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
         />
 
         {/* کامپوننت جدید و زیبای مدیریت خدمات */}
+        <div>
+          <Card className="mb-6">
+            {isAdmin && (
+              <RequestServicesManager
+                control={control}
+                register={register}
+                formState={formState}
+              />
+            )}
 
-        {isAdmin && (
-          <RequestServicesManager
-            control={control}
-            register={register}
-            formState={formState}
-          />
-        )}
-
-        {/* دکمه ذخیره تغییرات */}
-        {isAdmin && (
-          <div className="mt-4 flex justify-end">
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              disabled={formState.isSubmitting}
-              loading={formState.isSubmitting}
-              icon={<DIcon icon="fa-save" cdi={false} classCustom="ml-2" />}
-            >
-              ذخیره تغییرات
-            </Button>
-          </div>
-        )}
+            {/* دکمه ذخیره تغییرات */}
+            {isAdmin && (
+              <div className="flex flex-row-reverse m-4 justify-end">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={formState.isSubmitting}
+                  loading={formState.isSubmitting}
+                  icon={<DIcon icon="fa-save" cdi={false} classCustom="ml-2" />}
+                >
+                  ذخیره تغییرات
+                </Button>
+              </div>
+            )}
+          </Card>
+        </div>
 
         {/* تایم‌لاین شما بدون تغییر */}
         {request.notifications && request.notifications.length > 0 && (

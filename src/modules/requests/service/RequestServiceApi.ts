@@ -18,7 +18,7 @@ export class RequestServiceApi extends BaseService<any> {
     super(
       new Repository(),
       createRequestSchema,
-      createRequestSchema,
+      createRequestSchema.partial(),
       searchFileds,
       relations
     );
