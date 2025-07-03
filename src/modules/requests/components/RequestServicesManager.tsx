@@ -122,12 +122,20 @@ const RequestServicesManager: React.FC<Props> = ({
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="flex items-center gap-3 p-2 bg-gray-50 rounded-md"
+                  className="flex flex-wrap items-center gap-3 p-2 bg-gray-50 rounded-md"
                 >
+                  <button
+                    type="button"
+                    className=" btn btn-sm btn-outline-danger"
+                    onClick={() => remove(index)}
+                  >
+                    <DIcon icon="fa-times" cdi={false} />
+                  </button>
+                  
                   <div className="flex-grow font-semibold">
                     {getServiceName(field.actualServiceId)}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <label className="text-sm">تعداد:</label>
                     <input
                       type="number"
@@ -139,7 +147,7 @@ const RequestServicesManager: React.FC<Props> = ({
                       })}
                     />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <label className="text-sm">قیمت واحد:</label>
                     <input
                       type="number"
@@ -151,13 +159,6 @@ const RequestServicesManager: React.FC<Props> = ({
                       })}
                     />
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => remove(index)}
-                  >
-                    <DIcon icon="fa-times" cdi={false} />
-                  </button>
                 </div>
               ))}
             </div>
