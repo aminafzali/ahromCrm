@@ -138,21 +138,74 @@ export default function InvoiceForm({
     return subtotal + taxAmount - discountAmount;
   };
 
-  const onSetRequest = (selectedItem: any) => {
-    setReq(selectedItem);
-    setUser((selectedItem as any).user);
-    let newItem = {};
-    //TODO:T2 متن زیر باید اصلاح شود
-    newItem = {
-      serviceTypeId: parseInt((selectedItem as any).serviceType.id.toString()),
-      description: (selectedItem as any).serviceType.name,
-      price: (selectedItem as any).serviceType.basePrice,
-      total: (selectedItem as any).serviceType.basePrice,
-      quantity: 1,
-    };
+  // const onSetRequest = (selectedItem: any) => {
+  //   setReq(selectedItem);
+  //   setUser((selectedItem as any).user);
+  //   let newItem = {};
+  //   //TODO:T2 متن زیر باید اصلاح شود
+  //   newItem = {
+  //     serviceTypeId: parseInt((selectedItem as any).serviceType.id.toString()),
+  //     description: (selectedItem as any).serviceType.name,
+  //     price: (selectedItem as any).serviceType.basePrice,
+  //     total: (selectedItem as any).serviceType.basePrice,
+  //     quantity: 1,
+  //   };
 
-    setItems([...items, newItem]);
+  //   setItems([...items, newItem]);
+  // };
+  // const onSetUser = (selectedItem: any) => {
+  //   setUser(selectedItem);
+  // };
+
+  /**
+   * ✅ **کد نهایی با مسیردهی صحیح به داده‌های تودرتو**
+   * این تابع با درک صحیح ساختار Prisma، مقادیر نام، قیمت و تعداد را استخراج می‌کند.
+   */
+  const onSetRequest = (selectedItem: any) => {
+    // برای دیباگ: ساختار دقیق داده‌ای که از کامپوننت انتخاب می‌آید را در کنسول مرورگر ببینید.
+    console.log("درخواست انتخاب شده (selectedItem):", selectedItem);
+
+    setReq(selectedItem);
+    setUser(selectedItem.user);
+
+    // بررسی می‌کنیم که آرایه actualServices در آبجکت درخواست وجود داشته باشد
+    if (
+      selectedItem.actualServices &&
+      Array.isArray(selectedItem.actualServices)
+    ) {
+      const newItemsFromRequest = selectedItem.actualServices
+        .map((serviceEntry: any) => {
+          // serviceEntry معادل یک رکورد از جدول ActualServiceOnRequest است
+
+          // 1. دسترسی به جزئیات خدمت (نام و قیمت) از آبجکت تودرتو
+          const details = serviceEntry.actualService;
+          if (!details) {
+            console.error(
+              "اطلاعات 'actualService' در آیتم ورودی وجود ندارد:",
+              serviceEntry
+            );
+            return null; // اگر ساختار تودرتو وجود نداشت، این آیتم را نادیده بگیر
+          }
+
+          // 2. دسترسی به تعداد از سطح اصلی آبجکت serviceEntry
+          const quantity = serviceEntry.quantity || 1;
+
+          // 3. ساخت آیتم جدید برای فاکتور
+          return {
+            itemType: "ACTUALSERVICE",
+            actualServiceId: details.id,
+            description: details.name, // <<-- مشکل شرح حل شد
+            price: details.price, // قیمت از منبع اصلی خوانده می‌شود
+            quantity: quantity, // <<-- تعداد صحیح خوانده می‌شود
+            total: details.price * quantity,
+          };
+        })
+        .filter(Boolean); // حذف هر آیتم null که ممکن است به دلیل خطا ایجاد شده باشد
+
+      setItems((prevItems) => [...prevItems, ...newItemsFromRequest]);
+    }
   };
+
   const onSetUser = (selectedItem: any) => {
     setUser(selectedItem);
   };
