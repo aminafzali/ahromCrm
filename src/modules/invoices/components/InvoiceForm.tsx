@@ -3,6 +3,7 @@
 import DIcon from "@/@Client/Components/common/DIcon";
 import Loading from "@/@Client/Components/common/Loading";
 import Select22 from "@/@Client/Components/wrappers/Select22";
+import { columnsForAdmin } from "@/modules/actual-services/data/table";
 import { columnsForSelect } from "@/modules/products/data/table";
 import { useProduct } from "@/modules/products/hooks/useProduct";
 import { ProductWithRelations } from "@/modules/products/types";
@@ -10,6 +11,9 @@ import { listItemRenderUser } from "@/modules/requests/data/table";
 import { columns } from "@/modules/service-types/data/table";
 import { useServiceType } from "@/modules/service-types/hooks/useServiceType";
 import { ServiceType } from "@/modules/service-types/types";
+//TODO:T2d برای خدمات واقعی باید در اینجا موارد مهم را ایمپورت کنیم
+import { useActualService } from "@/modules/actual-services/hooks/useActualService";
+import { ActualService } from "@/modules/actual-services/types";
 import { listItemRender } from "@/modules/users/data/table";
 import { Button, ButtonSelectWithTable, Form, Input } from "ndui-ahrom";
 import { useEffect, useState } from "react";
@@ -52,6 +56,16 @@ const itemServiceSchema = z.object({
   serviceType: z.any().optional(),
 });
 
+// TODO:T2d for actual-service
+const itemActualServiceSchema = z.object({
+  quantity: z.preprocess(
+    (val) => parseFloat(val as string),
+    z.number().min(1, "تعداد باید حداقل 1 باشد")
+  ),
+  price: z.any().optional(),
+  actualService: z.any().optional(),
+});
+
 const itemProductSchema = z.object({
   quantity: z.preprocess(
     (val) => parseFloat(val as string),
@@ -86,11 +100,17 @@ export default function InvoiceForm({
     defaultValues.discountPercent || 0
   );
   const [error, setError] = useState<string | null>(null);
-  const [itemType, setItemType] = useState<"SERVICE" | "PRODUCT" | "CUSTOM">(
-    "CUSTOM"
-  );
+  const [itemType, setItemType] = useState<
+    "SERVICE" | "PRODUCT" | "ACTUALSERVICE" | "CUSTOM"
+  >("CUSTOM");
   const { getAll: getAllProducts, loading: loadingProduct } = useProduct();
   const { getAll: getAllServices, loading: loadingService } = useServiceType();
+
+  //TODO:T2d برای خدمات واقعی باید در اینجا موارد را قرار بدهیم
+  const { getAll: getAllActualServices, loading: loadingActualService } =
+    useActualService();
+  const [actualServices, setActualServices] = useState<ActualService[]>([]);
+
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
   const [services, setServices] = useState<ServiceType[]>([]);
 
@@ -102,6 +122,9 @@ export default function InvoiceForm({
     setProducts(p.data);
     const s = await getAllServices();
     setServices(s.data);
+    //TODO:T2
+    const a = await getAllActualServices();
+    setActualServices(a.data);
   };
 
   useEffect(() => {
@@ -119,7 +142,7 @@ export default function InvoiceForm({
     setReq(selectedItem);
     setUser((selectedItem as any).user);
     let newItem = {};
-
+    //TODO:T2 متن زیر باید اصلاح شود
     newItem = {
       serviceTypeId: parseInt((selectedItem as any).serviceType.id.toString()),
       description: (selectedItem as any).serviceType.name,
@@ -163,6 +186,18 @@ export default function InvoiceForm({
         serviceTypeId: parseInt(data.serviceTypeId),
         description: service.name,
         price: service.basePrice,
+      };
+    } else if (itemType === "ACTUALSERVICE") {
+      const actualService = actualServices.find(
+        (s) => s.id === parseInt(data.actualService.id)
+      );
+      if (!actualService) return;
+
+      newItem = {
+        ...newItem,
+        actualServiceId: parseInt(data.actualServiceId),
+        description: actualService.name,
+        price: actualService.price,
       };
     }
 
@@ -238,6 +273,25 @@ export default function InvoiceForm({
             }}
           />
         );
+      //TODO:T2d
+      case "ACTUALSERVICE":
+        return (
+          <ButtonSelectWithTable
+            name={"actualService"}
+            label={"زیر خدمت"}
+            columns={columnsForAdmin}
+            data={actualServices}
+            selectionMode="single"
+            onSelect={function (selectedItems): void {
+              setItemPrice(selectedItems.price);
+            }}
+            iconViewMode={{
+              remove: (
+                <DIcon icon="fa-times" cdi={false} classCustom="text-error" />
+              ),
+            }}
+          />
+        );
       case "CUSTOM":
         return (
           <Input
@@ -255,12 +309,15 @@ export default function InvoiceForm({
         return itemProductSchema;
       case "SERVICE":
         return itemServiceSchema;
+      case "ACTUALSERVICE":
+        return itemActualServiceSchema;
       case "CUSTOM":
         return itemSchema;
     }
   };
 
-  if (loadingProduct || loadingService) return <Loading />;
+  if (loadingProduct || loadingService || loadingActualService)
+    return <Loading />;
 
   return (
     <div className="space-y-6">
@@ -317,6 +374,7 @@ export default function InvoiceForm({
                 { value: "CUSTOM", label: "متن آزاد" },
                 { value: "PRODUCT", label: "محصول" },
                 { value: "SERVICE", label: "خدمت" },
+                { value: "ACTUALSERVICE", label: "زیر خدمت" },
               ]}
               name={""}
             />

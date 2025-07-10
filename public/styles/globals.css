@@ -56,3 +56,17 @@ nav
 {
   scrollbar-width: none !important;
 }
+
+@media print {
+  body:not(.print-mode) * {
+    display: none !important;
+  }
+
+  body.print-mode .invoice-container {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+}

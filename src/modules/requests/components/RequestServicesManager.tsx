@@ -131,7 +131,7 @@ const RequestServicesManager: React.FC<Props> = ({
                   >
                     <DIcon icon="fa-times" cdi={false} />
                   </button>
-                  
+
                   <div className="flex-grow font-semibold">
                     {getServiceName(field.actualServiceId)}
                   </div>

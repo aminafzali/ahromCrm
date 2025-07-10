@@ -21,6 +21,8 @@ export default function InvoiceItems({ items, onRemove }: InvoiceItemsProps) {
         return "محصول";
       case "SERVICE":
         return "خدمت";
+      case "ACTUALSERVICE":
+        return "زیر خدمت";
       default:
         return "متن آزاد";
     }
