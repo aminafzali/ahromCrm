@@ -72,7 +72,8 @@ export abstract class BaseController<T> {
             key === "categoryId" ||
             key === "brandId" ||
             key === "deviceTypeId" ||
-            key === "actualServiceId"   
+            key === "actualServiceId" ||
+            key === "reminderId"
           ) {
             filters[key] = parseInt(value); // مقدار را به عدد تبدیل کن
           } else {

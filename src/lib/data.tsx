@@ -128,6 +128,19 @@ export const dashboardMenuItems = [
     icon: <DIcon icon="fa-inbox-in" cdi={false}></DIcon>,
     href: "/dashboard/payments",
   },
+  // برای فعالیت هاو در ابتدا یادآور نوشته شد
+  {
+    id: "activity",
+    label: "فعالیت ها",
+    divider: true,
+    href: "/activityDivider",
+  },
+  {
+    id: "reminders",
+    label: "یادآوری ها",
+    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+    href: "/dashboard/reminders",
+  },
 ];
 
 export const dashboardBottomItems = [

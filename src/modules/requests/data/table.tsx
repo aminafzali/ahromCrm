@@ -84,7 +84,7 @@ export const columnsForUser: Column[] = [
 ];
 
 export const listItemRender = (row: any) => (
-  <div className="bg-white px-2 py-2 border-2 rounded-lg border-[1px] border-gray-400 hover:shadow-sm transition-shadow">
+  <div className="bg-white px-2 py-2 border-2 rounded-lg border-gray-400 hover:shadow-sm transition-shadow">
     <Link href={`/dashboard/requests/${row.id}`}>
       <div className="flex justify-between items-center border-b-2 py-2">
         <StatusBadge status={row.status.name} />
