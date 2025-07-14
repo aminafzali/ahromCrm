@@ -9,7 +9,7 @@ const service = new ReminderApiService();
 
 class ReminderController extends BaseController<any> {
   constructor() {
-    super(service, include);
+    super(service, include, true);
   }
 }
 
