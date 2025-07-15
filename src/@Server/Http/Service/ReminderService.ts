@@ -44,12 +44,11 @@ export class ReminderService extends BaseService<any> {
       reminder.entityId ? `\nمربوط به آیتم شماره: ${reminder.entityId}` : ""
     }`;
 
-    // ساخت یک آبجکت نوتیفیکیشن کامل که با قوانین NotificationServiceApi هماهنگ است
-    const notificationData = {
+    // ساخت یک آبجکت نوتیفیکیشن پایه
+    const notificationData: any = {
       userId: reminder.userId,
       title: "یادآوری: " + reminder.title,
       message: message,
-      requestId: reminder.entityType === "Request" ? reminder.entityId : null,
       note: reminder.description,
       sendSms:
         reminder.notificationChannels === "SMS" ||
@@ -58,6 +57,11 @@ export class ReminderService extends BaseService<any> {
         reminder.notificationChannels === "EMAIL" ||
         reminder.notificationChannels === "ALL",
     };
+
+    // ++ اصلاحیه کلیدی: فیلد requestId را فقط در صورتی اضافه می‌کنیم که وجود داشته باشد ++
+    if (reminder.entityType === "Request" && reminder.entityId) {
+      notificationData.requestId = reminder.entityId;
+    }
 
     logger.info(
       `[ReminderService] Attempting to create notification with payload: ${JSON.stringify(
@@ -79,7 +83,7 @@ export class ReminderService extends BaseService<any> {
       const dueReminders = await this.repository.findAll({
         filters: { dueDate: { lte: now }, notified: false, status: "PENDING" },
         limit: batchSize,
-        page: 1 + Math.floor(offset / batchSize), // محاسبه صفحه بر اساس offset
+        page: 1 + Math.floor(offset / batchSize),
       });
 
       logger.info(
@@ -124,7 +128,6 @@ export class ReminderService extends BaseService<any> {
     }
   }
 
-  // ++ این متدها که فراموش شده بودند، اکنون به درستی اضافه شده‌اند ++
   private async processReminder(reminder: any) {
     try {
       await this.sendNotification(reminder);
@@ -195,6 +198,7 @@ export class ReminderService extends BaseService<any> {
     return date;
   }
 }
+
 // reminder قبلی
 // import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 // import { BaseService } from "@/@Server/Http/Service/BaseService";
