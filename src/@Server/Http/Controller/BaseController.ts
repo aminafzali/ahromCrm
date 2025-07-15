@@ -172,6 +172,9 @@ export abstract class BaseController<T> {
     return this.executeAction(req, async () => {
       await AuthProvider.isAuthenticated(req);
       const body = await req.json();
+      // ++ لاگ ۱: این لاگ را اضافه کنید ++
+      console.log("--- DEBUG [BaseController]: Received body to create:", body);
+
       try {
         const data = await this.service.create(body);
         return this.created({
@@ -364,8 +367,15 @@ export abstract class BaseController<T> {
    * Handle exceptions
    */
   protected handleException(error: unknown): NextResponse {
-    // --- لطفاً فقط این یک خط را اضافه کنید ---
-    console.error("====== SERVER ERROR (BaseController) ======", error);
+    // --- لطفاً این بخش را با کد زیر جایگزین کنید ---
+    console.error("====== SERVER ERROR (BaseController) ======");
+    if (error instanceof Error) {
+      console.error("Error Name:", error.name);
+      console.error("Error Message:", error.message);
+      console.error("Error Stack:", error.stack);
+    } else {
+      console.error("Caught a non-Error object:", error);
+    }
     // --- پایان تغییر ---
 
     if (error instanceof BaseException) {

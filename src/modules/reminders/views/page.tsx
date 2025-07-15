@@ -1,7 +1,5 @@
-// src/modules/reminders/views/page.tsx
-
+// مسیر فایل: src/modules/reminders/views/page.tsx
 "use client";
-
 import Loading from "@/@Client/Components/common/Loading";
 import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper";
 import { FilterOption } from "@/@Client/types";
@@ -9,14 +7,11 @@ import { useUser } from "@/modules/users/hooks/useUser";
 import { UserWithRelations } from "@/modules/users/types";
 import { ReminderStatus } from "@prisma/client";
 import { useEffect, useState } from "react";
-import { columnsForAdmin, listItemRender } from "../data/table";
+import { columns } from "../data/table";
 import { useReminder } from "../hooks/useReminder";
 import { ReminderWithDetails } from "../types";
 
-export default function RemindersModuleView({
-  isAdmin = true,
-  title = "یادآورها",
-}) {
+export default function RemindersModuleView() {
   const {
     getAll: fetchReminders,
     remove: deleteItem,
@@ -41,7 +36,6 @@ export default function RemindersModuleView({
   if (loadingUsers) return <Loading />;
 
   const filters: FilterOption[] = [];
-
   if (users.length > 0) {
     const userOptions = users.map((user) => ({
       value: user.id,
@@ -53,7 +47,6 @@ export default function RemindersModuleView({
       options: [{ value: "all", label: "همه کاربران" }, ...userOptions],
     });
   }
-
   const statusOptions = Object.values(ReminderStatus).map((status) => ({
     value: status,
     label: {
@@ -62,7 +55,6 @@ export default function RemindersModuleView({
       CANCELLED: "لغو شده",
     }[status],
   }));
-
   filters.push({
     name: "status",
     label: "وضعیت",
@@ -71,13 +63,12 @@ export default function RemindersModuleView({
 
   return (
     <DataTableWrapper<ReminderWithDetails>
-      title={title}
-      columns={columnsForAdmin}
-      listItemRender={listItemRender}
+      title="مدیریت یادآورها"
+      columns={columns}
       loading={loading}
       error={error}
       fetcher={fetchReminders}
-      //  deleteItem={deleteItem}
+    //  deleteItem={deleteItem}
       filterOptions={filters}
       createUrl="/dashboard/reminders/create"
     />

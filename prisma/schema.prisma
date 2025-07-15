@@ -11,106 +11,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// +++ مدل جدید برای خدمات واقعی و قابل قیمت‌گذاری +++
-model ActualService {
-  id          Int     @id @default(autoincrement())
-  name        String
-  price       Float
-  description String? @db.Text
-
-  // --- روابط ---
-  // هر خدمت واقعی زیرمجموعه یک نوع خدمت است
-  serviceTypeId Int
-  serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id])
-
-  // هر خدمت واقعی می تواند در چندین درخواست استفاده شود
-  requests ActualServiceOnRequest[]
-
-  // هر خدمت واقعی می تواند در چندین قلم فاکتور استفاده شود
-  invoiceItems InvoiceItem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// +++ جدول واسط برای اتصال "درخواست" و "خدمات واقعی" +++
-model ActualServiceOnRequest {
-  id       Int   @id @default(autoincrement())
-  quantity Int   @default(1)
-  price    Float // قیمت خدمت در لحظه افزودن به درخواست (می تواند با قیمت پیش فرض متفاوت باشد)
-
-  requestId Int
-  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
-
-  actualServiceId Int
-  actualService   ActualService @relation(fields: [actualServiceId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([requestId, actualServiceId]) // جلوگیری از افزودن یک خدمت تکراری به یک درخواست
-}
-
-// --- اصلاح مدل ServiceType ---
-model ServiceType {
-  id          Int       @id @unique @default(autoincrement())
-  name        String    @unique
-  description String?   @db.Text
-  basePrice   Float     @default(0)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  requests    Request[]
-
-  // --- اصلاحات ---
-  // InvoiceItem دیگر مستقیما به ServiceType وصل نیست
-  // InvoiceItem InvoiceItem[]  // --- این خط حذف یا کامنت شود ---
-
-  // +++ رابطه جدید: هر نوع خدمت، چندین خدمت واقعی دارد +++
-  actualServices ActualService[]
-}
-
-// --- اصلاح مدل Request ---
-model Request {
-  id Int @id @unique @default(autoincrement())
-  // ... سایر فیلدهای شما
-
-  // +++ رابطه جدید: هر درخواست شامل لیستی از خدمات واقعی است که باید انجام شود +++
-  actualServices ActualServiceOnRequest[]
-
-  // ... بقیه فیلدها و روابط شما دست نخورده باقی می مانند
-  userId           Int
-  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  serviceTypeId    Int?
-  serviceType      ServiceType?           @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
-  description      String                 @db.Text
-  address          String?
-  preferredDate    DateTime?
-  preferredTime    DateTime?
-  note             String?
-  statusId         Int?
-  status           Status?                @relation(fields: [statusId], references: [id], onDelete: Cascade)
-  priority         String                 @default("متوسط")
-  assignedToId     Int?
-  assignedTo       User?                  @relation(name: "AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
-  estimatedPrice   Float?
-  actualPrice      Float?
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-  completedAt      DateTime?
-  receivedDevice   ReceivedDevice?
-  notes            Note[]
-  invoices         Invoice[]
-  notifications    Notification[]
-  attachments      RequestAttachment[]
-  statusHistory    RequestStatusHistory[]
-  reviews          RequestReview[]
-  cancellations    RequestCancellation[]
-  formSubmission   FormSubmission?        @relation(fields: [formSubmissionid], references: [id])
-  formSubmissionid Int?
-  trackingCode     String?
-}
-
+//>>>>>>>>>>>>> invoice..............................................................................
 // --- اصلاح مدل InvoiceItem ---
 model InvoiceItem {
   id        Int             @id @unique @default(autoincrement())
@@ -151,82 +52,6 @@ model InvoiceItem {
 
 // کپی کامل بقیه مدل های شما برای کامل بودن فایل...
 // (من فقط مدل هایی که تغییر کرده اند را در بالا آوردم، شما باید بقیه مدل هایتان را در اینجا داشته باشید)
-
-enum FieldType {
-  text
-  number
-  boolean
-  select
-  multi_select
-  date
-  file
-}
-
-model Form {
-  id          Int              @id @default(autoincrement())
-  name        String           @unique
-  description String?          @db.Text
-  isActive    Boolean          @default(true)
-  fields      FieldOnForm[]
-  submissions FormSubmission[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-}
-
-model Field {
-  id           Int           @id @default(autoincrement())
-  name         String        @unique @default(uuid())
-  label        String        @default("برچسپ")
-  type         FieldType     @default(text)
-  placeholder  String?
-  required     Boolean       @default(false)
-  options      FieldOption[]
-  validation   String? // JSON string of validation rules
-  defaultValue String?
-  order        Int           @default(0)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  forms        FieldOnForm[]
-}
-
-model FieldOnForm {
-  formId  Int
-  fieldId Int
-  form    Form  @relation(fields: [formId], references: [id], onDelete: Cascade)
-  field   Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
-
-  @@id([formId, fieldId]) // تعریف کلید مرکب برای ارتباط Many-to-Many
-}
-
-model FieldOption {
-  id        Int      @id @default(autoincrement())
-  fieldId   Int
-  field     Field    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
-  label     String
-  value     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model FormSubmission {
-  id     Int                   @id @default(autoincrement())
-  formId Int
-  form   Form                  @relation(fields: [formId], references: [id], onDelete: Cascade)
-  values FormSubmissionValue[]
-  data   Json // Stores form submission data
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  requests Request[]
-}
-
-model FormSubmissionValue {
-  id           Int            @id @default(autoincrement())
-  submissionId Int
-  submission   FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  value        String // مقدار ورودی کاربر
-}
 
 enum InvoiceStatus {
   PENDING
@@ -308,6 +133,90 @@ model Payment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+//<<<<<<<<<<< invoice..............................................................................
+
+//>>>>>>>>>>> form builder ..........................................................................................
+
+enum FieldType {
+  text
+  number
+  boolean
+  select
+  multi_select
+  date
+  file
+}
+
+model Form {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String?          @db.Text
+  isActive    Boolean          @default(true)
+  fields      FieldOnForm[]
+  submissions FormSubmission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Field {
+  id           Int           @id @default(autoincrement())
+  name         String        @unique @default(uuid())
+  label        String        @default("برچسپ")
+  type         FieldType     @default(text)
+  placeholder  String?
+  required     Boolean       @default(false)
+  options      FieldOption[]
+  validation   String? // JSON string of validation rules
+  defaultValue String?
+  order        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  forms        FieldOnForm[]
+}
+
+model FieldOnForm {
+  formId  Int
+  fieldId Int
+  form    Form  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  field   Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@id([formId, fieldId]) // تعریف کلید مرکب برای ارتباط Many-to-Many
+}
+
+model FieldOption {
+  id        Int      @id @default(autoincrement())
+  fieldId   Int
+  field     Field    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  label     String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FormSubmission {
+  id     Int                   @id @default(autoincrement())
+  formId Int
+  form   Form                  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  values FormSubmissionValue[]
+  data   Json // Stores form submission data
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requests Request[]
+}
+
+model FormSubmissionValue {
+  id           Int            @id @default(autoincrement())
+  submissionId Int
+  submission   FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  value        String // مقدار ورودی کاربر
+}
+
+//<<<<<<<<<< form builder ..........................................................................................
+
+//>>>>>>>>>>  store ................................................................................................
 
 model Product {
   id            Int                @id @default(autoincrement())
@@ -445,10 +354,14 @@ model ExpertReview {
   updatedAt DateTime @updatedAt
 }
 
+//<<<<<<<<<<<  store ................................................................................................
+
+//>>>>>>>>>>> reminder and notif....................................................................................
 enum ReminderStatus {
   PENDING
   COMPLETED
   CANCELLED
+  FAILED // ++ این مقدار جدید را اضافه کنید ++
 }
 
 enum NotificationChannel {
@@ -465,8 +378,8 @@ model Reminder {
   dueDate              DateTime
   status               ReminderStatus      @default(PENDING)
   type                 String // For identifying different types of reminders (e.g., 'request', 'invoice', etc.)
-  entityId             Int // ID of the related entity (request, invoice, etc.)
-  entityType           String // Name of the related entity type
+  entityId             Int? // ID of the related entity (request, invoice, etc.)
+  entityType           String? // Name of the related entity type
   userId               Int
   user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt            DateTime            @default(now())
@@ -476,6 +389,70 @@ model Reminder {
   repeatInterval       String? // e.g., 'daily', 'weekly', 'monthly'
   notificationChannels NotificationChannel @default(ALL)
   timezone             String              @default("UTC")
+
+  // ++ این دو فیلد جدید را اضافه کنید ++
+  retryCount Int?      @default(0)
+  lastRetry  DateTime?
+}
+
+model Notification {
+  id        Int      @id @unique @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requestId Int?
+  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  title     String
+  note      String?
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  sendSms   Boolean  @default(true)
+  sendEmail Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+//>>>>>>>>>>> reminder and notif....................................................................................
+
+// ماژول درخواستها ...................................................................................................................
+// --- اصلاح مدل Request ---
+model Request {
+  id Int @id @unique @default(autoincrement())
+  // ... سایر فیلدهای شما
+
+  // +++ رابطه جدید: هر درخواست شامل لیستی از خدمات واقعی است که باید انجام شود +++
+  actualServices ActualServiceOnRequest[]
+
+  // ... بقیه فیلدها و روابط شما دست نخورده باقی می مانند
+  userId           Int
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceTypeId    Int?
+  serviceType      ServiceType?           @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+  description      String                 @db.Text
+  address          String?
+  preferredDate    DateTime?
+  preferredTime    DateTime?
+  note             String?
+  statusId         Int?
+  status           Status?                @relation(fields: [statusId], references: [id], onDelete: Cascade)
+  priority         String                 @default("متوسط")
+  assignedToId     Int?
+  assignedTo       User?                  @relation(name: "AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  estimatedPrice   Float?
+  actualPrice      Float?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  completedAt      DateTime?
+  receivedDevice   ReceivedDevice?
+  notes            Note[]
+  invoices         Invoice[]
+  notifications    Notification[]
+  attachments      RequestAttachment[]
+  statusHistory    RequestStatusHistory[]
+  reviews          RequestReview[]
+  cancellations    RequestCancellation[]
+  formSubmission   FormSubmission?        @relation(fields: [formSubmissionid], references: [id])
+  formSubmissionid Int?
+  trackingCode     String?
 }
 
 model RequestAttachment {
@@ -543,6 +520,9 @@ model Status {
   RequestStatusHistoryOld RequestStatusHistory[] @relation(name: "oldStatus")
 }
 
+// ماژول درخواستها ...................................................................................................................
+
+// ماژول مخاطبین ...........................................................................................................
 model User {
   id              Int              @id @unique @default(autoincrement())
   name            String?
@@ -595,6 +575,14 @@ model UserGroup {
   labels      Label[]  @relation("GroupLabels")
 }
 
+enum Role {
+  ADMIN
+  TECHNICIAN
+  USER
+}
+
+// ماژول مخاطبین ...........................................................................................................
+
 model Note {
   id        Int      @id @unique @default(autoincrement())
   requestId Int
@@ -602,28 +590,6 @@ model Note {
   content   String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-model Notification {
-  id        Int      @id @unique @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  requestId Int?
-  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
-  title     String
-  note      String?
-  message   String   @db.Text
-  isRead    Boolean  @default(false)
-  sendSms   Boolean  @default(true)
-  sendEmail Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-enum Role {
-  ADMIN
-  TECHNICIAN
-  USER
 }
 
 enum LabelColor {
@@ -636,7 +602,7 @@ enum LabelColor {
   info
 }
 
-// ماژول وسائل دریافت شده
+// ماژول وسائل دریافت شده .......................................................................................
 
 model DeviceType {
   id              Int              @id @default(autoincrement())
@@ -674,4 +640,66 @@ model ReceivedDevice {
 
   requestId Int?     @unique
   request   Request? @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+// ماژول خدمات ...........................................................................................................................................
+
+// +++ مدل جدید برای خدمات واقعی و قابل قیمت‌گذاری +++
+model ActualService {
+  id          Int     @id @default(autoincrement())
+  name        String
+  price       Float
+  description String? @db.Text
+
+  // --- روابط ---
+  // هر خدمت واقعی زیرمجموعه یک نوع خدمت است
+  serviceTypeId Int
+  serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id])
+
+  // هر خدمت واقعی می تواند در چندین درخواست استفاده شود
+  requests ActualServiceOnRequest[]
+
+  // هر خدمت واقعی می تواند در چندین قلم فاکتور استفاده شود
+  invoiceItems InvoiceItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// +++ جدول واسط برای اتصال "درخواست" و "خدمات واقعی" +++
+
+model ActualServiceOnRequest {
+  id       Int   @id @default(autoincrement())
+  quantity Int   @default(1)
+  price    Float // قیمت خدمت در لحظه افزودن به درخواست (می تواند با قیمت پیش فرض متفاوت باشد)
+
+  requestId Int
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  actualServiceId Int
+  actualService   ActualService @relation(fields: [actualServiceId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([requestId, actualServiceId]) // جلوگیری از افزودن یک خدمت تکراری به یک درخواست
+}
+
+// --- اصلاح مدل ServiceType ---
+model ServiceType {
+  id          Int       @id @unique @default(autoincrement())
+  name        String    @unique
+  description String?   @db.Text
+  basePrice   Float     @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  requests    Request[]
+
+  // --- اصلاحات ---
+  // InvoiceItem دیگر مستقیما به ServiceType وصل نیست
+  // InvoiceItem InvoiceItem[]  // --- این خط حذف یا کامنت شود ---
+
+  // +++ رابطه جدید: هر نوع خدمت، چندین خدمت واقعی دارد +++
+  actualServices ActualService[]
 }
