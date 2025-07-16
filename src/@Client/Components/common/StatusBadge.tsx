@@ -26,6 +26,7 @@ const defaultStatusMap: Record<string, { label: string; color: string }> = {
   cancelled: { label: "لغو شده", color: "error" },
   "لغو شده": { label: "لغو شده", color: "error text-white" },
   CANCELED: { label: "لغو شده", color: "error text-white" },
+  COMPLETED: { label: "موفق", color: "success" },
   FAILED: { label: "ناموفق", color: "error text-white" },
   draft: { label: "پیش‌نویس", color: "secondary" },
   published: { label: "منتشر شده", color: "success" },

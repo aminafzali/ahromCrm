@@ -53,6 +53,7 @@ export default function RemindersModuleView() {
       PENDING: "در انتظار",
       COMPLETED: "ارسال شده",
       CANCELLED: "لغو شده",
+      FAILED: "ناموفق",
     }[status],
   }));
   filters.push({
@@ -68,7 +69,7 @@ export default function RemindersModuleView() {
       loading={loading}
       error={error}
       fetcher={fetchReminders}
-    //  deleteItem={deleteItem}
+      //  deleteItem={deleteItem}
       filterOptions={filters}
       createUrl="/dashboard/reminders/create"
     />
