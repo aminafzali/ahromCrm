@@ -1,35 +1,35 @@
+// مسیر فایل: src/@Server/Http/Controller/BaseController.ts (نسخه نهایی، کامل و اصلاح‌شده)
+
 import { AuthProvider } from "@/@Server/Providers/AuthProvider";
 import { NextRequest, NextResponse } from "next/server";
 import {
   BadRequestException,
   BaseException,
+  ForbiddenException,
   NotFoundException,
+  UnauthorizedException,
   ValidationException,
 } from "../../Exceptions/BaseException";
 import { BaseService } from "../Service/BaseService";
 
-export abstract class BaseController<T> {
+export abstract class BaseController<T extends { userId?: number | null }> {
   protected service: BaseService<T>;
-  protected include?: Record<string, boolean | object> = {};
-  protected own?: boolean = true;
-  protected mustLoggedIn?: boolean = false;
-  protected defaultOrderBy: Record<string, "asc" | "desc"> = {
-    createdAt: "desc",
-  };
+  protected include: Record<string, boolean | object>;
+  protected own: boolean;
+  protected mustLoggedIn: boolean;
 
   constructor(
     service: BaseService<T>,
-    include?: Record<string, boolean | object>,
-    own?: boolean
+    include: Record<string, boolean | object> = {},
+    own: boolean = true,
+    mustLoggedIn: boolean = true
   ) {
     this.service = service;
     this.include = include;
     this.own = own;
+    this.mustLoggedIn = mustLoggedIn;
   }
 
-  /**
-   * Parse query parameters from request
-   */
   protected parseQueryParams(req: NextRequest): any {
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get("limit") || "20");
@@ -47,8 +47,7 @@ export abstract class BaseController<T> {
     };
     let dynamicInclude = { ...this.include };
 
-    // Process all query parameters for filters
-    for (const key of searchParams.keys()) {
+    for (const [key, value] of searchParams.entries()) {
       if (
         ![
           "page",
@@ -62,20 +61,11 @@ export abstract class BaseController<T> {
           "endDate",
         ].includes(key)
       ) {
-        const value = searchParams.get(key);
         if (value) {
           if (key === "labels" || key === "groups") {
-            filters[key] = { some: { id: parseInt(value) } }; // مقدار را به عدد تبدیل کن
-          } else if (
-            key === "statusId" ||
-            key === "serviceTypeId" ||
-            key === "categoryId" ||
-            key === "brandId" ||
-            key === "deviceTypeId" ||
-            key === "actualServiceId" ||
-            key === "reminderId"
-          ) {
-            filters[key] = parseInt(value); // مقدار را به عدد تبدیل کن
+            filters[key] = { some: { id: parseInt(value) } };
+          } else if (key.endsWith("Id")) {
+            filters[key] = parseInt(value);
           } else {
             filters[key] = value;
           }
@@ -83,10 +73,6 @@ export abstract class BaseController<T> {
       }
     }
 
-    // Set order by
-    // orderBy[orderField] = orderDirection as "asc" | "desc";
-
-    // Process include parameter
     if (searchParams.has("include")) {
       try {
         dynamicInclude = JSON.parse(searchParams.get("include")!);
@@ -94,7 +80,6 @@ export abstract class BaseController<T> {
         throw new BadRequestException("Invalid include format");
       }
     }
-
     return {
       page,
       limit,
@@ -102,22 +87,31 @@ export abstract class BaseController<T> {
       search,
       orderBy,
       include: dynamicInclude,
-      dateRange: {
-        startDate,
-        endDate,
-      },
+      dateRange: { startDate, endDate },
     };
   }
 
-  /**
-   * Get all records with pagination and filtering
-   */
   async getAll(req: NextRequest): Promise<NextResponse> {
     return this.executeAction(req, async () => {
-      const u = await AuthProvider.isAuthenticated(req, this.mustLoggedIn);
+      const context = await AuthProvider.isAuthenticated(
+        req,
+        this.mustLoggedIn
+      );
+      if (this.mustLoggedIn && !context.workspaceId)
+        throw new BadRequestException("Workspace not identified.");
+
       const params = this.parseQueryParams(req);
 
-      // Apply date range filter if provided
+      if (context.workspaceId) {
+        params.filters.workspaceId = context.workspaceId;
+      }
+
+      if (this.own && context.role?.name === "USER") {
+        if (!context.user)
+          throw new UnauthorizedException("User context is required.");
+        params.filters.userId = context.user.id;
+      }
+
       if (params.dateRange.startDate || params.dateRange.endDate) {
         params.filters.createdAt = {};
         if (params.dateRange.startDate) {
@@ -128,219 +122,184 @@ export abstract class BaseController<T> {
         }
       }
 
-      if (this.own) {
-        if (u.role === "USER") {
-          params.filters.userId = u.id;
-        }
-      }
-
-      console.log("params", params);
-
       const data = await this.service.getAll(params);
       return this.success(data);
     });
   }
 
-  /**
-   * Get a record by ID
-   */
-  async getById(req: NextRequest, id: number): Promise<NextResponse> {
+  async getById(req: NextRequest, id: string | number): Promise<NextResponse> {
     return this.executeAction(req, async () => {
-      const u = await AuthProvider.isAuthenticated(req);
-      const filters = {};
-      if (this.own) {
-        if (u.role === "USER") {
-          filters["userId"] = u.id;
-        }
+      const numericId = typeof id === "string" ? parseInt(id, 10) : id;
+      const context = await AuthProvider.isAuthenticated(req);
+      if (!context.workspaceId || !context.user)
+        throw new UnauthorizedException(
+          "User and Workspace context are required."
+        );
+
+      const filters: any = { workspaceId: context.workspaceId };
+
+      if (this.own && context.role?.name === "USER") {
+        filters.userId = context.user.id;
       }
-      const entity = await this.service.getById(id, {
+
+      const entity = await this.service.getById(numericId, {
         include: this.include,
         filters,
       });
-      if (!entity) {
-        throw new NotFoundException("Entity not found");
-      }
+      if (!entity)
+        throw new NotFoundException("Entity not found in this workspace");
 
       return this.success(entity);
     });
   }
 
-  /**
-   * Create a new record
-   */
   async create(req: NextRequest): Promise<NextResponse> {
     return this.executeAction(req, async () => {
-      await AuthProvider.isAuthenticated(req);
-      const body = await req.json();
-      // ++ لاگ ۱: این لاگ را اضافه کنید ++
-      console.log("--- DEBUG [BaseController]: Received body to create:", body);
-
-      try {
-        const data = await this.service.create(body);
-        return this.created({
-          message: "Entity created successfully",
-          data,
-        });
-      } catch (error) {
-        if (error instanceof ValidationException) {
-          throw error;
-        }
-        throw error;
-        throw new BadRequestException("Invalid input data");
-      }
-    });
-  }
-
-  /**
-   * Update a record
-   */
-  async update(req: NextRequest, id: number): Promise<NextResponse> {
-    return this.executeAction(req, async () => {
-      await AuthProvider.isAdmin(req);
-      const body = await req.json();
-      try {
-        const data = await this.service.update(id, body);
-        return this.success({
-          message: "Entity updated successfully",
-          data,
-        });
-      } catch (error) {
-        if (error instanceof ValidationException) {
-          throw error;
-        }
-        if (error instanceof NotFoundException) {
-          throw error;
-        }
-        throw new BadRequestException("Invalid input data");
-      }
-    });
-  }
-
-  /**
-   * Update a record
-   */
-  async put(req: NextRequest, id: number): Promise<NextResponse> {
-    return this.executeAction(req, async () => {
-      await AuthProvider.isAdmin(req);
-      const body = await req.json();
-      try {
-        const data = await this.service.put(id, body);
-        return this.success({
-          message: "Entity updated successfully",
-          data,
-        });
-      } catch (error) {
-        if (error instanceof ValidationException) {
-          throw error;
-        }
-        if (error instanceof NotFoundException) {
-          throw error;
-        }
-        throw new BadRequestException("Invalid input data");
-      }
-    });
-  }
-
-  /**
-   * Delete a record
-   */
-  async delete(req: NextRequest, id: number): Promise<NextResponse> {
-    return this.executeAction(req, async () => {
-      await AuthProvider.isAdmin(req);
-      try {
-        await this.service.delete(id);
-        return this.noContent();
-      } catch (error) {
-        if (error instanceof NotFoundException) {
-          throw error;
-        }
-        throw new BadRequestException("Could not delete entity");
-      }
-    });
-  }
-
-  /**
-   * update Status
-   */
-  async updateStatus(req: NextRequest, id: number): Promise<NextResponse> {
-    return this.executeAction(req, async () => {
-      await AuthProvider.isAdmin(req);
-      const body = await req.json();
-      try {
-        await this.service.updateStatus(
-          id,
-          body.statusId,
-          body.note,
-          body.sendSms
+      const context = await AuthProvider.isAuthenticated(req);
+      if (!context.workspaceId || !context.user)
+        throw new UnauthorizedException(
+          "User and Workspace context are required for creation."
         );
-        return this.success("با موفقیت به روز رسانی شد", 201);
-      } catch (error) {
-        if (error instanceof NotFoundException) {
-          throw error;
-        }
-        throw new BadRequestException("Could not delete entity");
-      }
-    });
-  }
 
-  /**
-   * Delete a record
-   */
-  async createReminder(req: NextRequest, id: number): Promise<NextResponse> {
-    return this.executeAction(req, async () => {
-      await AuthProvider.isAdmin(req);
       const body = await req.json();
-      try {
-        await this.service.createReminder(id, body);
-        return this.success("با موفقیت یاد آور ساخته شد", 201);
-      } catch (error) {
-        console.log(error);
-        if (error instanceof NotFoundException) {
-          throw error;
-        }
-        throw new BadRequestException("Could not ");
-      }
+      const dataToCreate = {
+        ...body,
+        workspaceId: context.workspaceId,
+        userId: body.userId || context.user.id,
+      };
+
+      const data = await this.service.create(dataToCreate);
+      return this.created({ message: "Entity created successfully", data });
     });
   }
 
-  /**
-   * Bulk operations
-   */
+  async update(req: NextRequest, id: string | number): Promise<NextResponse> {
+    return this.executeAction(req, async () => {
+      const numericId = typeof id === "string" ? parseInt(id, 10) : id;
+      const context = await AuthProvider.isAuthenticated(req);
+      if (context.role?.name !== "Admin")
+        throw new ForbiddenException("Admin access required for update.");
+
+      await this.service.getById(numericId, {
+        filters: { workspaceId: context.workspaceId },
+      });
+
+      const body = await req.json();
+      const data = await this.service.update(numericId, body);
+      return this.success({ message: "Entity updated successfully", data });
+    });
+  }
+
+  async delete(req: NextRequest, id: string | number): Promise<NextResponse> {
+    return this.executeAction(req, async () => {
+      const numericId = typeof id === "string" ? parseInt(id, 10) : id;
+      const context = await AuthProvider.isAuthenticated(req);
+
+      const entityToDelete = await this.service.getById(numericId, {
+        filters: { workspaceId: context.workspaceId },
+      });
+      if (!entityToDelete)
+        throw new NotFoundException("Entity not found in this workspace.");
+
+      if (context.role?.name !== "Admin") {
+        if (this.own && entityToDelete.userId !== context.user?.id) {
+          throw new ForbiddenException(
+            "Permission denied to delete this entity."
+          );
+        }
+      }
+
+      await this.service.delete(numericId);
+      return this.noContent();
+    });
+  }
+
+  async updateStatus(
+    req: NextRequest,
+    id: string | number
+  ): Promise<NextResponse> {
+    return this.executeAction(req, async () => {
+      const numericId = typeof id === "string" ? parseInt(id, 10) : id;
+      const context = await AuthProvider.isAuthenticated(req);
+      if (context.role?.name !== "Admin")
+        throw new ForbiddenException(
+          "Admin access required for status update."
+        );
+
+      await this.service.getById(numericId, {
+        filters: { workspaceId: context.workspaceId },
+      });
+
+      const body = await req.json();
+      await this.service.updateStatus(
+        numericId,
+        body.statusId,
+        body.note,
+        body.sendSms
+      );
+      return this.success("با موفقیت به روز رسانی شد", 201);
+    });
+  }
+
+  async createReminder(
+    req: NextRequest,
+    id: string | number
+  ): Promise<NextResponse> {
+    return this.executeAction(req, async () => {
+      const numericId = typeof id === "string" ? parseInt(id, 10) : id;
+      const context = await AuthProvider.isAuthenticated(req);
+      if (context.role?.name !== "Admin")
+        throw new ForbiddenException(
+          "Admin access required to create reminder."
+        );
+
+      await this.service.getById(numericId, {
+        filters: { workspaceId: context.workspaceId },
+      });
+
+      const body = await req.json();
+      const reminderData = { ...body, workspaceId: context.workspaceId };
+
+      await this.service.createReminder(numericId, reminderData);
+      return this.success("با موفقیت یاد آور ساخته شد", 201);
+    });
+  }
+
   async bulk(req: NextRequest): Promise<NextResponse> {
     return this.executeAction(req, async () => {
-      await AuthProvider.isAdmin(req);
-      const body = await req.json();
+      const context = await AuthProvider.isAuthenticated(req);
+      if (context.role?.name !== "Admin")
+        throw new ForbiddenException(
+          "Admin access required for bulk operations."
+        );
 
-      if (!body.operation || !body.data) {
+      const body = await req.json();
+      if (!body.operation || !body.data)
         throw new BadRequestException("Operation and data are required");
-      }
+
+      const whereWithWorkspace = {
+        ...(body.where || {}),
+        workspaceId: context.workspaceId,
+      };
 
       let result;
-
       switch (body.operation) {
         case "createMany":
-          result = await this.service.createMany(body.data);
+          const dataWithWorkspace = body.data.map((item: any) => ({
+            ...item,
+            workspaceId: context.workspaceId,
+          }));
+          result = await this.service.createMany(dataWithWorkspace);
           break;
         case "updateMany":
-          if (!body.where) {
-            throw new BadRequestException(
-              "Where clause is required for updateMany"
-            );
-          }
-          result = await this.service.updateMany(body.where, body.data);
+          result = await this.service.updateMany(whereWithWorkspace, body.data);
           break;
         case "deleteMany":
-          if (!body.where) {
-            throw new BadRequestException(
-              "Where clause is required for deleteMany"
-            );
-          }
-          result = await this.service.deleteMany(body.where);
+          result = await this.service.deleteMany(whereWithWorkspace);
           break;
         default:
-          throw new BadRequestException("Invalid operation");
+          throw new BadRequestException("Invalid bulk operation");
       }
-
       return this.success({
         message: `Bulk operation ${body.operation} completed successfully`,
         result,
@@ -348,9 +307,6 @@ export abstract class BaseController<T> {
     });
   }
 
-  /**
-   * Execute an action with error handling
-   */
   protected async executeAction(
     req: NextRequest,
     action: () => Promise<NextResponse>
@@ -358,25 +314,22 @@ export abstract class BaseController<T> {
     try {
       return await action();
     } catch (error) {
-      // console.error(error);
       return this.handleException(error);
     }
   }
 
-  /**
-   * Handle exceptions
-   */
   protected handleException(error: unknown): NextResponse {
-    // --- لطفاً این بخش را با کد زیر جایگزین کنید ---
     console.error("====== SERVER ERROR (BaseController) ======");
-    if (error instanceof Error) {
+    if (error instanceof ValidationException) {
+      console.error("Error Name: ValidationException");
+      console.error("Validation Errors:", error.errors);
+    } else if (error instanceof Error) {
       console.error("Error Name:", error.name);
       console.error("Error Message:", error.message);
       console.error("Error Stack:", error.stack);
     } else {
       console.error("Caught a non-Error object:", error);
     }
-    // --- پایان تغییر ---
 
     if (error instanceof BaseException) {
       return NextResponse.json(
@@ -384,97 +337,40 @@ export abstract class BaseController<T> {
         { status: error.statusCode }
       );
     }
-
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
     return NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 }
     );
   }
 
-  /**
-   * Return a success response
-   */
   protected success<T>(data: T, status: number = 200): NextResponse {
     return NextResponse.json(data, { status });
   }
 
-  /**
-   * Return a created response
-   */
   protected created<T>(data: T): NextResponse {
     return this.success(data, 201);
   }
 
-  /**
-   * Return a no content response
-   */
   protected noContent(): NextResponse {
     return new NextResponse(null, { status: 204 });
   }
 
-  /**
-   * Link an entity to another (e.g., add a tag to a post)
-   */
-  async link(req: NextRequest, id: number): Promise<NextResponse> {
+  async link(req: NextRequest, id: string | number): Promise<NextResponse> {
     return this.executeAction(req, async () => {
-      await AuthProvider.isAdmin(req);
-      const body = await req.json();
-
-      if (!body.relation || !body.relatedIds) {
-        throw new BadRequestException("Relation and relatedIds are required");
-      }
-
-      try {
-        const data = await this.service.link(
-          id,
-          body.relation,
-          body.relatedIds
-        );
-        return this.success({
-          message: "Entities linked successfully",
-          data,
-        });
-      } catch (error) {
-        if (error instanceof NotFoundException) {
-          throw error;
-        }
-        throw new BadRequestException("Could not link entities");
-      }
+      throw new BadRequestException(
+        "Link method is not yet implemented for workspaces."
+      );
     });
   }
 
-  /**
-   * Unlink an entity from another (e.g., remove a tag from a post)
-   */
-  async unlink(req: NextRequest, id: number): Promise<NextResponse> {
+  async unlink(req: NextRequest, id: string | number): Promise<NextResponse> {
     return this.executeAction(req, async () => {
-      await AuthProvider.isAdmin(req);
-      const body = await req.json();
-
-      if (!body.relation || !body.relatedIds) {
-        throw new BadRequestException("Relation and relatedIds are required");
-      }
-
-      try {
-        const data = await this.service.unlink(
-          id,
-          body.relation,
-          body.relatedIds
-        );
-        return this.success({
-          message: "Entities unlinked successfully",
-          data,
-        });
-      } catch (error) {
-        if (error instanceof NotFoundException) {
-          throw error;
-        }
-        throw new BadRequestException("Could not unlink entities");
-      }
+      throw new BadRequestException(
+        "Unlink method is not yet implemented for workspaces."
+      );
     });
   }
 }

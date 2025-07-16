@@ -1,61 +1,86 @@
-import { getToken } from 'next-auth/jwt';
-import { NextRequest } from 'next/server';
-import { ForbiddenException, UnauthorizedException } from '../Exceptions/BaseException';
+// مسیر فایل: src/@Server/Providers/AuthProvider.ts
+
+import { getServerSession } from "next-auth";
+import { NextRequest } from "next/server";
+import { authOptions } from "@/lib/authOptions";
+import {
+  ForbiddenException,
+  UnauthorizedException,
+  BadRequestException,
+} from "../Exceptions/BaseException";
+import prisma from "@/lib/prisma";
+import { User } from "@prisma/client";
 
 export class AuthProvider {
   /**
-   * Check if the user is authenticated
+   * Checks if the user is authenticated and has access to the specified workspace.
+   * Returns a full context object including user, workspaceId, and role.
    */
-  static async isAuthenticated(req: NextRequest , mustLoggedIn: boolean = true): Promise<any> {
-    const token = await getToken({ req });
-    
-    if (!token && mustLoggedIn) {
-      throw new UnauthorizedException('You must be logged in to access this resource');
+  static async isAuthenticated(req: NextRequest, mustBeLoggedIn = true) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email && mustBeLoggedIn) {
+      throw new UnauthorizedException("Not authenticated");
     }
     
-    return token;
+    // اگر کاربر لاگین نکرده بود و الزامی هم نبود، یک context خالی برمی‌گردانیم
+    if (!session?.user?.email) {
+      return { user: null, workspaceId: null, role: null };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user && mustBeLoggedIn) {
+      throw new UnauthorizedException("User not found");
+    }
+
+    // ++ منطق جدید برای تشخیص ورک‌اسپیس و نقش ++
+    // ما شناسه ورک‌اسپیس را از یک هدر سفارشی در درخواست می‌خوانیم
+    const workspaceIdHeader = req.headers.get("X-Workspace-Id");
+    if (!workspaceIdHeader && mustBeLoggedIn) {
+      throw new BadRequestException("X-Workspace-Id header is required");
+    }
+    const workspaceId = parseInt(workspaceIdHeader as string, 10);
+
+    if (isNaN(workspaceId) && mustBeLoggedIn) {
+      throw new BadRequestException("Invalid Workspace ID format");
+    }
+
+    // بررسی اینکه آیا کاربر عضو این ورک‌اسپیس است یا خیر
+    const workspaceUser = await prisma.workspaceUser.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId: workspaceId,
+          userId: user!.id,
+        },
+      },
+      include: {
+        role: true, // نقش کاربر را نیز دریافت می‌کنیم
+      },
+    });
+
+    if (!workspaceUser && mustBeLoggedIn) {
+      throw new ForbiddenException("Access denied to this workspace");
+    }
+
+    // برگرداندن یک آبجکت "زمینه" (Context) کامل
+    return {
+      user,
+      workspaceId,
+      role: workspaceUser?.role, // آبجکت کامل نقش کاربر در این ورک‌اسپیس
+    };
   }
 
   /**
-   * Check if the user is an admin
+   * Checks if the user is an admin within the current workspace context.
    */
-  static async isAdmin(req: NextRequest): Promise<any> {
-    const token = await AuthProvider.isAuthenticated(req);
-    
-    if (token.role !== "ADMIN") {
-      throw new ForbiddenException('You do not have permission to access this resource');
+  static async isAdmin(req: NextRequest) {
+    const context = await this.isAuthenticated(req);
+    // فرض می‌کنیم نقشی با نام "Admin" برای مدیران تعریف شده است
+    if (context.role?.name !== "Admin") {
+      throw new ForbiddenException("Admin access required");
     }
-    
-    return token;
-  }
-
-  /**
-   * Check if the user has a specific role
-   */
-  static async hasRole(req: NextRequest, roles: string[]): Promise<any> {
-    const token = await AuthProvider.isAuthenticated(req);
-    
-    if (!roles.includes(token.role)) {
-      throw new ForbiddenException('You do not have permission to access this resource');
-    }
-    
-    return token;
-  }
-
-  /**
-   * Check if the user owns a resource
-   */
-  static async ownsResource(req: NextRequest, userId:  string): Promise<any> {
-    const token = await AuthProvider.isAuthenticated(req);
-    
-    // Convert to string for comparison
-    const tokenUserId = token.id.toString();
-    const resourceUserId = userId.toString();
-    
-    if (token.role !== 'ADMIN' && tokenUserId !== resourceUserId) {
-      throw new ForbiddenException('You do not have permission to access this resource');
-    }
-    
-    return token;
+    return context;
   }
 }
