@@ -10,8 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function GET(req: NextRequest) {
   try {
-    // احراز هویت کاربر بدون نیاز به هدر ورک‌اسپیس
-    // ما mustBeLoggedIn را true می‌فرستیم اما چون هدر ورک‌اسپیس نداریم، AuthProvider فقط کاربر را برمی‌گرداند.
+    // احراز هویت کاربر. در اینجا نیازی به ارسال هدر ورک‌اسپیس نیست.
     const context = await AuthProvider.isAuthenticated(req, true);
 
     if (!context.user) {
