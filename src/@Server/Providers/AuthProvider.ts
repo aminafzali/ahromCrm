@@ -1,28 +1,30 @@
-// مسیر فایل: src/@Server/Providers/AuthProvider.ts
+// مسیر فایل: src/@Server/Providers/AuthProvider.ts (نسخه نهایی و کامل)
 
+import { authOptions } from "@/lib/authOptions";
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextRequest } from "next/server";
-import { authOptions } from "@/lib/authOptions";
 import {
+  BadRequestException,
   ForbiddenException,
   UnauthorizedException,
-  BadRequestException,
 } from "../Exceptions/BaseException";
-import prisma from "@/lib/prisma";
-import { User } from "@prisma/client";
 
+/**
+ * این کلاس مسئولیت کامل احراز هویت و کنترل دسترسی را بر عهده دارد
+ * و اکنون مفهوم ورک‌اسپیس را به طور کامل درک می‌کند.
+ */
 export class AuthProvider {
   /**
-   * Checks if the user is authenticated and has access to the specified workspace.
-   * Returns a full context object including user, workspaceId, and role.
+   * بررسی می‌کند که آیا کاربر احراز هویت شده و به ورک‌اسپیس مشخص شده دسترسی دارد یا خیر.
+   * یک آبجکت "زمینه" (Context) کامل شامل کاربر، شناسه ورک‌اسپیس و نقش کاربر در آن ورک‌اسپیس را برمی‌گرداند.
    */
   static async isAuthenticated(req: NextRequest, mustBeLoggedIn = true) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email && mustBeLoggedIn) {
       throw new UnauthorizedException("Not authenticated");
     }
-    
-    // اگر کاربر لاگین نکرده بود و الزامی هم نبود، یک context خالی برمی‌گردانیم
+
     if (!session?.user?.email) {
       return { user: null, workspaceId: null, role: null };
     }
@@ -36,15 +38,25 @@ export class AuthProvider {
     }
 
     // ++ منطق جدید برای تشخیص ورک‌اسپیس و نقش ++
-    // ما شناسه ورک‌اسپیس را از یک هدر سفارشی در درخواست می‌خوانیم
     const workspaceIdHeader = req.headers.get("X-Workspace-Id");
     if (!workspaceIdHeader && mustBeLoggedIn) {
-      throw new BadRequestException("X-Workspace-Id header is required");
+      // اگر هدر وجود نداشت، یک خطای واضح برمی‌گردانیم
+      throw new BadRequestException(
+        "X-Workspace-Id header is required for this operation."
+      );
     }
+
     const workspaceId = parseInt(workspaceIdHeader as string, 10);
 
     if (isNaN(workspaceId) && mustBeLoggedIn) {
-      throw new BadRequestException("Invalid Workspace ID format");
+      throw new BadRequestException(
+        "Invalid Workspace ID format in X-Workspace-Id header."
+      );
+    }
+
+    // اگر لاگین بودن الزامی نباشد و هدر هم نباشد، context خالی برگردان
+    if (!mustBeLoggedIn && !workspaceIdHeader) {
+      return { user, workspaceId: null, role: null };
     }
 
     // بررسی اینکه آیا کاربر عضو این ورک‌اسپیس است یا خیر
@@ -56,27 +68,29 @@ export class AuthProvider {
         },
       },
       include: {
-        role: true, // نقش کاربر را نیز دریافت می‌کنیم
+        role: true, // نقش کاربر را نیز به همراه اطلاعات آن دریافت می‌کنیم
       },
     });
 
     if (!workspaceUser && mustBeLoggedIn) {
-      throw new ForbiddenException("Access denied to this workspace");
+      throw new ForbiddenException(
+        "Access denied. You are not a member of this workspace."
+      );
     }
 
     // برگرداندن یک آبجکت "زمینه" (Context) کامل
     return {
       user,
       workspaceId,
-      role: workspaceUser?.role, // آبجکت کامل نقش کاربر در این ورک‌اسپیس
+      role: workspaceUser?.role, // آبجکت کامل نقش کاربر (شامل id, name, description)
     };
   }
 
   /**
-   * Checks if the user is an admin within the current workspace context.
+   * بررسی می‌کند که آیا کاربر در ورک‌اسپیس فعلی، نقش "Admin" را دارد یا خیر.
    */
   static async isAdmin(req: NextRequest) {
-    const context = await this.isAuthenticated(req);
+    const context = await this.isAuthenticated(req, true);
     // فرض می‌کنیم نقشی با نام "Admin" برای مدیران تعریف شده است
     if (context.role?.name !== "Admin") {
       throw new ForbiddenException("Admin access required");
