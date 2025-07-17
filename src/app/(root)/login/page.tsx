@@ -1,211 +1,140 @@
+// مسیر فایل: src/app/(root)/login/page.tsx (نسخه نهایی و کامل)
+
 "use client";
 
-import { Button, Form, Input } from "ndui-ahrom";
+import axios from "axios";
 import { signIn } from "next-auth/react";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { z } from "zod";
-
-// Schema for phone number input
-const phoneSchema = z.object({
-  phone: z.string().min(11, "شماره تماس معتبر نیست"),
-});
-
-// Schema for OTP verification
-const otpSchema = z.object({
-  otp: z
-    .number()
-    .min(100000, "کد تایید باید 6 رقم باشد")
-    .max(999999, "کد تایید باید 6 رقم باشد"),
-});
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 export default function LoginPage() {
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [step, setStep] = useState(1);
   const [phone, setPhone] = useState("");
-  const [token, setToken] = useState("");
+  const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const [callBack, setCallBack] = useState<string>("/");
+  const searchParams = useSearchParams();
 
-  const pathname = usePathname(); // برای بازنشانی مقدار هنگام تغییر صفحه
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("callbackUrl"))
-      setCallBack(params.get("callbackUrl") as string);
-  }, [pathname]); // هنگام تغییر مسیر مقدار رو دوباره بگیره
-
-  // Handle phone number submission
-  const handlePhoneSubmit = async (data: { phone: string }) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setError(null);
-    setPhone(data.phone);
-
     try {
-      // Call API to send OTP
-      const response = await fetch("/api/auth/send-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ phone: data.phone }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setError(result.error || "خطا در ارسال کد تایید");
-      } else {
-        // Store token for OTP verification
-        setToken(result.token);
-        // Move to OTP verification step
-        setStep("otp");
-      }
-    } catch (error) {
-      setError("خطا در ارسال کد تایید");
-      console.error("Send OTP error:", error);
+      // استفاده از axios برای مدیریت بهتر خطاها
+      await axios.post("/api/auth/send-otp", { phone });
+      setStep(2);
+    } catch (err: any) {
+      // نمایش خطای سرور یا یک پیام عمومی
+      setError(err.response?.data?.error || "خطایی در ارسال کد رخ داد.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle OTP verification
-  const handleOtpSubmit = async (data: { otp: number }) => {
-    setLoading(true);
-    setError(null);
-    const o: string = data.otp.toString();
-    try {
-      // Verify OTP
-      const response = await fetch("/api/auth/verify-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ token, otp: o }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setError(result.error || "کد تایید نامعتبر است");
-      } else {
-        // Sign in with NextAuth using the verified token
-        const signInResult = await signIn("credentials", {
-          redirect: true,
-          callbackUrl: callBack,
-          phone,
-          token: result.token,
-        });
-
-        if (signInResult?.error) {
-          setError("خطا در ورود به سیستم");
-        }
-      }
-    } catch (error) {
-      setError("خطا در تایید کد");
-      console.error("Verify OTP error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle resend OTP
-  const handleResendOtp = async () => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setError(null);
 
-    try {
-      // Call API to resend OTP
-      const response = await fetch("/api/auth/send-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ phone }),
-      });
+    const result = await signIn("credentials", {
+      redirect: false,
+      phone,
+      otp,
+    });
 
-      const result = await response.json();
+    setLoading(false);
 
-      if (!response.ok) {
-        setError(result.error || "خطا در ارسال مجدد کد تایید");
-      } else {
-        // Update token
-        setToken(result.token);
-        // Show success message
-        setError("کد تایید جدید ارسال شد");
-      }
-    } catch (error) {
-      setError("خطا در ارسال مجدد کد تایید");
-      console.error("Resend OTP error:", error);
-    } finally {
-      setLoading(false);
+    if (result?.error) {
+      setError(result.error);
+    } else if (result?.ok) {
+      // پس از لاگین موفق، به صفحه انتخاب ورک‌اسپیس هدایت می‌شویم
+      const callbackUrl =
+        searchParams.get("callbackUrl") || "/select-workspace";
+      router.push(callbackUrl);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-6 text-center">ورود به سامانه</h1>
+    <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+      <div className="card shadow-sm" style={{ width: "25rem" }}>
+        <div className="card-body p-4">
+          <h3 className="card-title text-center mb-4">ورود | ثبت‌نام</h3>
+          {error && (
+            <div className="alert alert-danger p-2 text-center small">
+              {error}
+            </div>
+          )}
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+          {step === 1 ? (
+            <form onSubmit={handleSendOtp}>
+              <div className="form-group">
+                <label htmlFor="phone" className="form-label">
+                  شماره موبایل
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  className="form-control form-control-lg text-center"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="09123456789"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn btn-primary w-100 mt-3"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="spinner-border spinner-border-sm"></span>
+                ) : (
+                  "ارسال کد تایید"
+                )}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp}>
+              <div className="form-group text-center">
+                <label htmlFor="otp" className="form-label">
+                  کد تایید ارسال شده را وارد کنید
+                </label>
+                <input
+                  type="text"
+                  id="otp"
+                  inputMode="numeric"
+                  className="form-control form-control-lg text-center"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn btn-link btn-sm mt-2"
+                  onClick={() => {
+                    setStep(1);
+                    setError(null);
+                  }}
+                >
+                  ویرایش شماره موبایل
+                </button>
+              </div>
+              <button
+                type="submit"
+                className="btn btn-success w-100 mt-3"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="spinner-border spinner-border-sm"></span>
+                ) : (
+                  "ورود به سیستم"
+                )}
+              </button>
+            </form>
+          )}
         </div>
-      )}
-
-      {step === "phone" ? (
-        <Form schema={phoneSchema} onSubmit={handlePhoneSubmit}>
-          <div className="space-y-4">
-            <Input
-              name="phone"
-              label="شماره تماس"
-              placeholder="09123456789"
-              type="tel"
-            />
-
-            <Button type="submit" fullWidth disabled={loading}>
-              {loading ? "در حال ارسال کد..." : "دریافت کد تایید"}
-            </Button>
-          </div>
-        </Form>
-      ) : (
-        <Form schema={otpSchema} onSubmit={handleOtpSubmit}>
-          <div className="space-y-4">
-            <p className="text-center mb-4">
-              کد تایید به شماره {phone} ارسال شد
-            </p>
-
-            <Input
-              name="otp"
-              label="کد تایید"
-              placeholder="کد 6 رقمی را وارد کنید"
-              type="number"
-            />
-
-            <Button type="submit" fullWidth disabled={loading}>
-              {loading ? "در حال تایید..." : "تایید و ورود"}
-            </Button>
-
-            <Button
-              variant="ghost"
-              fullWidth
-              onClick={handleResendOtp}
-              disabled={loading}
-            >
-              ارسال مجدد کد
-            </Button>
-
-            <Button
-              variant="ghost"
-              fullWidth
-              onClick={() => setStep("phone")}
-              disabled={loading}
-            >
-              بازگشت
-            </Button>
-          </div>
-        </Form>
-      )}
+      </div>
     </div>
   );
 }
