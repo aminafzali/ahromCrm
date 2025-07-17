@@ -7,7 +7,7 @@ export const dashboardMenuItems = [
     id: "workspaces",
     label: "فضای کاری",
     icon: <DIcon icon="fa-grid" cdi={false}></DIcon>,
-    href: "/workspaces",
+    href: "/dashboard/workspaces",
   },
   {
     id: "dashboard",

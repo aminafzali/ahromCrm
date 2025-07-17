@@ -1,4 +1,4 @@
-// مسیر فایل: src/app/select-workspace/page.tsx
+// مسیر فایل: src/app/select-workspace/page.tsx (نسخه اصلاح‌شده)
 
 "use client";
 
@@ -52,8 +52,10 @@ export default function SelectWorkspacePage() {
                 <hr />
                 <Button
                   className="btn-link mt-3"
-                  onClick={() => router.push("/dashboard/workspaces/create")}
+                  onClick={() => router.push("/manage/workspaces/create")}
                 >
+                  {" "}
+                  {/* ++ اصلاحیه کلیدی ++ */}
                   یا یک ورک‌اسپیس جدید بسازید
                 </Button>
               </div>
@@ -65,8 +67,10 @@ export default function SelectWorkspacePage() {
               </p>
               <Button
                 className="btn btn-primary btn-lg"
-                onClick={() => router.push("/dashboard/workspaces/create")}
+                onClick={() => router.push("/manage/workspaces/create")}
               >
+                {" "}
+                {/* ++ اصلاحیه کلیدی ++ */}
                 <DIcon icon="fa-plus" cdi={false} classCustom="me-2" />
                 ساخت اولین ورک‌اسپیس
               </Button>

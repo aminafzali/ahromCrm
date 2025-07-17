@@ -26,11 +26,17 @@ export default function WorkspaceForm() {
   });
 
   const handleSave = async (data: z.infer<typeof workspaceSchema>) => {
-    const result = await create(data);
-    if (result) {
-      // پس از ایجاد موفق، لیست ورک‌اسپیس‌ها را دوباره فراخوانی می‌کنیم
-      refetchWorkspaces();
-      router.push("/dashboard/workspaces");
+    try {
+      const result = await create(data);
+      if (result) {
+        // پس از ایجاد موفق، لیست ورک‌اسپیس‌ها را دوباره فراخوانی می‌کنیم
+        await refetchWorkspaces();
+        // سپس کاربر را به صفحه انتخاب ورک‌اسپیس هدایت می‌کنیم تا بتواند وارد ورک‌اسپیس جدید خود شود
+        router.push("/select-workspace");
+      }
+    } catch (error) {
+      console.error("Failed to create workspace:", error);
+      // هوک useCrud به صورت خودکار نوتیفیکیشن خطا را نمایش می‌دهد
     }
   };
 
@@ -49,14 +55,14 @@ export default function WorkspaceForm() {
               {...register("name")}
             />
             {errors.name && (
-              <div className="invalid-feedback">{errors.name.message}</div>
+              <div className="invalid-feedback">{errors.name?.message}</div>
             )}
           </div>
         </div>
         <div className="col-md-6">
           <div className="form-group">
             <label htmlFor="slug" className="form-label">
-              اسلاگ (آدرس یکتا) <span className="text-danger">*</span>
+              شناسه یکتا (در URL) <span className="text-danger">*</span>
             </label>
             <input
               id="slug"
@@ -65,7 +71,7 @@ export default function WorkspaceForm() {
               {...register("slug")}
             />
             {errors.slug && (
-              <div className="invalid-feedback">{errors.slug.message}</div>
+              <div className="invalid-feedback">{errors.slug?.message}</div>
             )}
           </div>
         </div>
@@ -80,7 +86,17 @@ export default function WorkspaceForm() {
           انصراف
         </button>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? "در حال ذخیره..." : "ایجاد ورک‌اسپیس"}
+          {submitting ? (
+            <>
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                aria-hidden="true"
+              ></span>
+              در حال ساخت...
+            </>
+          ) : (
+            "ایجاد ورک‌اسپیس"
+          )}
         </button>
       </div>
     </form>
