@@ -10,7 +10,6 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function GET(req: NextRequest) {
   try {
-    // احراز هویت کاربر. در اینجا نیازی به ارسال هدر ورک‌اسپیس نیست.
     const context = await AuthProvider.isAuthenticated(req, true);
 
     if (!context.user) {

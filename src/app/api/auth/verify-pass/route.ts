@@ -1,63 +1,66 @@
-import { NextRequest, NextResponse } from "next/server";
+// مسیر فایل: src/app/api/auth/verify-pass/routes.ts (نسخه نهایی و کامل)
+
 import prisma from "@/lib/prisma";
-import { z } from "zod";
+import { compare } from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { compare } from "bcryptjs"; // تغییر از bcrypt به bcryptjs
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 const loginSchema = z.object({
-  phone: z.string(),
-  password: z.string(),
+  phone: z.string().min(10, { message: "شماره تلفن نامعتبر است" }),
+  password: z
+    .string()
+    .min(6, { message: "رمز عبور باید حداقل ۶ کاراکتر باشد" }),
 });
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Validate input
     const validation = loginSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
-        { error: validation.error.errors },
+        { error: validation.error.format() },
         { status: 400 }
       );
     }
 
     const { phone, password } = validation.data;
 
-    // Find user by phone number
     const user = await prisma.user.findUnique({ where: { phone } });
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    if (!user.password) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // Verify password
-    const isPasswordValid = await compare(password, user.password);
-    if (!isPasswordValid) {
+    if (!user || !user.password) {
       return NextResponse.json(
-        { error: "Invalid phone number or password" },
-        { status: 400 }
+        { error: "شماره تلفن یا رمز عبور نامعتبر است" },
+        { status: 401 }
       );
     }
 
-    // Generate authentication token
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error("JWT_SECRET is not defined");
+    const isPasswordValid = await compare(password, user.password);
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { error: "شماره تلفن یا رمز عبور نامعتبر است" },
+        { status: 401 }
+      );
     }
 
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET is not defined in .env file");
+    }
+
+    // ++ اصلاحیه: حذف فیلد role از توکن JWT ++
+    // در این مرحله، ما فقط هویت کاربر را تایید می‌کنیم.
+    // نقش کاربر بعداً بر اساس ورک‌اسپیس انتخابی مشخص می‌شود.
     const authToken = jwt.sign(
       {
         id: user.id,
         phone: user.phone,
-        role: user.role,
+        email: user.email,
+        name: user.name,
       },
       secret,
-      { expiresIn: "90d" }
+      { expiresIn: "30d" }
     );
 
     return NextResponse.json({
@@ -66,7 +69,8 @@ export async function POST(req: NextRequest) {
         id: user.id,
         name: user.name,
         phone: user.phone,
-        role: user.role,
+        email: user.email,
+        // ++ اصلاحیه: فیلد role که دیگر وجود ندارد، حذف شده است ++
       },
       token: authToken,
     });

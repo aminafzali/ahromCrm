@@ -127,6 +127,10 @@ model User {
   reviews              Review[]
   receivedDevices      ReceivedDevice[]
 
+  // ++ این دو فیلد جدید را برای مدیریت OTP اضافه کنید ++
+  otp        String?
+  otpExpires DateTime?
+
   labels     UserLabel[]
   userGroups UserGroupMember[]
 }

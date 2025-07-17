@@ -4,6 +4,12 @@ import DIcon from "@/@Client/Components/common/DIcon";
 
 export const dashboardMenuItems = [
   {
+    id: "workspaces",
+    label: "فضای کاری",
+    icon: <DIcon icon="fa-grid" cdi={false}></DIcon>,
+    href: "/workspaces",
+  },
+  {
     id: "dashboard",
     label: "داشبورد",
     icon: <DIcon icon="fa-grid" cdi={false}></DIcon>,
