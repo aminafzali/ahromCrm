@@ -1,29 +1,43 @@
+// مسیر فایل: src/@Client/hooks/useCrud.ts (نسخه نهایی، کامل و اصلاح‌شده)
+
 import { ApiError } from "@/@Client/Exceptions/ApiError";
 import { BaseRepository } from "@/@Client/Http/Repository/BaseRepository";
 import { FullQueryParams, PaginationResult } from "@/@Client/types";
 import { useToast } from "ndui-ahrom";
 import { useCallback, useState } from "react";
 
-/**
- * هوک جنریک برای مدیریت عملیات CRUD
- */
 export function useCrud<
   T,
   CreateInput = any,
   UpdateInput = any,
-  UpdateStatus = any,
-  createFormSchema = any
+  UpdateStatus = any
 >(repository: BaseRepository<T, number>) {
-  const [loading, setLoading] = useState<boolean>(true);
+  // ++ اصلاحیه کلیدی ۱: مقدار اولیه loading باید false باشد ++
+  const [loading, setLoading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [statusCode, setStatus] = useState<number>(0);
   const [success, setSuccess] = useState<string | null>(null);
-  const { showToast } = useToast(); // دریافت متد نمایش پیام
+  const { showToast } = useToast();
 
-  /**
-   * دریافت لیست ‌ها
-   */
+  const handleError = useCallback(
+    (error: unknown) => {
+      if (error instanceof ApiError) {
+        setError(error.message);
+        setStatus(error.statusCode);
+        showToast(error.message, "error");
+      } else {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
+        setError(errorMessage);
+        showToast(errorMessage, "error");
+      }
+    },
+    [showToast]
+  );
+
   const getAll = useCallback(
     async (params: FullQueryParams = { page: 1, limit: 10 }) => {
       setLoading(true);
@@ -38,12 +52,9 @@ export function useCrud<
         setLoading(false);
       }
     },
-    [repository]
+    [repository, handleError]
   );
 
-  /**
-   * دریافت یک  بر اساس ID
-   */
   const getById = useCallback(
     async (id: number) => {
       setLoading(true);
@@ -58,47 +69,38 @@ export function useCrud<
         setLoading(false);
       }
     },
-    [repository]
+    [repository, handleError]
   );
 
-  /**
-   * ایجاد  جدید
-   */
   const create = useCallback(
-    async (data: any) => {
-      // setLoading(true);
+    async (data: CreateInput) => {
       setSubmitting(true);
       setError(null);
       setSuccess(null);
       try {
         const result = await repository.create(data);
-        setSuccess(" با موفقیت ایجاد شد");
-        showToast(" با موفقیت ایجاد شد", "success");
+        setSuccess("با موفقیت ایجاد شد");
+        showToast("با موفقیت ایجاد شد", "success");
         return result;
       } catch (error) {
         handleError(error);
         throw error;
       } finally {
-        // setLoading(false);
         setSubmitting(false);
       }
     },
-    [repository]
+    [repository, handleError, showToast]
   );
 
-  /**
-   * به‌روزرسانی
-   */
   const update = useCallback(
     async (id: number, data: UpdateInput) => {
-      // setLoading(true);
       setSubmitting(true);
       setError(null);
       setSuccess(null);
       try {
         const result = await repository.update<UpdateInput>(id, data);
-        setSuccess(" با موفقیت به‌روزرسانی شد");
-        showToast(" با موفقیت به‌روزرسانی شد", "info");
+        setSuccess("با موفقیت به‌روزرسانی شد");
+        showToast("با موفقیت به‌روزرسانی شد", "info");
         return result;
       } catch (error) {
         handleError(error);
@@ -107,21 +109,18 @@ export function useCrud<
         setSubmitting(false);
       }
     },
-    [repository]
+    [repository, handleError, showToast]
   );
-  /**
-   * به‌روزرسانی
-   */
+
   const Put = useCallback(
     async (id: number, data: any) => {
-      // setLoading(true);
       setSubmitting(true);
       setError(null);
       setSuccess(null);
       try {
         const result = await repository.Put(id, data);
-        setSuccess(" با موفقیت به‌روزرسانی شد");
-        showToast(" با موفقیت به‌روزرسانی شد", "info");
+        setSuccess("با موفقیت به‌روزرسانی شد");
+        showToast("با موفقیت به‌روزرسانی شد", "info");
         return result;
       } catch (error) {
         handleError(error);
@@ -130,22 +129,18 @@ export function useCrud<
         setSubmitting(false);
       }
     },
-    [repository]
+    [repository, handleError, showToast]
   );
 
-  /**
-   * به‌روزرسانی
-   */
   const link = useCallback(
     async (id: number, data: any) => {
-      // setLoading(true);
       setSubmitting(true);
       setError(null);
       setSuccess(null);
       try {
         const result = await repository.link(id, data);
-        setSuccess(" با موفقیت به‌روزرسانی شد");
-        showToast(" با موفقیت به‌روزرسانی شد", "info");
+        setSuccess("با موفقیت به‌روزرسانی شد");
+        showToast("با موفقیت به‌روزرسانی شد", "info");
         return result;
       } catch (error) {
         handleError(error);
@@ -154,22 +149,18 @@ export function useCrud<
         setSubmitting(false);
       }
     },
-    [repository]
+    [repository, handleError, showToast]
   );
 
-  /**
-   * به‌روزرسانی
-   */
   const unlink = useCallback(
     async (id: number, data: any) => {
-      // setLoading(true);
       setSubmitting(true);
       setError(null);
       setSuccess(null);
       try {
         const result = await repository.unlink(id, data);
-        setSuccess(" با موفقیت به‌روزرسانی شد");
-        showToast(" با موفقیت به‌روزرسانی شد", "info");
+        setSuccess("با موفقیت به‌روزرسانی شد");
+        showToast("با موفقیت به‌روزرسانی شد", "info");
         return result;
       } catch (error) {
         handleError(error);
@@ -178,20 +169,17 @@ export function useCrud<
         setSubmitting(false);
       }
     },
-    [repository]
+    [repository, handleError, showToast]
   );
 
-  /**
-   * حذف
-   */
   const remove = useCallback(
     async (id: number) => {
       setSubmitting(true);
       setError(null);
       try {
         await repository.delete(id);
-        setSuccess(" با موفقیت حذف شد");
-        showToast(" با موفقیت حذف شد", "error");
+        setSuccess("با موفقیت حذف شد");
+        showToast("با موفقیت حذف شد", "error");
       } catch (error) {
         handleError(error);
         throw error;
@@ -199,21 +187,14 @@ export function useCrud<
         setSubmitting(false);
       }
     },
-    [repository]
+    [repository, handleError, showToast]
   );
 
-  /**
-   * Update status
-   */
   const updateStatus = useCallback(
     async (id: number, data: UpdateStatus) => {
-      //TODO:T1 خط زیر کامنت شده راه حل اصلاحی نیاز است
       setSubmitting(true);
       setError(null);
       setSuccess(null);
-      console.log("id in updateStatus", id);
-      console.log("data in updateStatus", data);
-
       try {
         const result = await repository.updateStatus<UpdateStatus>(id, data);
         setSuccess("وضعیت با موفقیت بروزرسانی شد");
@@ -221,38 +202,32 @@ export function useCrud<
         return result;
       } catch (error) {
         handleError(error);
-        console.log("error in updateStatus :" + error);
         throw error;
       } finally {
-        //TODO:T1 خط زیر کامنت شده راه حل اصلاحی نیاز است
         setSubmitting(false);
       }
     },
-    //TODO : بررسی کن چرا آرایه دارای ریپازیتوری نیست در حالی که از آن استفاده شده است
-    []
+    [repository, handleError, showToast]
   );
 
-  /**
-   * مدیریت خطاها
-   */
-  const handleError = (error: unknown) => {
-    if (error instanceof ApiError) {
-      setError(error.message);
-      setStatus(error.statusCode);
-    } else {
-      setError(
-        error instanceof Error ? error.message : "An unexpected error occurred"
-      );
-    }
-  };
-
-  const createReminder = async (data: any) => {
-    try {
-      return await repository.createReminder(data.entityId, data);
-    } catch (error) {
-      throw error;
-    }
-  };
+  const createReminder = useCallback(
+    async (data: any) => {
+      setSubmitting(true);
+      setError(null);
+      try {
+        const result = await repository.createReminder(data.entityId, data);
+        setSuccess("یادآور با موفقیت ایجاد شد");
+        showToast("یادآور با موفقیت ایجاد شد", "success");
+        return result;
+      } catch (error) {
+        handleError(error);
+        throw error;
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [repository, handleError, showToast]
+  );
 
   return {
     statusCode,

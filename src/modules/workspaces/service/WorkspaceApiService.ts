@@ -8,31 +8,23 @@ import { Workspace } from "@prisma/client";
 import { searchFileds } from "../data/fetch";
 import { workspaceSchema } from "../validation/schema";
 
-// یک ریپازیتوری داخلی فقط برای استفاده در این سرویس
 class Repository extends BaseRepository<Workspace> {
   constructor() {
     super("Workspace");
   }
 }
 
-/**
- * این سرویس، منطق پیچیده مربوط به ایجاد و مدیریت ورک‌اسپیس‌ها را کپسوله می‌کند.
- */
 export class WorkspaceApiService extends BaseService<Workspace> {
   constructor() {
     super(
       new Repository(),
       workspaceSchema,
-      workspaceSchema.partial(), // برای متد update
+      workspaceSchema.partial(),
       searchFileds
     );
   }
 
-  /**
-   * ما متد create را بازنویسی (override) می‌کنیم تا منطق سفارشی خود را اضافه کنیم.
-   * @param data داده‌های ورودی برای ساخت ورک‌اسپیس (شامل name و slug).
-   * @param context آبجکت احراز هویت شامل کاربر و ورک‌اسپیس فعال.
-   */
+  // ++ اصلاحیه: متد create اکنون context را به عنوان پارامتر دوم می‌پذیرد ++
   async create(data: any, context?: any): Promise<Workspace> {
     if (!context || !context.user) {
       throw new ForbiddenException(
@@ -40,31 +32,20 @@ export class WorkspaceApiService extends BaseService<Workspace> {
       );
     }
 
-    const { name, slug } = data;
+    // اعتبارسنجی داده‌های ورودی با اسکیمای اصلی
+    const validatedData = this.createSchema.parse(data);
+    const { name, slug } = validatedData;
     const ownerId = context.user.id;
 
-    // استفاده از تراکنش پریزما برای تضمین اجرای تمام عملیات با هم
-    const newWorkspace = await prisma.$transaction(async (tx) => {
-      // قدم اول: ساخت ورک‌اسپیس
+    return prisma.$transaction(async (tx) => {
       const workspace = await tx.workspace.create({
-        data: {
-          name,
-          slug,
-          ownerId,
-        },
+        data: { name, slug, ownerId },
       });
-
-      // قدم دوم: پیدا کردن یا ساختن نقش "Admin"
       const adminRole = await tx.role.upsert({
         where: { name: "Admin" },
         update: {},
-        create: {
-          name: "Admin",
-          description: "دسترسی کامل به تمام منابع ورک‌اسپیس",
-        },
+        create: { name: "Admin", description: "دسترسی کامل" },
       });
-
-      // قدم سوم: انتساب کاربر به ورک‌اسپیس جدید با نقش ادمین
       await tx.workspaceUser.create({
         data: {
           workspaceId: workspace.id,
@@ -72,10 +53,7 @@ export class WorkspaceApiService extends BaseService<Workspace> {
           roleId: adminRole.id,
         },
       });
-
       return workspace;
     });
-
-    return newWorkspace;
   }
 }

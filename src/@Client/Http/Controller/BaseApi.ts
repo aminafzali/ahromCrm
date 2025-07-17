@@ -1,4 +1,4 @@
-// مسیر فایل: src/@Client/Http/Controller/BaseApi.ts (نسخه نهایی و کامل)
+// مسیر فایل: src/@Client/Http/Controller/BaseApi.ts (نسخه نهایی با حداقل تغییرات)
 
 import { ApiError } from "../../Exceptions/ApiError";
 
@@ -14,7 +14,10 @@ export class BaseApi {
     };
   }
 
-  protected async get<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
+  protected async get<T>(
+    endpoint: string,
+    params: Record<string, any> = {}
+  ): Promise<T> {
     const url = this.buildUrl(endpoint, params);
     return this.request<T>(url);
   }
@@ -31,7 +34,10 @@ export class BaseApi {
 
   protected async patch<T>(endpoint: string, data: any): Promise<T> {
     const url = this.buildUrl(endpoint);
-    return this.request<T>(url, { method: "PATCH", body: JSON.stringify(data) });
+    return this.request<T>(url, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
   }
 
   protected async Delete<T>(endpoint: string): Promise<T> {
@@ -40,7 +46,12 @@ export class BaseApi {
   }
 
   private buildUrl(endpoint: string, params: Record<string, any> = {}): string {
-    const url = new URL(`${this.baseUrl}/${endpoint.startsWith("/") ? endpoint.substring(1) : endpoint}`, typeof window !== "undefined" ? window.location.origin : this.baseUrl);
+    const url = new URL(
+      `${this.baseUrl}/${
+        endpoint.startsWith("/") ? endpoint.substring(1) : endpoint
+      }`,
+      typeof window !== "undefined" ? window.location.origin : this.baseUrl
+    );
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         url.searchParams.append(key, String(value));
@@ -50,41 +61,69 @@ export class BaseApi {
   }
 
   private async request<T>(url: string, options: RequestInit = {}): Promise<T> {
-    // ++ منطق جدید برای اضافه کردن هدر ورک‌اسپیس ++
-    const activeWorkspaceId = typeof window !== 'undefined' ? localStorage.getItem('activeWorkspaceId') : null;
+    const activeWorkspaceId =
+      typeof window !== "undefined"
+        ? localStorage.getItem("activeWorkspaceId")
+        : null;
 
     const mergedOptions: RequestInit = {
       ...options,
+      // ++ اصلاحیه ۱: به fetch می‌گوییم کوکی‌ها را برای احراز هویت ارسال کن ++
+      credentials: "include",
       headers: {
         ...this.defaultHeaders,
         ...options.headers,
+        // ++ اصلاحیه ۲: هدر ورک‌اسپیس را نیز اضافه می‌کنیم ++
+        ...(activeWorkspaceId && { "X-Workspace-Id": activeWorkspaceId }),
       },
     };
 
-    if (activeWorkspaceId) {
-      (mergedOptions.headers as Record<string, string>)['X-Workspace-Id'] = activeWorkspaceId;
-    }
-    // -- پایان منطق جدید --
-
     try {
       const response = await fetch(url, mergedOptions);
-      let data;
-      const contentType = response.headers.get("content-type");
 
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      } else {
-        const textData = await response.text();
-        data = textData ? JSON.parse(textData) : { success: response.ok };
+      if (response.status === 204) {
+        // No Content
+        return {} as T;
       }
+
+      const textData = await response.text();
+      // Handle cases where the response body is empty but the request was successful
+      const data = textData ? JSON.parse(textData) : { success: response.ok };
 
       if (!response.ok) {
-        throw new ApiError(data.error || "An error occurred", response.status, data.errors);
+        throw new ApiError(
+          data.error || "An error occurred",
+          response.status,
+          data.errors
+        );
       }
+
       return data as T;
     } catch (error) {
-      if (error instanceof ApiError) throw error;
-      throw new ApiError(error instanceof Error ? error.message : "Network error", 500);
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(
+        error instanceof Error
+          ? error.message
+          : "A network or parsing error occurred",
+        500
+      );
+    }
+  }
+
+  protected setAuthToken(token: string | null): void {
+    if (token) {
+      this.defaultHeaders = {
+        ...this.defaultHeaders,
+        Authorization: `Bearer ${token}`,
+      };
+    } else {
+      const { Authorization, ...headers } = this.defaultHeaders as Record<
+        string,
+        string
+      >;
+      this.defaultHeaders = headers;
     }
   }
 }

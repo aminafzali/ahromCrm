@@ -1,11 +1,16 @@
-// مسیر فایل: src/@Client/Http/Repository/BaseRepository.ts (نسخه نهایی و کامل)
+// مسیر فایل: src/@Client/Http/Repository/BaseRepository.ts
 
 import { FullQueryParams, PaginationResult } from "@/@Client/types";
 import { BaseApi } from "../Controller/BaseApi";
 
-export class BaseRepository<T, IdType extends string | number> extends BaseApi {
+export class BaseRepository<
+  T,
+  IdType extends string | number,
+  CreateInput = any,
+  UpdateInput = any
+> extends BaseApi {
   constructor(slug: string) {
-    super(`/api/${slug}`);
+    super(slug);
   }
 
   getAll(params: FullQueryParams): Promise<PaginationResult<T>> {
@@ -16,15 +21,15 @@ export class BaseRepository<T, IdType extends string | number> extends BaseApi {
     return this.get<T>(`/${id}`, params);
   }
 
-  create<CreateInput>(data: CreateInput): Promise<T> {
+  create(data: CreateInput): Promise<T> {
     return this.post<T>("", data);
   }
 
-  update<UpdateInput>(id: IdType, data: UpdateInput): Promise<T> {
+  update<U extends UpdateInput>(id: IdType, data: U): Promise<T> {
     return this.patch<T>(`/${id}`, data);
   }
 
-  Put<UpdateInput>(id: IdType, data: UpdateInput): Promise<T> {
+  Put(id: IdType, data: any): Promise<T> {
     return this.put<T>(`/${id}`, data);
   }
 
@@ -32,14 +37,11 @@ export class BaseRepository<T, IdType extends string | number> extends BaseApi {
     return this.Delete<void>(`/${id}`);
   }
 
-  updateStatus<UpdateStatus>(id: IdType, data: UpdateStatus): Promise<T> {
+  updateStatus<S>(id: IdType, data: S): Promise<T> {
     return this.patch<T>(`/${id}/status`, data);
   }
 
-  createReminder<ReminderInput>(
-    id: IdType,
-    data: ReminderInput
-  ): Promise<void> {
+  createReminder<R>(id: IdType, data: R): Promise<void> {
     return this.post<void>(`/${id}/reminders`, data);
   }
 

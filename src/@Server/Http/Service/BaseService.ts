@@ -110,7 +110,7 @@ export abstract class BaseService<T> {
   /**
    * Create a new record with validation and hooks
    */
-  async create(data: any): Promise<T> {
+  async create(data: any, context: { user: { address: string; name: string | null; id: number; createdAt: Date; updatedAt: Date; email: string | null; phone: string; password: string | null; otp: string | null; otpExpires: Date | null; } | null; workspaceId: null; role: null; } | { user: { address: string; name: string | null; id: number; createdAt: Date; updatedAt: Date; email: string | null; phone: string; password: string | null; otp: string | null; otpExpires: Date | null; } | null; workspaceId: number; role: { name: string; id: number; createdAt: Date; updatedAt: Date; description: string | null; } | undefined; }): Promise<T> {
     if (this.createSchema) {
       //TODO: خط زیر باید برداشته شود
       console.log("" + this.createSchema);

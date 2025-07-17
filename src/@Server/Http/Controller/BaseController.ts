@@ -61,10 +61,8 @@ export abstract class BaseController<T extends { userId?: number | null }> {
           "endDate",
         ].includes(key)
       ) {
-        if (value) {
-          if (key === "labels" || key === "groups") {
-            filters[key] = { some: { id: parseInt(value) } };
-          } else if (key.endsWith("Id")) {
+        if (value && value !== "all") {
+          if (key.endsWith("Id")) {
             filters[key] = parseInt(value);
           } else {
             filters[key] = value;
@@ -162,13 +160,10 @@ export abstract class BaseController<T extends { userId?: number | null }> {
         );
 
       const body = await req.json();
-      const dataToCreate = {
-        ...body,
-        workspaceId: context.workspaceId,
-        userId: body.userId || context.user.id,
-      };
 
-      const data = await this.service.create(dataToCreate);
+      // ++ اصلاحیه کلیدی: پاس دادن context به لایه سرویس ++
+      const data = await this.service.create(body, context);
+
       return this.created({ message: "Entity created successfully", data });
     });
   }
@@ -213,6 +208,55 @@ export abstract class BaseController<T extends { userId?: number | null }> {
       return this.noContent();
     });
   }
+
+  protected async executeAction(
+    req: NextRequest,
+    action: () => Promise<NextResponse>
+  ): Promise<NextResponse> {
+    try {
+      return await action();
+    } catch (error) {
+      return this.handleException(error);
+    }
+  }
+
+  protected handleException(error: unknown): NextResponse {
+    console.error("====== SERVER ERROR (BaseController) ======");
+    if (error instanceof ValidationException) {
+      console.error("Validation Errors:", error.errors);
+    } else if (error instanceof Error) {
+      console.error("Error Name:", error.name);
+      console.error("Error Message:", error.message);
+    } else {
+      console.error("Caught a non-Error object:", error);
+    }
+
+    if (error instanceof BaseException) {
+      return NextResponse.json(
+        { error: error.message, ...(error.errors && { errors: error.errors }) },
+        { status: error.statusCode }
+      );
+    }
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json(
+      { error: "An unexpected error occurred" },
+      { status: 500 }
+    );
+  }
+
+  protected success<T>(data: T, status: number = 200): NextResponse {
+    return NextResponse.json(data, { status });
+  }
+  protected created<T>(data: T): NextResponse {
+    return this.success(data, 201);
+  }
+  protected noContent(): NextResponse {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  // ... سایر متدها (updateStatus, createReminder و ...) بدون تغییر باقی می‌مانند ...
 
   async updateStatus(
     req: NextRequest,
@@ -305,57 +349,6 @@ export abstract class BaseController<T extends { userId?: number | null }> {
         result,
       });
     });
-  }
-
-  protected async executeAction(
-    req: NextRequest,
-    action: () => Promise<NextResponse>
-  ): Promise<NextResponse> {
-    try {
-      return await action();
-    } catch (error) {
-      return this.handleException(error);
-    }
-  }
-
-  protected handleException(error: unknown): NextResponse {
-    console.error("====== SERVER ERROR (BaseController) ======");
-    if (error instanceof ValidationException) {
-      console.error("Error Name: ValidationException");
-      console.error("Validation Errors:", error.errors);
-    } else if (error instanceof Error) {
-      console.error("Error Name:", error.name);
-      console.error("Error Message:", error.message);
-      console.error("Error Stack:", error.stack);
-    } else {
-      console.error("Caught a non-Error object:", error);
-    }
-
-    if (error instanceof BaseException) {
-      return NextResponse.json(
-        { error: error.message, ...(error.errors && { errors: error.errors }) },
-        { status: error.statusCode }
-      );
-    }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    return NextResponse.json(
-      { error: "An unexpected error occurred" },
-      { status: 500 }
-    );
-  }
-
-  protected success<T>(data: T, status: number = 200): NextResponse {
-    return NextResponse.json(data, { status });
-  }
-
-  protected created<T>(data: T): NextResponse {
-    return this.success(data, 201);
-  }
-
-  protected noContent(): NextResponse {
-    return new NextResponse(null, { status: 204 });
   }
 
   async link(req: NextRequest, id: string | number): Promise<NextResponse> {
