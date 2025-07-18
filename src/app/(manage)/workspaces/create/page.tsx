@@ -1,9 +1,6 @@
 // مسیر فایل: src/app/(manage)/workspaces/create/page.tsx
-
 "use client";
-
-// ** ایمپورت از مسیر صحیح در ماژول‌ها **
-import WorkspaceForm from "@/modules/workspaces/components/WorkspaceForm";
+import WorkspaceForm from "../_components/WorkspaceForm";
 
 export default function WorkspaceCreatePage() {
   return (
@@ -13,8 +10,8 @@ export default function WorkspaceCreatePage() {
       </div>
       <div className="card-body p-4">
         <p className="text-muted mb-4">
-          یک فضای کاری جدید برای کسب‌وکار یا تیم خود بسازید. شما به عنوان مالک
-          این ورک‌اسپیس شناخته خواهید شد.
+          یک فضای کاری جدید بسازید. شما به عنوان مالک این ورک‌اسپیس شناخته
+          خواهید شد.
         </p>
         <WorkspaceForm />
       </div>

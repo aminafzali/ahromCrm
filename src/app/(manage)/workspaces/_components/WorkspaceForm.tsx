@@ -1,20 +1,16 @@
-// مسیر فایل: src/modules/workspaces/components/WorkspaceForm.tsx
-
+// مسیر فایل: src/app/(manage)/workspaces/_components/WorkspaceForm.tsx
 "use client";
-
 import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
+import { useWorkspaceCrud } from "@/@Client/hooks/useWorkspaceCrud";
+import { workspaceSchema } from "@/@Server/services/workspaces/WorkspaceApiService"; // ایمپورت مستقیم اسکیما
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useWorkspaceCrud } from "../hooks/useWorkspaceCrud";
-import { workspaceSchema } from "../validation/schema";
 
 export default function WorkspaceForm() {
   const router = useRouter();
-  // هوک context برای رفرش کردن لیست ورک‌اسپیس‌ها پس از ایجاد
   const { refetchWorkspaces } = useWorkspace();
-  // هوک CRUD برای ارسال داده به سرور
   const { create, submitting } = useWorkspaceCrud();
 
   const {
@@ -29,14 +25,11 @@ export default function WorkspaceForm() {
     try {
       const result = await create(data);
       if (result) {
-        // پس از ایجاد موفق، لیست ورک‌اسپیس‌ها را دوباره فراخوانی می‌کنیم
         await refetchWorkspaces();
-        // سپس کاربر را به صفحه انتخاب ورک‌اسپیس هدایت می‌کنیم تا بتواند وارد ورک‌اسپیس جدید خود شود
         router.push("/select-workspace");
       }
     } catch (error) {
       console.error("Failed to create workspace:", error);
-      // هوک useCrud به صورت خودکار نوتیفیکیشن خطا را نمایش می‌دهد
     }
   };
 
@@ -54,9 +47,7 @@ export default function WorkspaceForm() {
               className={`form-control ${errors.name ? "is-invalid" : ""}`}
               {...register("name")}
             />
-            {errors.name && (
-              <div className="invalid-feedback">{errors.name?.message}</div>
-            )}
+            <div className="invalid-feedback">{errors.name?.message}</div>
           </div>
         </div>
         <div className="col-md-6">
@@ -70,9 +61,7 @@ export default function WorkspaceForm() {
               className={`form-control ${errors.slug ? "is-invalid" : ""}`}
               {...register("slug")}
             />
-            {errors.slug && (
-              <div className="invalid-feedback">{errors.slug?.message}</div>
-            )}
+            <div className="invalid-feedback">{errors.slug?.message}</div>
           </div>
         </div>
       </div>
@@ -80,23 +69,13 @@ export default function WorkspaceForm() {
         <button
           type="button"
           className="btn btn-light"
-          onClick={() => router.back()}
+          onClick={() => router.push("/select-workspace")}
           disabled={submitting}
         >
           انصراف
         </button>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? (
-            <>
-              <span
-                className="spinner-border spinner-border-sm me-2"
-                aria-hidden="true"
-              ></span>
-              در حال ساخت...
-            </>
-          ) : (
-            "ایجاد ورک‌اسپیس"
-          )}
+          {submitting ? "در حال ساخت..." : "ایجاد ورک‌اسپیس"}
         </button>
       </div>
     </form>

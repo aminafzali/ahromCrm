@@ -1,14 +1,9 @@
 // مسیر فایل: src/app/(manage)/layout.tsx
-
 "use client";
-
-import  AuthProvider  from "@/providers/AuthProvider";
+import { WorkspaceProvider } from "@/@Client/context/WorkspaceProvider";
+import AuthProvider from "@/providers/AuthProvider";
 import { ToastContainer, ToastProvider } from "ndui-ahrom";
 
-/**
- * این Layout ساده، برای صفحات مدیریت کلی مانند ساخت ورک‌اسپیس استفاده می‌شود
- * و فاقد سایدبار و هدر پیچیده داشبورد است.
- */
 export default function ManageLayout({
   children,
 }: {
@@ -17,12 +12,14 @@ export default function ManageLayout({
   return (
     <AuthProvider>
       <ToastProvider>
-        <main className="bg-light min-vh-100 d-flex flex-column">
-          <div className="container-fluid flex-grow-1 d-flex flex-column justify-content-center align-items-center">
-            {children}
-          </div>
-        </main>
-        <ToastContainer position="top-center" />
+        <WorkspaceProvider>
+          <main className="bg-light min-vh-100 d-flex flex-column">
+            <div className="container-fluid flex-grow-1 d-flex flex-column justify-content-center align-items-center p-4">
+              {children}
+            </div>
+          </main>
+          <ToastContainer position="top-center" />
+        </WorkspaceProvider>
       </ToastProvider>
     </AuthProvider>
   );

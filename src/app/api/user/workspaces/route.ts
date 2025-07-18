@@ -10,10 +10,11 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function GET(req: NextRequest) {
   try {
-    const context = await AuthProvider.isAuthenticated(req, true);
+    // احراز هویت کاربر. در اینجا نیازی به ارسال هدر ورک‌اسپیس نیست.
+    const context = await AuthProvider.isAuthenticated(req, true, false);
 
     if (!context.user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const userWorkspaces = await prisma.workspaceUser.findMany({
@@ -22,23 +23,21 @@ export async function GET(req: NextRequest) {
       },
       include: {
         workspace: true, // اطلاعات کامل ورک‌اسپیس را جوین می‌کنیم
-        role: true, // اطلاعات کامل نقش را نیز جوین می‌کنیم
+        role: true,      // اطلاعات کامل نقش را نیز جوین می‌کنیم
       },
       orderBy: {
         workspace: {
-          createdAt: "asc",
-        },
-      },
+          createdAt: 'asc'
+        }
+      }
     });
 
     return NextResponse.json(userWorkspaces, { status: 200 });
+
   } catch (error: any) {
     if (error.statusCode === 401) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    return NextResponse.json(
-      { error: error.message || "An unexpected error occurred" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || "An unexpected error occurred" }, { status: 500 });
   }
 }

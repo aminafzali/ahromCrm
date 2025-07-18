@@ -16,6 +16,16 @@ export default function SelectWorkspacePage() {
     return <Loading />;
   }
 
+  const handleSelect = (ws: any) => {
+    setActiveWorkspace(ws);
+    // پس از انتخاب، بر اساس نقش کاربر به پنل مربوطه هدایت می‌کنیم
+    if (ws.role.name === "USER" || ws.role.name === "Customer") {
+      router.push("/panel");
+    } else {
+      router.push("/dashboard");
+    }
+  };
+
   return (
     <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
       <div
@@ -36,7 +46,7 @@ export default function SelectWorkspacePage() {
                     key={ws.workspaceId}
                     type="button"
                     className="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                    onClick={() => setActiveWorkspace(ws)}
+                    onClick={() => handleSelect(ws)}
                   >
                     <div>
                       <p className="mb-0 fw-bold">{ws.workspace.name}</p>
@@ -54,8 +64,6 @@ export default function SelectWorkspacePage() {
                   className="btn-link mt-3"
                   onClick={() => router.push("/manage/workspaces/create")}
                 >
-                  {" "}
-                  {/* ++ اصلاحیه کلیدی ++ */}
                   یا یک ورک‌اسپیس جدید بسازید
                 </Button>
               </div>
@@ -69,8 +77,6 @@ export default function SelectWorkspacePage() {
                 className="btn btn-primary btn-lg"
                 onClick={() => router.push("/manage/workspaces/create")}
               >
-                {" "}
-                {/* ++ اصلاحیه کلیدی ++ */}
                 <DIcon icon="fa-plus" cdi={false} classCustom="me-2" />
                 ساخت اولین ورک‌اسپیس
               </Button>

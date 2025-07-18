@@ -1,4 +1,4 @@
-// مسیر فایل: src/@Client/context/WorkspaceProvider.tsx (نسخه نهایی و کامل)
+// مسیر فایل: src/@Client/context/WorkspaceProvider.tsx
 
 "use client";
 
@@ -14,7 +14,7 @@ import {
 } from "react";
 import Loading from "../Components/common/Loading";
 
-// تعریف تایپ‌ها بر اساس خروجی API که قبلاً ساختیم
+// تعریف تایپ‌ها بر اساس خروجی API
 interface Role {
   id: number;
   name: string;
@@ -32,7 +32,6 @@ export interface UserWorkspace {
   role: Role;
 }
 
-// تعریف تایپ برای مقادیری که Context در اختیار قرار می‌دهد
 interface WorkspaceContextType {
   workspaces: UserWorkspace[];
   activeWorkspace: UserWorkspace | null;
@@ -41,12 +40,10 @@ interface WorkspaceContextType {
   refetchWorkspaces: () => void;
 }
 
-// ساخت Context
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
   undefined
 );
 
-// کامپوننت Provider اصلی
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const { data: session, status } = useSession();
   const [workspaces, setWorkspaces] = useState<UserWorkspace[]>([]);
@@ -55,7 +52,6 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchWorkspaces = useCallback(async () => {
-    // فقط در صورتی که کاربر احراز هویت شده باشد، درخواست ارسال می‌شود
     if (status === "authenticated") {
       setIsLoading(true);
       try {
@@ -69,25 +65,21 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
         let active: UserWorkspace | null = null;
         if (storedWorkspaceId) {
-          // با || null تضمین می‌کنیم که اگر آیتمی پیدا نشد، مقدار null برگردد نه undefined
           active =
             userWorkspaces.find(
               (ws) => ws.workspaceId.toString() === storedWorkspaceId
             ) || null;
         }
 
-        // اگر ورک‌اسپیس ذخیره شده معتبر نبود، اولین ورک‌اسپیس را به عنوان فعال انتخاب کن
         const currentActive = active || userWorkspaces[0] || null;
         setActiveWorkspaceState(currentActive);
 
-        // اگر ورک‌اسپیس فعالی وجود داشت، آن را در localStorage ذخیره کن
         if (currentActive) {
           localStorage.setItem(
             "activeWorkspaceId",
             currentActive.workspaceId.toString()
           );
         } else {
-          // اگر کاربر هیچ ورک‌اسپیسی نداشت، کلید را پاک کن
           localStorage.removeItem("activeWorkspaceId");
         }
       } catch (error) {
@@ -99,7 +91,6 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // اگر کاربر لاگین نکرده بود یا در حال بررسی بود، لودینگ را تمام کن
     if (status === "unauthenticated" || status === "loading") {
       setIsLoading(false);
       setWorkspaces([]);
@@ -109,9 +100,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchWorkspaces();
-  }, [status]); // وابستگی به status صحیح است تا با تغییر وضعیت لاگین، دوباره فراخوانی شود
+  }, [status, fetchWorkspaces]);
 
-  // تابعی برای تغییر ورک‌اسپیس فعال
   const setActiveWorkspace = (workspace: UserWorkspace | null) => {
     setActiveWorkspaceState(workspace);
     if (workspace) {
@@ -122,11 +112,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     } else {
       localStorage.removeItem("activeWorkspaceId");
     }
-    // رفرش کردن کامل صفحه برای بارگذاری تمام داده‌های مربوط به ورک‌اسپیس جدید
     window.location.reload();
   };
 
-  // تا زمانی که وضعیت لاگین نامشخص است یا در حال دریافت اطلاعات ورک‌اسپیس‌ها هستیم، لودر نمایش بده
   if (status === "loading" || isLoading) {
     return <Loading />;
   }
@@ -146,7 +134,6 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// هوک سفارشی برای استفاده آسان از این Context در کامپوننت‌های دیگر
 export const useWorkspace = () => {
   const context = useContext(WorkspaceContext);
   if (context === undefined) {

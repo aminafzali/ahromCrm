@@ -7,44 +7,48 @@ import { NextResponse } from "next/server";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // مسیرهای API که نیاز به احراز هویت ندارند را از اینجا عبور می‌دهیم
+  // مسیرهای عمومی API که نیازی به احراز هویت ندارند
   const publicApiRoutes = [
-    "/api/auth",
-    "/api/cron", // کران جاب نباید نیاز به لاگین داشته باشد
+    "/api/auth", // تمام مسیرهای زیرمجموعه /api/auth
+    "/api/cron", // مسیر کران جاب
   ];
 
+  // اگر مسیر یکی از مسیرهای عمومی API بود، اجازه عبور می‌دهیم
   if (publicApiRoutes.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
-  // گرفتن توکن کاربر
+  // گرفتن توکن کاربر از کوکی‌ها
   const token = await getToken({ req: request });
 
-  // اگر کاربر توکن ندارد و تلاش می‌کند به یک مسیر محافظت‌شده دسترسی پیدا کند...
+  // اگر کاربر توکن ندارد (لاگین نکرده است)...
   if (!token) {
-    // برای API ها، خطای Unauthorized برمی‌گردانیم
+    // ... و تلاش می‌کند به یک API محافظت‌شده دسترسی پیدا کند، خطای 401 برمی‌گردانیم.
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // برای صفحات، کاربر را به صفحه لاگین هدایت می‌کنیم
+    // ... و تلاش می‌کند به یک صفحه محافظت‌شده (مانند داشبورد) دسترسی پیدا کند، او را به صفحه لاگین هدایت می‌کنیم.
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // ++ اصلاحیه کلیدی: حذف کامل منطق بررسی token.role ++
-  // کنترل دسترسی دقیق (Admin, USER) اکنون در لایه API و کنترلرها انجام می‌شود.
-  // middleware فقط وظیفه حفاظت کلی از مسیرها را بر عهده دارد.
+  // ++ اصلاحیه کلیدی و نهایی: حذف کامل منطق بررسی token.role ++
+  // middleware دیگر نگران نقش کاربر نیست. این وظیفه به لایه‌های بعدی (AuthProvider) واگذار شده است.
+  // اگر کاربر توکن دارد، اجازه دسترسی به تمام مسیرهای محافظت‌شده را می‌دهیم.
 
   return NextResponse.next();
 }
 
+// کانفیگ middleware برای اجرا شدن فقط روی مسیرهای مشخص شده
 export const config = {
   matcher: [
-    // تمام مسیرهای داشبورد، پنل و API (به جز موارد عمومی) را محافظت می‌کنیم
+    // تمام مسیرهای داشبورد، پنل و بخش مدیریت جدید را محافظت می‌کنیم
     "/dashboard/:path*",
     "/panel/:path*",
+    "/manage/:path*",
+    // تمام مسیرهای API (به جز موارد عمومی که در بالا تعریف شد) را محافظت می‌کنیم
     "/api/((?!auth|cron).*)",
   ],
 };
