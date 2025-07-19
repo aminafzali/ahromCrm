@@ -7,48 +7,46 @@ import { NextResponse } from "next/server";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // مسیرهای عمومی API که نیازی به احراز هویت ندارند
-  const publicApiRoutes = [
-    "/api/auth", // تمام مسیرهای زیرمجموعه /api/auth
-    "/api/cron", // مسیر کران جاب
-  ];
-
-  // اگر مسیر یکی از مسیرهای عمومی API بود، اجازه عبور می‌دهیم
-  if (publicApiRoutes.some((path) => pathname.startsWith(path))) {
+  // مسیرهای عمومی API که هرگز نیاز به احراز هویت ندارند
+  const publicApiRoutes = ["/api/auth", "/api/cron"];
+  if (publicApiRoutes.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
   // گرفتن توکن کاربر از کوکی‌ها
   const token = await getToken({ req: request });
 
-  // اگر کاربر توکن ندارد (لاگین نکرده است)...
-  if (!token) {
-    // ... و تلاش می‌کند به یک API محافظت‌شده دسترسی پیدا کند، خطای 401 برمی‌گردانیم.
+  const isAuthPage = pathname.startsWith('/login');
+
+  // سناریو ۱: کاربر لاگین کرده و تلاش می‌کند به صفحه لاگین برود
+  if (token && isAuthPage) {
+    // او را به صفحه انتخاب ورک‌اسپیس هدایت کن
+    return NextResponse.redirect(new URL("/select-workspace", request.url));
+  }
+
+  // سناریو ۲: کاربر لاگین نکرده و تلاش می‌کند به یک مسیر محافظت‌شده دسترسی پیدا کند
+  if (!token && !isAuthPage) {
+    // برای API ها، خطای Unauthorized برمی‌گردانیم
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    // ... و تلاش می‌کند به یک صفحه محافظت‌شده (مانند داشبورد) دسترسی پیدا کند، او را به صفحه لاگین هدایت می‌کنیم.
+    // برای صفحات، کاربر را به صفحه لاگین هدایت می‌کنیم
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // ++ اصلاحیه کلیدی و نهایی: حذف کامل منطق بررسی token.role ++
-  // middleware دیگر نگران نقش کاربر نیست. این وظیفه به لایه‌های بعدی (AuthProvider) واگذار شده است.
-  // اگر کاربر توکن دارد، اجازه دسترسی به تمام مسیرهای محافظت‌شده را می‌دهیم.
-
+  // در غیر این صورت (کاربر لاگین کرده و به مسیر درستی می‌رود)، اجازه عبور می‌دهیم
   return NextResponse.next();
 }
 
-// کانفیگ middleware برای اجرا شدن فقط روی مسیرهای مشخص شده
 export const config = {
   matcher: [
-    // تمام مسیرهای داشبورد، پنل و بخش مدیریت جدید را محافظت می‌کنیم
+    // تمام مسیرهای حساس برنامه را در اینجا تعریف می‌کنیم
     "/dashboard/:path*",
     "/panel/:path*",
-    "/manage/:path*",
-    // تمام مسیرهای API (به جز موارد عمومی که در بالا تعریف شد) را محافظت می‌کنیم
-    "/api/((?!auth|cron).*)",
+    "/select-workspace",
+    "/workspaces/:path*",
+    "/api/((?!auth|cron).*)", // تمام API ها به جز auth و cron
   ],
 };

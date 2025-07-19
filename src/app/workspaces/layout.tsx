@@ -1,4 +1,4 @@
-// مسیر فایل: src/app/select-workspace/layout.tsx (و همچنین workspaces/layout.tsx)
+// مسیر فایل: src/app/workspaces/layout.tsx
 
 "use client";
 

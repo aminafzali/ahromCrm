@@ -7,7 +7,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: "credentials", // نام provider را به credentials تغییر می‌دهیم که استانداردتر است
+      name: "credentials",
       credentials: {
         phone: { label: "Phone", type: "text" },
         otp: { label: "OTP", type: "text" },
@@ -25,7 +25,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error("کاربری با این مشخصات یافت نشد.");
         }
 
-        // ++ اصلاحیه کلیدی: منطق کامل تایید OTP ++
         if (user.otp !== credentials.otp) {
           throw new Error("کد تایید نامعتبر است.");
         }
@@ -33,13 +32,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error("کد تایید منقضی شده است.");
         }
 
-        // پس از تایید موفق، OTP را از دیتابیس پاک می‌کنیم
         await prisma.user.update({
           where: { id: user.id },
           data: { otp: null, otpExpires: null },
         });
 
-        // برگرداندن آبجکت کاربر برای ایجاد نشست
         return {
           id: user.id.toString(),
           name: user.name,
@@ -64,14 +61,22 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
+    // ++ اصلاحیه کلیدی: تعریف callback برای redirect ++
+    async redirect({ url, baseUrl }) {
+      // اگر کاربر در حال لاگین کردن است، همیشه او را به صفحه انتخاب ورک‌اسپیس بفرست
+      if (url.startsWith(baseUrl)) {
+        return `${baseUrl}/select-workspace`;
+      }
+      // در غیر این صورت، به آدرسی که از آن آمده بود برگردان
+      return url;
+    },
   },
   pages: {
     signIn: "/login",
-    error: "/login", // صفحه خطا در صورت بروز مشکل در لاگین
+    error: "/login",
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

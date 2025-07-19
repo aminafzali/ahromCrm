@@ -1,8 +1,10 @@
-// مسیر فایل: src/app/(manage)/workspaces/_components/WorkspaceForm.tsx
+// مسیر فایل: src/app/workspaces/_components/WorkspaceForm.tsx
+
 "use client";
+
 import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 import { useWorkspaceCrud } from "@/@Client/hooks/useWorkspaceCrud";
-import { workspaceSchema } from "@/@Server/services/workspaces/WorkspaceApiService"; // ایمپورت مستقیم اسکیما
+import { workspaceSchema } from "@/@Server/services/workspaces/WorkspaceApiService";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -26,7 +28,8 @@ export default function WorkspaceForm() {
       const result = await create(data);
       if (result) {
         await refetchWorkspaces();
-        router.push("/select-workspace");
+        // کاربر را به صفحه انتخاب برمی‌گردانیم تا ورک‌اسپیس جدیدش را انتخاب کند
+        router.push("/workspaces");
       }
     } catch (error) {
       console.error("Failed to create workspace:", error);
@@ -69,7 +72,7 @@ export default function WorkspaceForm() {
         <button
           type="button"
           className="btn btn-light"
-          onClick={() => router.push("/select-workspace")}
+          onClick={() => router.push("/workspaces")}
           disabled={submitting}
         >
           انصراف

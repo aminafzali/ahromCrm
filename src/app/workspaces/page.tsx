@@ -1,4 +1,4 @@
-// مسیر فایل: src/app/select-workspace/page.tsx
+// مسیر فایل: src/app/workspaces/page.tsx
 
 "use client";
 
@@ -19,8 +19,7 @@ export default function SelectWorkspacePage() {
   const handleSelect = (ws: any) => {
     setActiveWorkspace(ws);
     // پس از انتخاب، بر اساس نقش کاربر به پنل مربوطه هدایت می‌کنیم
-    if (ws.role.name === "USER") {
-      // فرض بر اینکه نقش مشتری "USER" است
+    if (ws.role.name === "USER" || ws.role.name === "Customer") {
       router.push("/panel");
     } else {
       router.push("/dashboard");
