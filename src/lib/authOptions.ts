@@ -1,4 +1,4 @@
-// مسیر فایل: src/lib/authOptions.ts (نسخه نهایی و کامل)
+// مسیر فایل: src/lib/authOptions.ts
 
 import prisma from "@/lib/prisma";
 import { NextAuthOptions, User as NextAuthUser } from "next-auth";
@@ -8,35 +8,27 @@ export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
-      credentials: {
-        phone: { label: "Phone", type: "text" },
-        otp: { label: "OTP", type: "text" },
-      },
+      credentials: { phone: {}, otp: {} },
       async authorize(credentials): Promise<NextAuthUser | null> {
         if (!credentials?.phone || !credentials.otp) {
           throw new Error("شماره تلفن و کد تایید الزامی است.");
         }
-
         const user = await prisma.user.findUnique({
           where: { phone: credentials.phone },
         });
-
         if (!user) {
           throw new Error("کاربری با این مشخصات یافت نشد.");
         }
-
         if (user.otp !== credentials.otp) {
           throw new Error("کد تایید نامعتبر است.");
         }
         if (!user.otpExpires || user.otpExpires < new Date()) {
           throw new Error("کد تایید منقضی شده است.");
         }
-
         await prisma.user.update({
           where: { id: user.id },
           data: { otp: null, otpExpires: null },
         });
-
         return {
           id: user.id.toString(),
           name: user.name,
@@ -61,22 +53,15 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    // ++ اصلاحیه کلیدی: تعریف callback برای redirect ++
     async redirect({ url, baseUrl }) {
-      // اگر کاربر در حال لاگین کردن است، همیشه او را به صفحه انتخاب ورک‌اسپیس بفرست
       if (url.startsWith(baseUrl)) {
-        return `${baseUrl}/select-workspace`;
+        // ++ اصلاحیه: هدایت به آدرس جدید و صحیح ++
+        return `${baseUrl}/workspaces`;
       }
-      // در غیر این صورت، به آدرسی که از آن آمده بود برگردان
       return url;
     },
   },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
-  session: {
-    strategy: "jwt",
-  },
+  pages: { signIn: "/login", error: "/login" },
+  session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
 };

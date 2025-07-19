@@ -28,7 +28,7 @@ export default function WorkspaceForm() {
       const result = await create(data);
       if (result) {
         await refetchWorkspaces();
-        // کاربر را به صفحه انتخاب برمی‌گردانیم تا ورک‌اسپیس جدیدش را انتخاب کند
+        // ++ اصلاحیه: هدایت به آدرس جدید و صحیح ++
         router.push("/workspaces");
       }
     } catch (error) {

@@ -49,8 +49,7 @@ export default function LoginPage() {
       setError(result.error);
     } else if (result?.ok) {
       // پس از لاگین موفق، به صفحه انتخاب ورک‌اسپیس هدایت می‌شویم
-      const callbackUrl =
-        searchParams.get("callbackUrl") || "/select-workspace";
+      const callbackUrl = searchParams.get("callbackUrl") || "/workspaces";
       router.push(callbackUrl);
     }
   };

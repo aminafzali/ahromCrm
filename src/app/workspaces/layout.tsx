@@ -3,7 +3,7 @@
 "use client";
 
 import { WorkspaceProvider } from "@/@Client/context/WorkspaceProvider";
-import AuthProvider from "@/providers/AuthProvider";
+import  AuthProvider  from "@/providers/AuthProvider";
 import { ToastContainer, ToastProvider } from "ndui-ahrom";
 
 export default function WorkspaceLayout({

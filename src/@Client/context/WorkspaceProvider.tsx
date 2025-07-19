@@ -1,12 +1,12 @@
 // مسیر فایل: src/@Client/context/WorkspaceProvider.tsx
 
-"use client";
+"use-client";
 
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import {
   createContext,
-  ReactNode,
+  ReactNode, // اصلاحیه: استفاده از ReactNode
   useCallback,
   useContext,
   useEffect,
@@ -14,7 +14,7 @@ import {
 } from "react";
 import Loading from "../Components/common/Loading";
 
-// تعریف تایپ‌ها بر اساس خروجی API
+// تعریف تایپ‌ها
 interface Role {
   id: number;
   name: string;
@@ -45,7 +45,7 @@ const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
 );
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [workspaces, setWorkspaces] = useState<UserWorkspace[]>([]);
   const [activeWorkspace, setActiveWorkspaceState] =
     useState<UserWorkspace | null>(null);
@@ -63,13 +63,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
         const storedWorkspaceId = localStorage.getItem("activeWorkspaceId");
 
-        let active: UserWorkspace | null = null;
-        if (storedWorkspaceId) {
-          active =
-            userWorkspaces.find(
+        // اصلاحیه: تغییر let به const
+        const active = storedWorkspaceId
+          ? userWorkspaces.find(
               (ws) => ws.workspaceId.toString() === storedWorkspaceId
-            ) || null;
-        }
+            ) || null
+          : null;
 
         const currentActive = active || userWorkspaces[0] || null;
         setActiveWorkspaceState(currentActive);
@@ -100,7 +99,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchWorkspaces();
-  }, [status, fetchWorkspaces]);
+  }, [status]);
 
   const setActiveWorkspace = (workspace: UserWorkspace | null) => {
     setActiveWorkspaceState(workspace);
