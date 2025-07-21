@@ -20,7 +20,7 @@ model Workspace {
   ownerId Int
   owner   User   @relation("OwnedWorkspaces", fields: [ownerId], references: [id], onDelete: Cascade)
 
-  // --- Back-relations for all workspace-specific data ---
+  // --- Back-relations for ALL workspace-specific data ---
   members                 WorkspaceUser[]
   requests                Request[]
   invoices                Invoice[]
@@ -112,6 +112,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  otp        String?
+  otpExpires DateTime?
+
   ownedWorkspaces Workspace[]     @relation("OwnedWorkspaces")
   workspaces      WorkspaceUser[]
 
@@ -127,17 +130,14 @@ model User {
   reviews              Review[]
   receivedDevices      ReceivedDevice[]
 
-  // ++ این دو فیلد جدید را برای مدیریت OTP اضافه کنید ++
-  otp        String?
-  otpExpires DateTime?
-
+  // ++ Explicit many-to-many relations ++
   labels     UserLabel[]
   userGroups UserGroupMember[]
 }
 
 model Request {
   id             Int          @id @unique @default(autoincrement())
-  workspaceId    Int          @default(1)
+  workspaceId    Int
   workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   userId         Int
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -175,7 +175,7 @@ model Request {
 
 model Invoice {
   id          Int       @id @unique @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   requestId   Int?
   request     Request?  @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -201,7 +201,7 @@ model Invoice {
 
 model Product {
   id          Int       @id @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   price       Float
@@ -228,7 +228,7 @@ model Product {
 
 model Brand {
   id              Int              @id @default(autoincrement())
-  workspaceId     Int              @default(1)
+  workspaceId     Int
   workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name            String
   logoUrl         String?
@@ -244,7 +244,7 @@ model Brand {
 
 model Category {
   id          Int        @id @default(autoincrement())
-  workspaceId Int        @default(1)
+  workspaceId Int
   workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   slug        String
@@ -264,7 +264,7 @@ model Category {
 
 model Status {
   id                      Int                    @id @unique @default(autoincrement())
-  workspaceId             Int                    @default(1)
+  workspaceId             Int
   workspace               Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name                    String
   color                   String
@@ -280,7 +280,7 @@ model Status {
 
 model DeviceType {
   id              Int              @id @default(autoincrement())
-  workspaceId     Int              @default(1)
+  workspaceId     Int
   workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name            String
   description     String?          @db.Text
@@ -293,7 +293,7 @@ model DeviceType {
 
 model ReceivedDevice {
   id                 Int        @id @default(autoincrement())
-  workspaceId        Int        @default(1)
+  workspaceId        Int
   workspace          Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   model              String?
   serialNumber       String?
@@ -316,7 +316,7 @@ model ReceivedDevice {
 
 model ServiceType {
   id             Int             @id @unique @default(autoincrement())
-  workspaceId    Int             @default(1)
+  workspaceId    Int
   workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name           String
   description    String?         @db.Text
@@ -332,7 +332,7 @@ model ServiceType {
 
 model ActualService {
   id            Int                      @id @default(autoincrement())
-  workspaceId   Int                      @default(1)
+  workspaceId   Int
   workspace     Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name          String
   price         Float
@@ -347,7 +347,7 @@ model ActualService {
 
 model Form {
   id          Int              @id @default(autoincrement())
-  workspaceId Int              @default(1)
+  workspaceId Int
   workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   description String?          @db.Text
@@ -362,7 +362,7 @@ model Form {
 
 model Label {
   id          Int         @id @default(autoincrement())
-  workspaceId Int         @default(1)
+  workspaceId Int
   workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   color       String      @default("primary")
@@ -375,7 +375,7 @@ model Label {
 
 model UserGroup {
   id          Int               @id @default(autoincrement())
-  workspaceId Int               @default(1)
+  workspaceId Int
   workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   description String?           @db.Text
@@ -406,7 +406,7 @@ model UserGroupMember {
 
 model Attribute {
   id           Int                @id @default(autoincrement())
-  workspaceId  Int                @default(1)
+  workspaceId  Int
   workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name         String
   type         String
@@ -421,7 +421,7 @@ model Attribute {
 
 model Warranty {
   id          Int       @id @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   duration    Int
@@ -433,7 +433,7 @@ model Warranty {
 
 model Reminder {
   id                   Int                 @id @default(autoincrement())
-  workspaceId          Int                 @default(1)
+  workspaceId          Int
   workspace            Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   title                String
   description          String?             @db.Text
@@ -457,7 +457,7 @@ model Reminder {
 
 model Notification {
   id          Int       @id @unique @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   userId      Int
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Notification_userId_fkey")
@@ -476,7 +476,7 @@ model Notification {
 
 model InvoiceItem {
   id              Int             @id @unique @default(autoincrement())
-  workspaceId     Int             @default(1)
+  workspaceId     Int
   workspace       Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   invoiceId       Int
   invoice         Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -499,7 +499,7 @@ model InvoiceItem {
 
 model Payment {
   id          Int           @id @unique @default(autoincrement())
-  workspaceId Int           @default(1)
+  workspaceId Int
   workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   userId      Int?
   user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull, map: "Payment_userId_fkey")
@@ -518,7 +518,7 @@ model Payment {
 
 model Field {
   id           Int           @id @default(autoincrement())
-  workspaceId  Int           @default(1)
+  workspaceId  Int
   workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name         String
   label        String        @default("برچسپ")
@@ -557,7 +557,7 @@ model FieldOption {
 
 model FormSubmission {
   id          Int                   @id @default(autoincrement())
-  workspaceId Int                   @default(1)
+  workspaceId Int
   workspace   Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   formId      Int
   form        Form                  @relation(fields: [formId], references: [id], onDelete: Cascade)
@@ -577,7 +577,7 @@ model FormSubmissionValue {
 
 model ProductImage {
   id          Int       @id @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   productId   Int?
   product     Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -591,7 +591,7 @@ model ProductImage {
 
 model ProductAttribute {
   id          Int       @id @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   productId   Int
   attributeId Int
@@ -604,7 +604,7 @@ model ProductAttribute {
 
 model ProductVariant {
   id          Int       @id @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   productId   Int
   product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -618,7 +618,7 @@ model ProductVariant {
 
 model Review {
   id          Int       @id @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   productId   Int
   product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -632,7 +632,7 @@ model Review {
 
 model ExpertReview {
   id          Int       @id @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   productId   Int
   product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -647,7 +647,7 @@ model ExpertReview {
 
 model RequestAttachment {
   id          Int       @id @unique @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   requestId   Int
   request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -658,7 +658,7 @@ model RequestAttachment {
 
 model RequestStatusHistory {
   id          Int       @id @unique @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   requestId   Int
   request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -673,7 +673,7 @@ model RequestStatusHistory {
 
 model RequestReview {
   id          Int       @id @unique @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   requestId   Int
   request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -686,7 +686,7 @@ model RequestReview {
 
 model RequestCancellation {
   id            Int       @id @unique @default(autoincrement())
-  workspaceId   Int       @default(1)
+  workspaceId   Int
   workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   requestId     Int
   request       Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -698,18 +698,18 @@ model RequestCancellation {
 
 model Note {
   id          Int       @id @unique @default(autoincrement())
-  workspaceId Int       @default(1)
+  workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   requestId   Int
   request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
   content     String    @db.Text
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model ActualServiceOnRequest {
   id              Int           @id @default(autoincrement())
-  workspaceId     Int           @default(1)
+  workspaceId     Int
   workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   quantity        Int           @default(1)
   price           Float

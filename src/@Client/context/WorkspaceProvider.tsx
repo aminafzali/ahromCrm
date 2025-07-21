@@ -1,12 +1,12 @@
 // مسیر فایل: src/@Client/context/WorkspaceProvider.tsx
 
-"use-client";
+"use client";
 
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import {
   createContext,
-  ReactNode, // اصلاحیه: استفاده از ReactNode
+  ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -14,7 +14,7 @@ import {
 } from "react";
 import Loading from "../Components/common/Loading";
 
-// تعریف تایپ‌ها
+// ... (تایپ‌های شما بدون تغییر) ...
 interface Role {
   id: number;
   name: string;
@@ -31,7 +31,6 @@ export interface UserWorkspace {
   workspace: Workspace;
   role: Role;
 }
-
 interface WorkspaceContextType {
   workspaces: UserWorkspace[];
   activeWorkspace: UserWorkspace | null;
@@ -60,27 +59,20 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         );
         const userWorkspaces = response.data;
         setWorkspaces(userWorkspaces);
-
         const storedWorkspaceId = localStorage.getItem("activeWorkspaceId");
-
-        // اصلاحیه: تغییر let به const
         const active = storedWorkspaceId
           ? userWorkspaces.find(
               (ws) => ws.workspaceId.toString() === storedWorkspaceId
             ) || null
           : null;
-
         const currentActive = active || userWorkspaces[0] || null;
         setActiveWorkspaceState(currentActive);
-
-        if (currentActive) {
+        if (currentActive)
           localStorage.setItem(
             "activeWorkspaceId",
             currentActive.workspaceId.toString()
           );
-        } else {
-          localStorage.removeItem("activeWorkspaceId");
-        }
+        else localStorage.removeItem("activeWorkspaceId");
       } catch (error) {
         console.error("Failed to fetch workspaces:", error);
         localStorage.removeItem("activeWorkspaceId");
@@ -89,19 +81,18 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
       }
     }
-
-    if (status === "unauthenticated" || status === "loading") {
+    if (status === "unauthenticated") {
       setIsLoading(false);
-      setWorkspaces([]);
-      setActiveWorkspaceState(null);
     }
   }, [status]);
 
   useEffect(() => {
     fetchWorkspaces();
-  }, [status]);
+  }, [fetchWorkspaces]);
 
   const setActiveWorkspace = (workspace: UserWorkspace | null) => {
+    // ++ اصلاحیه کلیدی: حذف رفرش صفحه ++
+    // ما فقط وضعیت را در state و localStorage آپدیت می‌کنیم.
     setActiveWorkspaceState(workspace);
     if (workspace) {
       localStorage.setItem(
@@ -111,12 +102,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     } else {
       localStorage.removeItem("activeWorkspaceId");
     }
-    window.location.reload();
+    // window.location.reload(); <-- این خط حذف می‌شود
   };
 
-  if (status === "loading" || isLoading) {
-    return <Loading />;
-  }
+  if (status === "loading" || isLoading) return <Loading />;
 
   return (
     <WorkspaceContext.Provider
@@ -135,8 +124,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
 export const useWorkspace = () => {
   const context = useContext(WorkspaceContext);
-  if (context === undefined) {
+  if (context === undefined)
     throw new Error("useWorkspace must be used within a WorkspaceProvider");
-  }
   return context;
 };

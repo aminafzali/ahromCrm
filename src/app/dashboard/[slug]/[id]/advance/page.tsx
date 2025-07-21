@@ -1,5 +1,5 @@
 "use client";
-
+// مسیر : src/app/dashboard/[slug]/[id]/advance/page.tsx
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
 import { useSession } from "next-auth/react";
