@@ -9,47 +9,53 @@ export class BaseRepository<
   CreateInput = any,
   UpdateInput = any
 > extends BaseApi {
+  // ===== شروع اصلاحیه کلیدی =====
+  protected slug: string; // slug را به عنوان یک پراپرتی داخلی نگه می‌داریم
+
   constructor(slug: string) {
-    super(slug);
+    super("/api"); // همیشه آدرس پایه صحیح را به والد پاس می‌دهیم
+    this.slug = slug;
   }
 
+  // در تمام متدها، از this.slug برای ساختن اندپوینت صحیح استفاده می‌کنیم
   getAll(params: FullQueryParams): Promise<PaginationResult<T>> {
-    return this.get<PaginationResult<T>>("", params);
+    return this.get<PaginationResult<T>>(this.slug, params);
   }
 
   getById(id: IdType, params?: any): Promise<T> {
-    return this.get<T>(`/${id}`, params);
+    return this.get<T>(`${this.slug}/${id}`, params);
   }
 
   create(data: CreateInput): Promise<T> {
-    return this.post<T>("", data);
+    return this.post<T>(this.slug, data);
   }
 
   update<U extends UpdateInput>(id: IdType, data: U): Promise<T> {
-    return this.patch<T>(`/${id}`, data);
+    return this.patch<T>(`${this.slug}/${id}`, data);
   }
 
   Put(id: IdType, data: any): Promise<T> {
-    return this.put<T>(`/${id}`, data);
+    return this.put<T>(`${this.slug}/${id}`, data);
   }
 
   delete(id: IdType): Promise<void> {
-    return this.Delete<void>(`/${id}`);
+    return this.Delete<void>(`${this.slug}/${id}`);
   }
 
   updateStatus<S>(id: IdType, data: S): Promise<T> {
-    return this.patch<T>(`/${id}/status`, data);
+    return this.patch<T>(`${this.slug}/${id}/status`, data);
   }
 
   createReminder<R>(id: IdType, data: R): Promise<void> {
-    return this.post<void>(`/${id}/reminders`, data);
+    return this.post<void>(`${this.slug}/${id}/reminders`, data);
   }
 
   link(id: IdType, data: any): Promise<T> {
-    return this.patch<T>(`/${id}/link`, data);
+    return this.patch<T>(`${this.slug}/${id}/link`, data);
   }
 
   unlink(id: IdType, data: any): Promise<T> {
-    return this.patch<T>(`/${id}/unlink`, data);
+    return this.patch<T>(`${this.slug}/${id}/unlink`, data);
   }
+  // ===== پایان اصلاحیه کلیدی =====
 }

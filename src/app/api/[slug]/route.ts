@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest , { params }: { params: Promise<{ slug: string}>}) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
   try {
     const { slug } = await params;
 
@@ -18,7 +21,10 @@ export async function GET(req: NextRequest , { params }: { params: Promise<{ slu
   }
 }
 
-export async function POST(req: NextRequest , { params }: { params: Promise<{ slug: string}>}) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
   try {
     const { slug } = await params;
 

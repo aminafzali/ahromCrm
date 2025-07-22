@@ -76,7 +76,6 @@ export abstract class BaseService<T> {
   async getAll(
     params: FullQueryParams = { page: 1, limit: 10 }
   ): Promise<PaginationResult<T>> {
-    // Ensure searchFields are set if search is provided
     params.searchFields = this.searchableFields;
     const defaultFilter = this.defaultFilter;
     params.filters = { ...params.filters, ...defaultFilter };
@@ -112,26 +111,29 @@ export abstract class BaseService<T> {
   /**
    * Create a new record with validation and hooks
    */
-  async create(data: any, context: AuthContext): Promise<T> {
+  async create(
+    data: any,
+    context: AuthContext,
+    isOwnedByUser: boolean = false
+  ): Promise<T> {
     if (this.createSchema) {
       data = this.validate(this.createSchema, data);
     }
     data = await this.processDynamicFields(data);
 
     // ===== شروع اصلاحیه کلیدی =====
-    // تزریق خودکار شناسه‌های workspaceId و userId از context
-    // این کار تضمین می‌کند که داده‌ها همیشه به درستی به فضای کاری و کاربر فعلی متصل می‌شوند
+    // تزریق خودکار شناسه‌ها از context امن سرور
     if (context.workspaceId) {
       data.workspaceId = context.workspaceId;
     }
-    // اگر مدل شامل userId باشد، آن را نیز اضافه می‌کنیم
-    if (context.user && "userId" in data === false) {
+
+    // userId را فقط زمانی اضافه می‌کنیم که این موجودیت متعلق به یک کاربر خاص باشد (own = true)
+    if (isOwnedByUser && context.user) {
       data.userId = context.user.id;
     }
     // ===== پایان اصلاحیه کلیدی =====
 
     if (this.beforeCreate) {
-      // context را به هوک beforeCreate نیز پاس می‌دهیم تا در منطق‌های سفارشی قابل استفاده باشد
       data = await this.beforeCreate(data, context);
     }
 
@@ -162,17 +164,14 @@ export abstract class BaseService<T> {
       data = this.validate(this.updateSchema, data);
     }
 
-    // Execute beforeUpdate hook if exists
     if (this.beforeUpdate) {
       data = await this.beforeUpdate(id, data);
     }
 
     data = await this.processDynamicFields(data, true);
 
-    // Update the record
     const entity = await this.repository.update(id, data);
 
-    // Execute afterUpdate hook if exists
     if (this.afterUpdate) {
       await this.afterUpdate(entity);
     }
@@ -202,7 +201,7 @@ export abstract class BaseService<T> {
       entityId: (entityData as any).id,
       entityType: this.repository.getModelName(),
       userId: (entityData as any).userId,
-      workspaceId: (entityData as any).workspaceId, // اطمینان از وجود workspaceId
+      workspaceId: (entityData as any).workspaceId,
       notified: false,
       status: "PENDING",
     };
@@ -267,38 +266,6 @@ export abstract class BaseService<T> {
    */
   async count(where: any = {}): Promise<number> {
     return this.repository.count(where);
-  }
-
-  /**
-   * Get distinct values for a field
-   */
-  async distinct(field: string, where: any = {}): Promise<any[]> {
-    return this.repository.distinct(field, where);
-  }
-
-  /**
-   * Perform aggregations
-   */
-  async aggregate(where: any = {}, aggregations: any = {}): Promise<any> {
-    return this.repository.aggregate(where, aggregations);
-  }
-
-  /**
-   * Group by a field
-   */
-  async groupBy(
-    by: string[],
-    where: any = {},
-    aggregations: any = {}
-  ): Promise<any[]> {
-    return this.repository.groupBy(by, where, aggregations);
-  }
-
-  /**
-   * Execute a transaction
-   */
-  async transaction<R>(callback: (tx: any) => Promise<R>): Promise<R> {
-    return this.repository.transaction(callback);
   }
 
   /**
@@ -368,7 +335,6 @@ export abstract class BaseService<T> {
     data: any,
     update: boolean = false
   ): Promise<any> {
-    // این منطق پیچیده و مهم شما کاملاً حفظ می‌شود
     if (this.relations && this.relations.length > 0) {
       for (const field of this.relations) {
         if (data[field] && Array.isArray(data[field])) {

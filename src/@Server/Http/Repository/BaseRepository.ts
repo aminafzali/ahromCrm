@@ -1,3 +1,5 @@
+// مسیر فایل: src/@Server/Http/Repository/BaseRepository.ts
+
 import prisma from "@/lib/prisma";
 import { PrismaClient } from "@prisma/client";
 import { NotFoundException } from "../../Exceptions/BaseException";
@@ -7,7 +9,6 @@ import {
   SingleParams,
   TransactionClient,
 } from "../../types";
-import { QueryBuilder } from "../Helper/QueryBuilder";
 
 export abstract class BaseRepository<T> {
   protected prisma: PrismaClient;
@@ -40,45 +41,33 @@ export abstract class BaseRepository<T> {
     const {
       page = 1,
       limit = 10,
-      filters = {},
+      filters = {}, // این فیلتر اکنون شامل workspaceId است
       orderBy = params.orderBy || this.defaultOrderBy,
       include = this.defaultInclude,
       search = "",
       searchFields = this.searchableFields,
     } = params;
 
-    // Build query using QueryBuilder
-    const queryBuilder = new QueryBuilder();
-
-    // Set basic filters
-    queryBuilder.setWhere(filters);
-
-    // Add search functionality if search term is provided
-    if (search && searchFields.length > 0) {
-      queryBuilder.search(searchFields, search);
+    // ===== شروع اصلاحیه کلیدی =====
+    // ما دیگر QueryBuilder داخلی را از صفر نمی‌سازیم.
+    // به جای آن، از آبجکت `filters` که توسط BaseController ساخته شده و حاوی فیلتر امن workspaceId است، مستقیماً استفاده می‌کنیم.
+    const where = { ...filters };
+    if (search && searchFields && searchFields.length > 0) {
+      where.OR = searchFields.map((field) => ({
+        [field]: { contains: search, mode: "insensitive" },
+      }));
     }
+    // ===== پایان اصلاحیه کلیدی =====
 
-    // Set ordering
-    queryBuilder.setOrderBy(orderBy);
-
-    // Set includes
-    queryBuilder.setInclude(include);
-
-    // Set pagination
-    queryBuilder.setPagination(page, limit);
-
-    // Build the query
-    const query = queryBuilder.build();
-    // Execute query
     const [data, total] = await Promise.all([
       this.model.findMany({
-        where: query.where,
+        where, // استفاده مستقیم از where امن‌شده
         orderBy: orderBy,
-        include: query.include,
-        skip: query.skip,
-        take: query.take,
+        include: include,
+        skip: (page - 1) * limit,
+        take: limit,
       }),
-      this.model.count({ where: query.where }),
+      this.model.count({ where }), // استفاده مستقیم از where امن‌شده
     ]);
 
     return {
@@ -100,7 +89,7 @@ export abstract class BaseRepository<T> {
     const where = { id: typeof id === "string" ? parseInt(id) : id };
 
     const record = await this.model.findUnique({
-      where: { ...where, ...params.filters },
+      where: { ...where, ...filters }, // فیلتر workspaceId اینجا هم اعمال می‌شود
       include,
     });
 
@@ -143,34 +132,30 @@ export abstract class BaseRepository<T> {
    * Create a new record
    */
   async create(data: any): Promise<T> {
-    const client = this.model;
-    return client.create({ data });
+    return this.model.create({ data });
   }
 
   /**
    * Create multiple records
    */
   async createMany(data: any[]): Promise<{ count: number }> {
-    const client = this.model;
-    return client.createMany({ data });
+    return this.model.createMany({ data });
   }
 
   /**
    * Update a record
    */
   async update(id: number, data: any): Promise<T> {
-    const client = this.model;
-    return await client.update({
+    return this.model.update({
       where: { id: parseInt(id.toString()) },
       data,
     });
   }
   /**
-   * Update a record
+   * Update a record (PUT variant)
    */
   async put(id: number, data: any): Promise<T> {
-    const client = this.model;
-    return await client.update({
+    return this.model.update({
       where: { id: parseInt(id.toString()) },
       data,
     });
@@ -180,8 +165,7 @@ export abstract class BaseRepository<T> {
    * Update multiple records
    */
   async updateMany(where: any, data: any): Promise<{ count: number }> {
-    const client = this.model;
-    return client.updateMany({
+    return this.model.updateMany({
       where,
       data,
     });
@@ -191,8 +175,7 @@ export abstract class BaseRepository<T> {
    * Upsert a record
    */
   async upsert(where: any, create: any, update: any): Promise<T> {
-    const client = this.model;
-    return client.upsert({
+    return this.model.upsert({
       where,
       create,
       update,
@@ -203,9 +186,8 @@ export abstract class BaseRepository<T> {
    * Delete a record
    */
   async delete(id: number | string): Promise<T> {
-    const client = this.model;
     try {
-      return await client.delete({
+      return await this.model.delete({
         where: { id: typeof id === "string" ? parseInt(id) : id },
       });
     } catch (error) {
@@ -217,8 +199,7 @@ export abstract class BaseRepository<T> {
    * Delete multiple records
    */
   async deleteMany(where: any): Promise<{ count: number }> {
-    const client = this.model;
-    return client.deleteMany({
+    return this.model.deleteMany({
       where,
     });
   }
@@ -248,43 +229,6 @@ export abstract class BaseRepository<T> {
   }
 
   /**
-   * Get distinct values for a field
-   */
-  async distinct(field: string, where: any = {}): Promise<any[]> {
-    return this.model
-      .findMany({
-        where,
-        select: { [field]: true },
-        distinct: [field],
-      })
-      .then((results: any[]) => results.map((r) => r[field]));
-  }
-
-  /**
-   * Perform aggregations
-   */
-  async aggregate(where: any = {}, aggregations: any = {}): Promise<any> {
-    return this.model.aggregate({
-      where,
-      ...aggregations,
-    });
-  }
-
-  /**
-   * Group by a field
-   */
-  async groupBy(
-    by: string[],
-    where: any = {},
-    aggregations: any = {}
-  ): Promise<any[]> {
-    return this.model.groupBy({
-      by,
-      where,
-      ...aggregations,
-    });
-  }
-  /**
    * Link related records
    */
   async link(
@@ -292,8 +236,7 @@ export abstract class BaseRepository<T> {
     relation: string,
     relatedIds: number[] | string[]
   ): Promise<T> {
-    const client = this.model;
-    return client.update({
+    return this.model.update({
       where: { id: typeof id === "string" ? parseInt(id) : id },
       data: {
         [relation]: {
@@ -313,9 +256,7 @@ export abstract class BaseRepository<T> {
     relation: string,
     relatedIds: number[] | string[]
   ): Promise<T> {
-    const client = this.model;
-
-    return client.update({
+    return this.model.update({
       where: { id: typeof id === "string" ? parseInt(id) : id },
       data: {
         [relation]: {
@@ -327,7 +268,7 @@ export abstract class BaseRepository<T> {
     });
   }
 
-  getModelName(){
+  getModelName() {
     return this.modelName;
   }
 }
