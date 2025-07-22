@@ -1,4 +1,4 @@
-// مسیر فایل: src/@Server/Http/Controller/BaseController.ts (نسخه نهایی، کامل و اصلاح‌شده)
+// مسیر فایل: src/@Server/Http/Controller/BaseController.ts
 
 import { AuthProvider } from "@/@Server/Providers/AuthProvider";
 import { NextRequest, NextResponse } from "next/server";
@@ -11,6 +11,15 @@ import {
   ValidationException,
 } from "../../Exceptions/BaseException";
 import { BaseService } from "../Service/BaseService";
+import { Role, User, WorkspaceUser } from ".prisma/client";
+
+// یک تایپ برای Context که شامل تمام اطلاعات کاربر و فضای کاری است
+export type AuthContext = {
+  user: User | null;
+  workspaceId: number | null;
+  role: Role | null;
+  workspaceUser: (WorkspaceUser & { role: Role }) | null;
+};
 
 export abstract class BaseController<T extends { userId?: number | null }> {
   protected service: BaseService<T>;
@@ -154,14 +163,25 @@ export abstract class BaseController<T extends { userId?: number | null }> {
   async create(req: NextRequest): Promise<NextResponse> {
     return this.executeAction(req, async () => {
       const context = await AuthProvider.isAuthenticated(req);
-      if (!context.workspaceId || !context.user)
+      
+      // با این شرط، به تایپ‌اسکریپت اطمینان می‌دهیم که تمام مقادیر مورد نیاز برای ساخت، وجود دارند
+      if (!context.workspaceId || !context.user || !context.role || !context.workspaceUser)
         throw new UnauthorizedException(
-          "User and Workspace context are required for creation."
+          "User, Workspace, Role, and WorkspaceUser context are required for creation."
         );
 
       const body = await req.json();
 
-      const data = await this.service.create(body, context);
+      // **اصلاحیه کلیدی**: ما یک آبجکت جدید و معتبر می‌سازیم که تایپ آن دقیقاً با چیزی که سرویس انتظار دارد، مطابقت دارد.
+      // این کار تداخل بین `null` و `undefined` را به طور کامل حل می‌کند.
+      const validServiceContext = {
+        user: context.user,
+        workspaceId: context.workspaceId,
+        role: context.role,
+        workspaceUser: context.workspaceUser,
+      };
+      // TODO: شاید نیاز باشد بیس سرویس اصلاح شود و رول از آن برداشته شود ولی فعلا مهم نیست
+      const data = await this.service.create(body, validServiceContext);
 
       return this.created({ message: "Entity created successfully", data });
     });
@@ -173,6 +193,8 @@ export abstract class BaseController<T extends { userId?: number | null }> {
       const context = await AuthProvider.isAuthenticated(req);
       if (context.role?.name !== "Admin")
         throw new ForbiddenException("Admin access required for update.");
+      
+      if(!context.workspaceId) throw new BadRequestException("Workspace ID is required for update.");
 
       await this.service.getById(numericId, {
         filters: { workspaceId: context.workspaceId },
@@ -188,6 +210,8 @@ export abstract class BaseController<T extends { userId?: number | null }> {
     return this.executeAction(req, async () => {
       const numericId = typeof id === "string" ? parseInt(id, 10) : id;
       const context = await AuthProvider.isAuthenticated(req);
+      
+      if(!context.workspaceId || !context.user) throw new BadRequestException("Full context is required for deletion.");
 
       const entityToDelete = await this.service.getById(numericId, {
         filters: { workspaceId: context.workspaceId },
@@ -196,7 +220,7 @@ export abstract class BaseController<T extends { userId?: number | null }> {
         throw new NotFoundException("Entity not found in this workspace.");
 
       if (context.role?.name !== "Admin") {
-        if (this.own && entityToDelete.userId !== context.user?.id) {
+        if (this.own && entityToDelete.userId !== context.user.id) {
           throw new ForbiddenException(
             "Permission denied to delete this entity."
           );
@@ -219,6 +243,8 @@ export abstract class BaseController<T extends { userId?: number | null }> {
         throw new ForbiddenException(
           "Admin access required for status update."
         );
+      
+      if(!context.workspaceId) throw new BadRequestException("Workspace ID is required.");
 
       await this.service.getById(numericId, {
         filters: { workspaceId: context.workspaceId },
@@ -246,13 +272,15 @@ export abstract class BaseController<T extends { userId?: number | null }> {
         throw new ForbiddenException(
           "Admin access required to create reminder."
         );
+      
+      if(!context.workspaceId || !context.user) throw new BadRequestException("Full context is required for reminder.");
 
       await this.service.getById(numericId, {
         filters: { workspaceId: context.workspaceId },
       });
 
       const body = await req.json();
-      const reminderData = { ...body, workspaceId: context.workspaceId };
+      const reminderData = { ...body, workspaceId: context.workspaceId, userId: context.user.id };
 
       await this.service.createReminder(numericId, reminderData);
       return this.success("با موفقیت یاد آور ساخته شد", 201);
@@ -266,6 +294,8 @@ export abstract class BaseController<T extends { userId?: number | null }> {
         throw new ForbiddenException(
           "Admin access required for bulk operations."
         );
+      
+      if(!context.workspaceId) throw new BadRequestException("Workspace ID is required for bulk operations.");
 
       const body = await req.json();
       if (!body.operation || !body.data)

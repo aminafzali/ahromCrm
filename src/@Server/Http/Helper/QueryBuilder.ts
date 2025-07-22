@@ -1,10 +1,9 @@
-
 export class QueryBuilder {
-  buildPrismaQuery(): { [x: string]: any; where: any; } {
+  buildPrismaQuery(): { [x: string]: any; where: any } {
     throw new Error("Method not implemented.");
   }
   private where: any = {};
-  private orderBy: any = { createdAt: 'desc' };
+  private orderBy: any = { createdAt: "desc" };
   private include: any = {};
   private page: number = 1;
   private limit: number = 10;
@@ -20,7 +19,7 @@ export class QueryBuilder {
   /**
    * Add a where condition
    */
-  Where(field: string, value: any, operator: string = 'equals'): QueryBuilder {
+  Where(field: string, value: any, operator: string = "equals"): QueryBuilder {
     if (value === undefined || value === null) {
       return this;
     }
@@ -30,7 +29,7 @@ export class QueryBuilder {
     }
 
     // Handle nested fields (e.g., 'user.name')
-    const parts = field.split('.');
+    const parts = field.split(".");
     if (parts.length > 1) {
       let current = this.where;
       for (let i = 0; i < parts.length - 1; i++) {
@@ -39,11 +38,11 @@ export class QueryBuilder {
         }
         current = current[parts[i]];
       }
-      
+
       if (!current[parts[parts.length - 1]]) {
         current[parts[parts.length - 1]] = {};
       }
-      
+
       current[parts[parts.length - 1]][operator] = value;
     } else {
       if (!this.where[field]) {
@@ -63,8 +62,8 @@ export class QueryBuilder {
       return this;
     }
 
-    const searchConditions = fields.map(field => ({
-      [field]: { contains: value }
+    const searchConditions = fields.map((field) => ({
+      [field]: { contains: value },
     }));
 
     if (!this.where.OR) {
@@ -79,7 +78,11 @@ export class QueryBuilder {
   /**
    * Add a date range condition
    */
-  dateRange(field: string, startDate?: string | Date, endDate?: string | Date): QueryBuilder {
+  dateRange(
+    field: string,
+    startDate?: string | Date,
+    endDate?: string | Date
+  ): QueryBuilder {
     if (!startDate && !endDate) {
       return this;
     }

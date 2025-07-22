@@ -1,13 +1,15 @@
+// مسیر فایل: src/@Server/Http/Service/BaseService.ts
+
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { ValidationException } from "../../Exceptions/BaseException";
 import {
   FullQueryParams,
   PaginationResult,
-  ServiceResult,
   SingleParams,
   StatusChangeEvent,
 } from "../../types";
+import { AuthContext } from "../Controller/BaseController";
 import { BaseRepository } from "../Repository/BaseRepository";
 
 export abstract class BaseService<T> {
@@ -20,7 +22,7 @@ export abstract class BaseService<T> {
   protected defaultFilter?: Record<string, any> = {};
 
   // Event handlers
-  protected beforeCreate?: (data: any) => Promise<any>;
+  protected beforeCreate?: (data: any, context: AuthContext) => Promise<any>;
   protected afterCreate?: (entity: T, data?: any) => Promise<void>;
   protected beforeUpdate?: (id: number | string, data: any) => Promise<any>;
   protected afterUpdate?: (entity: T) => Promise<void>;
@@ -110,20 +112,27 @@ export abstract class BaseService<T> {
   /**
    * Create a new record with validation and hooks
    */
-  async create(data: any, context: { user: { address: string; name: string | null; id: number; createdAt: Date; updatedAt: Date; email: string | null; phone: string; password: string | null; otp: string | null; otpExpires: Date | null; } | null; workspaceId: null; role: null; } | { user: { address: string; name: string | null; id: number; createdAt: Date; updatedAt: Date; email: string | null; phone: string; password: string | null; otp: string | null; otpExpires: Date | null; } | null; workspaceId: number; role: { name: string; id: number; createdAt: Date; updatedAt: Date; description: string | null; } | undefined; }): Promise<T> {
+  async create(data: any, context: AuthContext): Promise<T> {
     if (this.createSchema) {
-      //TODO: خط زیر باید برداشته شود
-      console.log("" + this.createSchema);
-
       data = this.validate(this.createSchema, data);
-
-      //TODO: خط زیر باید برداشته شود
-      console.log("" + data);
     }
     data = await this.processDynamicFields(data);
 
+    // ===== شروع اصلاحیه کلیدی =====
+    // تزریق خودکار شناسه‌های workspaceId و userId از context
+    // این کار تضمین می‌کند که داده‌ها همیشه به درستی به فضای کاری و کاربر فعلی متصل می‌شوند
+    if (context.workspaceId) {
+      data.workspaceId = context.workspaceId;
+    }
+    // اگر مدل شامل userId باشد، آن را نیز اضافه می‌کنیم
+    if (context.user && "userId" in data === false) {
+      data.userId = context.user.id;
+    }
+    // ===== پایان اصلاحیه کلیدی =====
+
     if (this.beforeCreate) {
-      data = await this.beforeCreate(data);
+      // context را به هوک beforeCreate نیز پاس می‌دهیم تا در منطق‌های سفارشی قابل استفاده باشد
+      data = await this.beforeCreate(data, context);
     }
 
     const entity = await this.repository.create(data);
@@ -131,8 +140,6 @@ export abstract class BaseService<T> {
     if (this.afterCreate) {
       await this.afterCreate(entity, data);
     }
-    //TODO: خط زیر باید برداشته شود
-    console.log("" + entity);
     return entity;
   }
 
@@ -151,7 +158,6 @@ export abstract class BaseService<T> {
    * Update a record with validation and hooks
    */
   async update(id: number, data: any): Promise<T> {
-    console.log("update", data);
     if (this.updateSchema) {
       data = this.validate(this.updateSchema, data);
     }
@@ -175,39 +181,20 @@ export abstract class BaseService<T> {
   }
 
   /**
-   * Update a record with validation and hooks
+   * Update a record with validation and hooks (PUT method variant)
    */
   async put(id: number, data: any): Promise<T> {
-    // if (this.updateSchema) {
-    //   data = this.validate(this.updateSchema, data);
-    // }
-
-    // // Execute beforeUpdate hook if exists
-    // if (this.beforeUpdate) {
-    //   data = await this.beforeUpdate(id, data);
-    // }
-
     data = await this.processDynamicFields(data);
-
-    // Update the record
     const entity = await this.repository.put(id, data);
-
-    // Execute afterUpdate hook if exists
-    // if (this.afterUpdate) {
-    //   await this.afterUpdate(entity);
-    // }
-
     return entity;
   }
 
   async createReminder(id: number, data: any) {
     const entityData = await this.repository.findById(id);
-    console.log("entityData", entityData);
+    const rawDueDate = data.dueDate;
+    const dueDate = new Date(rawDueDate);
 
-    const rawDueDate = data.dueDate; // "2025-05-30T01:58"
-    const dueDate = new Date(rawDueDate); // Converts to valid Date object
-
-    data = {
+    const reminderData = {
       title: data.title,
       description: data.description,
       dueDate,
@@ -215,14 +202,12 @@ export abstract class BaseService<T> {
       entityId: (entityData as any).id,
       entityType: this.repository.getModelName(),
       userId: (entityData as any).userId,
+      workspaceId: (entityData as any).workspaceId, // اطمینان از وجود workspaceId
       notified: false,
       status: "PENDING",
     };
 
-    console.log("newReminder", data);
-
-    const entity = await prisma.reminder.create({ data });
-
+    const entity = await prisma.reminder.create({ data: reminderData });
     return entity;
   }
 
@@ -239,18 +224,12 @@ export abstract class BaseService<T> {
   /**
    * Upsert a record with validation
    */
-  async upsert(
-    where: any,
-    create: any,
-    update: any,
-    createSchema?: z.ZodType<any>,
-    updateSchema?: z.ZodType<any>
-  ): Promise<T> {
-    if (createSchema) {
-      create = this.validate(createSchema, create);
+  async upsert(where: any, create: any, update: any): Promise<T> {
+    if (this.createSchema) {
+      create = this.validate(this.createSchema, create);
     }
-    if (updateSchema) {
-      update = this.validate(updateSchema, update);
+    if (this.updateSchema) {
+      update = this.validate(this.updateSchema, update);
     }
     return this.repository.upsert(where, create, update);
   }
@@ -259,19 +238,13 @@ export abstract class BaseService<T> {
    * Delete a record with hooks
    */
   async delete(id: number | string): Promise<T> {
-    // Execute beforeDelete hook if exists
     if (this.beforeDelete) {
       await this.beforeDelete(id);
     }
-
-    // Delete the record
     const entity = await this.repository.delete(id);
-
-    // Execute afterDelete hook if exists
     if (this.afterDelete) {
       await this.afterDelete(id);
     }
-
     return entity;
   }
 
@@ -345,11 +318,6 @@ export abstract class BaseService<T> {
     });
     const oldStatus = (entity as any).status.name;
 
-    console.log(">> Update Status: ID:", id);
-    console.log(">> StatusId:", statusId, typeof statusId);
-    console.log(">> Note:", note);
-
-    // Update the status
     await this.repository.update(id, {
       statusId,
       note,
@@ -362,7 +330,6 @@ export abstract class BaseService<T> {
     });
     const newStatus = (updatedEntity as any).status.name;
 
-    // Execute afterStatusChange hook if exists
     if (this.afterStatusChange) {
       await this.afterStatusChange(updatedEntity, {
         sendSms,
@@ -373,46 +340,6 @@ export abstract class BaseService<T> {
     }
 
     return updatedEntity;
-  }
-
-  /**
-   * Create notification for status change
-   */
-  protected async createStatusChangeNotification(
-    userId: number,
-    entityId: number | string,
-    oldStatus: string,
-    newStatus: string
-  ): Promise<void> {
-    await prisma.notification.create({
-      data: {
-        userId,
-        title: "تغییر وضعیت",
-        message: `وضعیت درخواست شما از ${oldStatus} به ${newStatus} تغییر کرد.`,
-        requestId: parseInt(entityId.toString()),
-
-        // metadata: { // TODO
-        //   entityId,
-        //   oldStatus,
-        //   newStatus
-        // }
-      },
-    });
-  }
-
-  /**
-   * Process dynamic fields and relations
-   */
-
-  /**
-   * Format service result
-   */
-  protected formatResult<R>(data?: R, message?: string): ServiceResult<R> {
-    return {
-      success: true,
-      data,
-      message,
-    };
   }
 
   /**
@@ -437,34 +364,19 @@ export abstract class BaseService<T> {
     return this.repository.unlink(id, relation, relatedIds);
   }
 
-  /**
-   * Format error result
-   */
-  protected formatError(error: string): ServiceResult<never> {
-    return {
-      success: false,
-      error,
-    };
-  }
-
   protected async processDynamicFields(
     data: any,
     update: boolean = false
   ): Promise<any> {
+    // این منطق پیچیده و مهم شما کاملاً حفظ می‌شود
     if (this.relations && this.relations.length > 0) {
       for (const field of this.relations) {
         if (data[field] && Array.isArray(data[field])) {
           data[field] = {
-            create: data[field].map((item: any) => ({
-              ...item,
-              // Add any additional processing for relation items
-            })),
+            create: data[field].map((item: any) => ({ ...item })),
           };
         } else if (data[field] && typeof data[field] === "object") {
-          // Handle single object relations
-          data[field] = {
-            create: data[field],
-          };
+          data[field] = { create: data[field] };
         }
       }
     }
@@ -486,14 +398,11 @@ export abstract class BaseService<T> {
           }
         } else if (data[field] && typeof data[field] === "object") {
           data[field] = {
-            connect: {
-              id: parseInt(data[field].id.toString()),
-            },
+            connect: { id: parseInt(data[field].id.toString()) },
           };
         }
       }
     }
-
     return data;
   }
 }

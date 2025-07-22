@@ -1,5 +1,6 @@
-// مسیر فایل: src/@Server/Providers/AuthProvider.ts (نسخه نهایی و کامل)
+// مسیر فایل: src/@Server/Providers/AuthProvider.ts
 
+import { Role } from ".prisma/client";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -31,7 +32,7 @@ export class AuthProvider {
     }
 
     if (!session?.user?.id) {
-      return { user: null, workspaceId: null, role: null };
+      return { user: null, workspaceId: null, role: null, workspaceUser: null };
     }
 
     const userId = parseInt(session.user.id, 10);
@@ -45,17 +46,21 @@ export class AuthProvider {
 
     // اگر نیازی به context ورک‌اسپیس نبود (مثلاً در زمان ساخت اولین ورک‌اسپیس)، فقط اطلاعات کاربر را برمی‌گردانیم
     if (!requireWorkspaceContext) {
-      return { user, workspaceId: null, role: null };
+      return { user, workspaceId: null, role: null, workspaceUser: null };
     }
 
     const workspaceIdHeader = req.headers.get("X-Workspace-Id");
     if (!workspaceIdHeader) {
-      throw new BadRequestException("X-Workspace-Id header is required");
+      throw new BadRequestException(
+        "X-Workspace-Id header is required for this operation."
+      );
     }
     const workspaceId = parseInt(workspaceIdHeader, 10);
 
     if (isNaN(workspaceId)) {
-      throw new BadRequestException("Invalid Workspace ID format");
+      throw new BadRequestException(
+        "Invalid Workspace ID format in X-Workspace-Id header."
+      );
     }
 
     // بررسی اینکه آیا کاربر عضو این ورک‌اسپیس است یا خیر
@@ -65,14 +70,17 @@ export class AuthProvider {
     });
 
     if (!workspaceUser && mustBeLoggedIn) {
-      throw new ForbiddenException("Access denied to this workspace");
+      throw new ForbiddenException(
+        "Access denied. You are not a member of this workspace."
+      );
     }
 
     // برگرداندن یک آبجکت "زمینه" (Context) کامل
     return {
       user,
       workspaceId,
-      role: workspaceUser?.role, // آبجکت کامل نقش کاربر (شامل id, name, description)
+      role: workspaceUser?.role as Role | null, // آبجکت کامل نقش کاربر (شامل id, name, description)
+      workspaceUser,
     };
   }
 

@@ -1,4 +1,5 @@
-// مسیر فایل: src/@Client/Http/Controller/BaseApi.ts (نسخه نهایی با حداقل تغییرات)
+// مسیر فایل: src/@Client/Http/Controller/BaseApi.ts
+// (نسخه نهایی با حداقل تغییرات ضروری)
 
 import { ApiError } from "../../Exceptions/ApiError";
 
@@ -61,6 +62,8 @@ export class BaseApi {
   }
 
   private async request<T>(url: string, options: RequestInit = {}): Promise<T> {
+    // ===== شروع اصلاحیه کلیدی =====
+    // این کد به صورت خودکار قبل از هر درخواست اجرا می‌شود
     const activeWorkspaceId =
       typeof window !== "undefined"
         ? localStorage.getItem("activeWorkspaceId")
@@ -68,15 +71,16 @@ export class BaseApi {
 
     const mergedOptions: RequestInit = {
       ...options,
-      // ++ اصلاحیه ۱: به fetch می‌گوییم کوکی‌ها را برای احراز هویت ارسال کن ++
+      // ۱. به fetch می‌گوییم کوکی‌ها را برای احراز هویت ارسال کن
       credentials: "include",
       headers: {
         ...this.defaultHeaders,
         ...options.headers,
-        // ++ اصلاحیه ۲: هدر ورک‌اسپیس را نیز اضافه می‌کنیم ++
+        // ۲. هدر ورک‌اسپیس را به صورت هوشمند اضافه می‌کنیم
         ...(activeWorkspaceId && { "X-Workspace-Id": activeWorkspaceId }),
       },
     };
+    // ===== پایان اصلاحیه کلیدی =====
 
     try {
       const response = await fetch(url, mergedOptions);
@@ -87,7 +91,6 @@ export class BaseApi {
       }
 
       const textData = await response.text();
-      // Handle cases where the response body is empty but the request was successful
       const data = textData ? JSON.parse(textData) : { success: response.ok };
 
       if (!response.ok) {
