@@ -1,12 +1,9 @@
-// مسیر فایل: src/components/Dashboard/WorkspaceSwitcher.tsx (نسخه نهایی و کامل)
+// مسیر فایل: src/components/Dashboard/WorkspaceSwitcher.tsx
 
 "use client";
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
-import { Button } from "ndui-ahrom";
-import { useRouter } from "next/navigation";
-// ** ایمپورت از کامپوننت جدید و استاندارد ما **
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +13,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "ndui-ahrom";
+import { useRouter } from "next/navigation";
 
 export default function WorkspaceSwitcher() {
   const { activeWorkspace, workspaces, setActiveWorkspace } = useWorkspace();
@@ -40,14 +39,16 @@ export default function WorkspaceSwitcher() {
           <span className="truncate font-bold">
             {activeWorkspace.workspace.name}
           </span>
-          <DIcon
-            icon="fa-chevron-down"
-            cdi={false}
-            classCustom="ms-2 opacity-50"
-          />
+          <DIcon icon="fa-chevron-down" cdi={false} classCustom="ms-2" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
+      {/* ===== شروع اصلاحیه ۱: سفید کردن بک‌گراند ===== */}
+      <DropdownMenuContent
+        className="w-56 bg-white dark:bg-gray-800"
+        align="end"
+        forceMount
+      >
+        {/* ===== پایان اصلاحیه ۱ ===== */}
         <DropdownMenuLabel>ورک‌اسپیس‌های من</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
@@ -57,6 +58,9 @@ export default function WorkspaceSwitcher() {
               onSelect={() => {
                 if (ws.workspaceId !== activeWorkspace.workspaceId) {
                   setActiveWorkspace(ws);
+                  // ===== شروع اصلاحیه ۲: رفرش کردن صفحه =====
+                  window.location.reload();
+                  // ===== پایان اصلاحیه ۲ =====
                 }
               }}
               className="cursor-pointer"

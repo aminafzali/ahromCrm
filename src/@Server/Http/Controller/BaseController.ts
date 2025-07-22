@@ -13,7 +13,6 @@ import {
 } from "../../Exceptions/BaseException";
 import { BaseService } from "../Service/BaseService";
 
-// یک تایپ برای Context که شامل تمام اطلاعات کاربر و فضای کاری است
 export type AuthContext = {
   user: User | null;
   workspaceId: number | null;
@@ -38,6 +37,42 @@ export abstract class BaseController<T extends { userId?: number | null }> {
     this.own = own;
     this.mustLoggedIn = mustLoggedIn;
   }
+
+  // ... متدهای parseQueryParams, getAll, getById بدون تغییر ...
+
+  async create(req: NextRequest): Promise<NextResponse> {
+    return this.executeAction(req, async () => {
+      const context = await AuthProvider.isAuthenticated(req);
+
+      if (
+        !context.workspaceId ||
+        !context.user ||
+        !context.role ||
+        !context.workspaceUser
+      )
+        throw new UnauthorizedException(
+          "User, Workspace, Role, and WorkspaceUser context are required for creation."
+        );
+
+      const body = await req.json();
+
+      const validServiceContext = {
+        user: context.user,
+        workspaceId: context.workspaceId,
+        role: context.role,
+        workspaceUser: context.workspaceUser,
+      };
+
+      // ===== شروع اصلاحیه =====
+      // فراخوانی متد create اکنون به شکل صحیح و با دو آرگومان انجام می‌شود
+      const data = await this.service.create(body, validServiceContext);
+      // ===== پایان اصلاحیه =====
+
+      return this.created({ message: "Entity created successfully", data });
+    });
+  }
+
+  // ... تمام متدهای دیگر (update, delete, bulk, etc.) بدون تغییر باقی می‌مانند ...
 
   protected parseQueryParams(req: NextRequest): any {
     const { searchParams } = new URL(req.url);
@@ -157,42 +192,6 @@ export abstract class BaseController<T extends { userId?: number | null }> {
         throw new NotFoundException("Entity not found in this workspace");
 
       return this.success(entity);
-    });
-  }
-
-  async create(req: NextRequest): Promise<NextResponse> {
-    return this.executeAction(req, async () => {
-      const context = await AuthProvider.isAuthenticated(req);
-
-      if (
-        !context.workspaceId ||
-        !context.user ||
-        !context.role ||
-        !context.workspaceUser
-      )
-        throw new UnauthorizedException(
-          "User, Workspace, Role, and WorkspaceUser context are required for creation."
-        );
-
-      const body = await req.json();
-
-      const validServiceContext = {
-        user: context.user,
-        workspaceId: context.workspaceId,
-        role: context.role,
-        workspaceUser: context.workspaceUser,
-      };
-
-      // ===== شروع اصلاحیه =====
-      // ما پرچم "own" را از کنترلر به لایه سرویس پاس می‌دهیم
-      const data = await this.service.create(
-        body,
-        validServiceContext,
-        this.own
-      );
-      // ===== پایان اصلاحیه =====
-
-      return this.created({ message: "Entity created successfully", data });
     });
   }
 
@@ -363,27 +362,42 @@ export abstract class BaseController<T extends { userId?: number | null }> {
   }
 
   protected handleException(error: unknown): NextResponse {
-    console.error("====== SERVER ERROR (BaseController) ======");
-    if (error instanceof ValidationException) {
-      console.error("Validation Errors:", error.errors);
-    } else if (error instanceof Error) {
-      console.error("Error Name:", error.name);
-      console.error("Error Message:", error.message);
+    // ===== شروع اصلاحیه =====
+    // این بخش تضمین می‌کند که حتی اگر یک مقدار غیر استاندارد (مثل null) پرتاب شود،
+    // ما آن را به یک آبجکت Error واقعی تبدیل می‌کنیم تا از کرش سرور جلوگیری شود.
+    let properError: Error;
+    if (error instanceof Error) {
+      properError = error;
     } else {
-      console.error("Caught a non-Error object:", error);
-    }
-
-    if (error instanceof BaseException) {
-      return NextResponse.json(
-        { error: error.message, ...(error.errors && { errors: error.errors }) },
-        { status: error.statusCode }
+      properError = new Error(
+        `An unexpected non-error value was thrown: ${JSON.stringify(error)}`
       );
     }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    // ===== پایان اصلاحیه =====
+
+    console.error("====== SERVER ERROR (BaseController) ======", properError);
+
+    if (properError instanceof ValidationException) {
+      console.error("Validation Errors:", (properError as any).errors);
+    } else {
+      console.error("Error Name:", properError.name);
+      console.error("Error Message:", properError.message);
     }
+
+    if (properError instanceof BaseException) {
+      return NextResponse.json(
+        {
+          error: properError.message,
+          ...((properError as any).errors && {
+            errors: (properError as any).errors,
+          }),
+        },
+        { status: (properError as any).statusCode }
+      );
+    }
+
     return NextResponse.json(
-      { error: "An unexpected error occurred" },
+      { error: "An unexpected internal server error occurred" },
       { status: 500 }
     );
   }
