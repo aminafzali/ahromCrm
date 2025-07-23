@@ -14,7 +14,7 @@ export default function ServiceTypeList() {
   const fetchServices = async () => {
     try {
       const response = await getAll();
-      setServices(response.data);
+      setServices(response?.data);
     } catch (error) {
       console.error('Error fetching services:', error);
     }

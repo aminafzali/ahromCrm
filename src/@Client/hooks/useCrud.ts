@@ -1,10 +1,11 @@
-// مسیر فایل: src/@Client/hooks/useCrud.ts (نسخه نهایی، کامل و اصلاح‌شده)
+// مسیر فایل: src/@Client/hooks/useCrud.ts
 
 import { ApiError } from "@/@Client/Exceptions/ApiError";
 import { BaseRepository } from "@/@Client/Http/Repository/BaseRepository";
 import { FullQueryParams, PaginationResult } from "@/@Client/types";
 import { useToast } from "ndui-ahrom";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useWorkspace } from "../context/WorkspaceProvider"; // ۱. کانتکست ورک‌اسپیس را ایمپورت می‌کنیم
 
 export function useCrud<
   T,
@@ -12,13 +13,25 @@ export function useCrud<
   UpdateInput = any,
   UpdateStatus = any
 >(repository: BaseRepository<T, number>) {
-  // ++ اصلاحیه کلیدی ۱: مقدار اولیه loading باید false باشد ++
   const [loading, setLoading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [statusCode, setStatus] = useState<number>(0);
   const [success, setSuccess] = useState<string | null>(null);
   const { showToast } = useToast();
+  const { activeWorkspace } = useWorkspace(); // ۲. ورک‌اسپیس فعال را از کانتکست می‌گیریم
+
+  // این useEffect تضمین می‌کند که با هر بار تغییر ورک‌اسپیس، خطاهای قبلی پاک شوند
+  // ===== لاگ ردیابی ۷: بررسی تغییر ورک‌اسپیس =====
+  useEffect(() => {
+    console.log(
+      `%c[CLIENT - useCrud] 🔄 Workspace changed. Active Workspace ID: ${activeWorkspace?.workspaceId}`,
+      "color: #6f42c1; font-weight: bold;"
+    );
+    setError(null);
+    setSuccess(null);
+  }, [activeWorkspace]);
+  // ===============================================
 
   const handleError = useCallback(
     (error: unknown) => {
@@ -40,10 +53,35 @@ export function useCrud<
 
   const getAll = useCallback(
     async (params: FullQueryParams = { page: 1, limit: 10 }) => {
+      if (!activeWorkspace) {
+        // ===== لاگ ردیابی ۸: حالت بدون ورک‌اسپیس =====
+        console.warn(
+          "[CLIENT - useCrud] getAll called but no active workspace. Aborting."
+        );
+        // ============================================
+        return;
+      } // اگر ورک‌اسپیسی فعال نبود، کاری انجام نده
+
+      // ===== لاگ ردیابی ۹: اجرای واکشی داده =====
+      console.log(
+        `%c[CLIENT - useCrud] 📞 Calling getAll for Workspace ID: ${activeWorkspace.workspaceId}`,
+        "color: #6f42c1; font-weight: bold;",
+        params
+      );
+      // =========================================
+
       setLoading(true);
       setError(null);
       try {
         const data: PaginationResult<T> = await repository.getAll(params);
+        // ===== لاگ ردیابی ۶: بررسی داده‌های نهایی دریافت شده در هوک =====
+        console.log(
+          `%c[CLIENT - useCrud] ✅ Data successfully received in hook:`,
+          "color: #6f42c1; font-weight: bold;",
+          data
+        );
+        // =============================================================
+
         return data;
       } catch (error) {
         handleError(error);
@@ -52,11 +90,16 @@ export function useCrud<
         setLoading(false);
       }
     },
-    [repository, handleError]
+    // ===== شروع اصلاحیه کلیدی =====
+    // با اضافه کردن activeWorkspace به لیست وابستگی، به useCallback می‌گوییم
+    // که با هر بار تغییر ورک‌اسپیس، یک تابع getAll جدید بسازد.
+    [repository, handleError, activeWorkspace]
+    // ===== پایان اصلاحیه کلیدی =====
   );
 
   const getById = useCallback(
     async (id: number) => {
+      if (!activeWorkspace) return;
       setLoading(true);
       setError(null);
       try {
@@ -69,7 +112,7 @@ export function useCrud<
         setLoading(false);
       }
     },
-    [repository, handleError]
+    [repository, handleError, activeWorkspace] // وابستگی به activeWorkspace اضافه شد
   );
 
   const create = useCallback(

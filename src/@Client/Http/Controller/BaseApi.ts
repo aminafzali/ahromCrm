@@ -80,11 +80,35 @@ export class BaseApi {
         ...(activeWorkspaceId && { "X-Workspace-Id": activeWorkspaceId }),
       },
     };
-    // ===== پایان اصلاحیه کلیدی =====
+
+    // ===== لاگ ردیابی ۱: بررسی درخواست قبل از ارسال =====
+    console.log(
+      `%c[CLIENT - BaseApi] 🚀 Sending Request:`,
+      "color: #007acc; font-weight: bold;",
+      {
+        method: options.method || "GET",
+        url: url,
+        headers: mergedOptions.headers,
+      }
+    );
+    // ===================================================
 
     try {
       const response = await fetch(url, mergedOptions);
-
+ 
+      // ===== لاگ ردیابی ۲: بررسی پاسخ خام دریافتی =====
+      console.log(
+        `%c[CLIENT - BaseApi] 📥 Received Raw Response:`,
+        "color: #007acc; font-weight: bold;",
+        {
+          ok: response.ok,
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+        }
+      );
+      // =================================================
+      
       if (response.status === 204) {
         // No Content
         return {} as T;

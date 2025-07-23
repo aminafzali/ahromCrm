@@ -2,7 +2,7 @@
 
 import { BaseController } from "@/@Server/Http/Controller/BaseController";
 import { ReceivedDevice } from "@prisma/client";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { include } from "../data/fetch";
 import { ReceivedDeviceServiceApi } from "../service/ReceivedDeviceServiceApi"; // مسیر سرویس را در صورت نیاز اصلاح کنید
 
@@ -14,26 +14,24 @@ class ReceivedDeviceController extends BaseController<ReceivedDevice> {
     super(new ReceivedDeviceServiceApi(), include);
   }
 
-  // ما متد getAll را بازنویسی می‌کنیم تا منطق فیلتر statusId را اضافه کنیم
-  async getAll(req: NextRequest): Promise<NextResponse> {
-    return this.executeAction(req, async () => {
-      // از متد والد برای پارس کردن تمام پارامترهای دیگر استفاده می‌کنیم
-      const params = this.parseQueryParams(req);
+  /**
+   * ما فقط این متد کوچک را بازنویسی می‌کنیم تا منطق فیلترینگ خاص خود را اعمال کنیم.
+   */
+  protected transformFilters(params: any): any {
+    // چک می‌کنیم آیا فیلتر statusId از کلاینت ارسال شده است یا نه
+    if (params.filters.statusId) {
+      // آن را به یک فیلتر تو در تو برای مدل Request تبدیل می‌کنیم
+      // (فرض بر اینکه مدل ReceivedDevice رابطه‌ای به نام request دارد)
+      params.filters.request = {
+        statusId: params.filters.statusId,
+      };
 
-      // چک می‌کنیم آیا فیلتر statusId وجود دارد یا نه
-      if (params.filters.statusId) {
-        // آن را به یک فیلتر تو در تو برای مدل Request تبدیل می‌کنیم
-        params.filters.request = {
-          statusId: params.filters.statusId,
-        };
-        // فیلتر اصلی را حذف می‌کنیم تا پریزما خطا ندهد
-        delete params.filters.statusId;
-      }
+      // فیلتر اصلی و اضافی را حذف می‌کنیم تا پریزما خطا ندهد
+      delete params.filters.statusId;
+    }
 
-      // سرویس را با پارامترهای اصلاح شده فراخوانی می‌کنیم
-      const data = await this.service.getAll(params);
-      return this.success(data);
-    });
+    // پارامترهای تبدیل شده را برمی‌گردانیم
+    return params;
   }
 }
 // ===================================================================

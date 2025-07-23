@@ -133,26 +133,77 @@ export abstract class BaseController<T extends { userId?: number | null }> {
     };
   }
 
+  /**
+   * هوک قابل بازنویسی برای تغییر یا تبدیل فیلترها قبل از ارسال به سرویس.
+   * این متد به شما اجازه می‌دهد منطق فیلترینگ سفارشی را بدون بازنویسی کامل getAll پیاده‌سازی کنید.
+   * @param params پارامترهای استخراج شده از URL
+   * @returns پارامترهای تبدیل شده
+   */
+  protected transformFilters(params: any): any {
+    // به صورت پیش‌فرض، هیچ تغییری اعمال نمی‌شود
+    return params;
+  }
+
   async getAll(req: NextRequest): Promise<NextResponse> {
+    // متد executeAction برای مدیریت متمرکز خطاها استفاده می‌شود
     return this.executeAction(req, async () => {
+      // ===== لاگ ردیابی ۱: شروع پردازش درخواست =====
+      console.log(
+        `%c[SERVER - BaseController] 🟢 1. Received GET request for: ${req.nextUrl.pathname}`,
+        "color: #28a745; font-weight: bold;"
+      );
+      console.log(
+        "[SERVER - BaseController]    Incoming Headers:",
+        Object.fromEntries(req.headers)
+      );
+      // ===============================================
+
+      // ۲. ابتدا context را با AuthProvider دریافت می‌کنیم تا workspaceId از هدر خوانده شود
       const context = await AuthProvider.isAuthenticated(
         req,
         this.mustLoggedIn
       );
-      if (this.mustLoggedIn && !context.workspaceId)
+
+      // ===== لاگ ردیابی ۲: بررسی خروجی AuthProvider =====
+      console.log(
+        `%c[SERVER - BaseController] 🟢 2. AuthProvider Context Result:`,
+        "color: #28a745; font-weight: bold;",
+        context
+      );
+      // ===============================================
+
+      if (this.mustLoggedIn && !context.workspaceId) {
+        // اگر در این مرحله خطا رخ دهد، یعنی هدر X-Workspace-Id ارسال نشده یا معتبر نیست
         throw new BadRequestException("Workspace not identified.");
+      }
 
-      const params = this.parseQueryParams(req);
+      // ۳. سپس پارامترهای دیگر (مثل صفحه‌بندی) را از URL می‌خوانیم
+      let params = this.parseQueryParams(req);
 
+      // ===== لاگ ردیابی ۳: بررسی پارامترها قبل از اضافه کردن فیلترها =====
+      console.log(
+        `%c[SERVER - BaseController] 🟢 3. Parsed URL Params:`,
+        "color: #28a745; font-weight: bold;",
+        params
+      );
+      // =============================================================
+
+      // ۴. حالا با اطمینان کامل، workspaceId را به فیلترها اضافه می‌کنیم
       if (context.workspaceId) {
         params.filters.workspaceId = context.workspaceId;
       }
 
+      // ۵. منطق فیلتر بر اساس مالکیت (own) را نیز در اینجا اعمال می‌کنیم
       if (this.own && context.role?.name === "USER") {
         if (!context.user)
           throw new UnauthorizedException("User context is required.");
         params.filters.userId = context.user.id;
       }
+
+      // ===== شروع اصلاحیه کلیدی =====
+      // قبل از ارسال پارامترها به سرویس، هوک transformFilters را فراخوانی می‌کنیم
+      params = this.transformFilters(params);
+      // ===== پایان اصلاحیه کلیدی =====
 
       if (params.dateRange.startDate || params.dateRange.endDate) {
         params.filters.createdAt = {};
@@ -164,7 +215,25 @@ export abstract class BaseController<T extends { userId?: number | null }> {
         }
       }
 
+      // ===== لاگ ردیابی ۴: بررسی پارامترهای نهایی قبل از ارسال به سرویس =====
+      console.log(
+        `%c[SERVER - BaseController] 🟢 4. Final Params being sent to Service:`,
+        "color: #28a745; font-weight: bold;",
+        JSON.parse(JSON.stringify(params)) // از JSON برای نمایش بهتر آبجکت‌های تو در تو استفاده می‌کنیم
+      );
+      // ================================================================
+
+      // ۶. فراخوانی لایه سرویس با پارامترهای امن‌شده
       const data = await this.service.getAll(params);
+
+      // ===== لاگ ردیابی ۵: بررسی داده‌های نهایی قبل از ارسال پاسخ =====
+      console.log(
+        `%c[SERVER - BaseController] 🟢 5. Final data before sending response to Client:`,
+        "color: #28a745; font-weight: bold;",
+        data
+      );
+      // ============================================================
+
       return this.success(data);
     });
   }
@@ -403,8 +472,16 @@ export abstract class BaseController<T extends { userId?: number | null }> {
   }
 
   protected success<T>(data: T, status: number = 200): NextResponse {
+    // ===== لاگ ردیابی ۴: لاگ کردن خود پاسخ =====
+    console.log(
+      `%c[SERVER - BaseController] ✅ Sending Success Response (Status ${status})`,
+      "color: #28a745; font-weight: bold;"
+    );
+    // ==========================================
+
     return NextResponse.json(data, { status });
   }
+
   protected created<T>(data: T): NextResponse {
     return this.success(data, 201);
   }

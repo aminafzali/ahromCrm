@@ -9,6 +9,7 @@ import {
   SingleParams,
   TransactionClient,
 } from "../../types";
+import { QueryBuilder } from "../Helper/QueryBuilder";
 
 export abstract class BaseRepository<T> {
   protected prisma: PrismaClient;
@@ -47,28 +48,61 @@ export abstract class BaseRepository<T> {
       search = "",
       searchFields = this.searchableFields,
     } = params;
+    // ===== لاگ ردیابی ۵: بررسی فیلترهای دریافتی در ریپازیتوری =====
+    console.log(
+      `%c[SERVER - BaseRepository] 🟠 Received filters in findAll:`,
+      "color: #fd7e14; font-weight: bold;",
+      filters
+    );
+    // ============================================================
 
-    // ===== شروع اصلاحیه کلیدی =====
-    // ما دیگر QueryBuilder داخلی را از صفر نمی‌سازیم.
-    // به جای آن، از آبجکت `filters` که توسط BaseController ساخته شده و حاوی فیلتر امن workspaceId است، مستقیماً استفاده می‌کنیم.
-    const where = { ...filters };
+    // ===== شروع اصلاحیه کلیدی و نهایی =====
+    // ما QueryBuilder را می‌سازیم، اما فیلترهای امن (شامل workspaceId) را به عنوان پایه به آن می‌دهیم.
+    const queryBuilder = new QueryBuilder();
+    queryBuilder.setWhere(filters); // این خط تضمین می‌کند که workspaceId همیشه به عنوان شرط پایه اعمال شود.
+
+    // حالا منطق جستجو را به فیلترهای موجود اضافه می‌کنیم (بدون اینکه فیلترهای قبلی را از بین ببرد)
     if (search && searchFields && searchFields.length > 0) {
-      where.OR = searchFields.map((field) => ({
-        [field]: { contains: search, mode: "insensitive" },
-      }));
+      queryBuilder.search(searchFields, search);
     }
-    // ===== پایان اصلاحیه کلیدی =====
+
+    // بقیه تنظیمات بدون تغییر باقی می‌مانند
+    queryBuilder.setOrderBy(orderBy);
+    queryBuilder.setInclude(include);
+    queryBuilder.setPagination(page, limit);
+
+    const query = queryBuilder.build();
+    // ===== پایان اصلاحیه کلیدی و نهایی =====
+
+    // ===== لاگ ردیابی ۶: بررسی شرط WHERE نهایی قبل از ارسال به Prisma =====
+    console.log(
+      `%c[SERVER - BaseRepository] 🔴 Final 'where' clause for Prisma:`,
+      "color: #dc3545; font-weight: bold;",
+      JSON.stringify(query.where, null, 2)
+    );
+    // =====================================================================
 
     const [data, total] = await Promise.all([
       this.model.findMany({
-        where, // استفاده مستقیم از where امن‌شده
-        orderBy: orderBy,
-        include: include,
-        skip: (page - 1) * limit,
-        take: limit,
+        where: query.where,
+        orderBy: query.orderBy,
+        include: query.include,
+        skip: query.skip,
+        take: query.take,
       }),
-      this.model.count({ where }), // استفاده مستقیم از where امن‌شده
+      this.model.count({ where: query.where }),
     ]);
+    // ===== لاگ ردیابی ۵: بررسی داده‌های خام بازگشتی از Prisma =====
+    console.log(
+      `%c[SERVER - BaseRepository] 📦 Raw data fetched from DB (Count: ${data.length}):`,
+      "color: #dc3545; font-weight: bold;",
+      data
+    );
+    console.log(
+      `%c[SERVER - BaseRepository] 🔢 Total count from DB: ${total}`,
+      "color: #dc3545; font-weight: bold;"
+    );
+    // ==============================================================
 
     return {
       data,
@@ -86,10 +120,14 @@ export abstract class BaseRepository<T> {
    */
   async findById(id: number | string, params: SingleParams = {}): Promise<T> {
     const { include = this.defaultInclude, filters } = params;
-    const where = { id: typeof id === "string" ? parseInt(id) : id };
+    // فیلتر workspaceId اینجا هم به درستی اعمال می‌شود
+    const where = {
+      id: typeof id === "string" ? parseInt(id) : id,
+      ...filters,
+    };
 
     const record = await this.model.findUnique({
-      where: { ...where, ...filters }, // فیلتر workspaceId اینجا هم اعمال می‌شود
+      where: where,
       include,
     });
 
@@ -100,9 +138,8 @@ export abstract class BaseRepository<T> {
     return record;
   }
 
-  /**
-   * Find records by specific field with dynamic includes
-   */
+  // ... تمام متدهای دیگر شما (create, update, delete, etc.) بدون تغییر باقی می‌مانند ...
+
   async findBy(
     field: string,
     value: any,
@@ -114,9 +151,6 @@ export abstract class BaseRepository<T> {
     });
   }
 
-  /**
-   * Find first record by specific field with dynamic includes
-   */
   async findOneBy(
     field: string,
     value: any,
@@ -128,32 +162,21 @@ export abstract class BaseRepository<T> {
     });
   }
 
-  /**
-   * Create a new record
-   */
   async create(data: any): Promise<T> {
     return this.model.create({ data });
   }
 
-  /**
-   * Create multiple records
-   */
   async createMany(data: any[]): Promise<{ count: number }> {
     return this.model.createMany({ data });
   }
 
-  /**
-   * Update a record
-   */
   async update(id: number, data: any): Promise<T> {
     return this.model.update({
       where: { id: parseInt(id.toString()) },
       data,
     });
   }
-  /**
-   * Update a record (PUT variant)
-   */
+
   async put(id: number, data: any): Promise<T> {
     return this.model.update({
       where: { id: parseInt(id.toString()) },
@@ -161,30 +184,14 @@ export abstract class BaseRepository<T> {
     });
   }
 
-  /**
-   * Update multiple records
-   */
   async updateMany(where: any, data: any): Promise<{ count: number }> {
-    return this.model.updateMany({
-      where,
-      data,
-    });
+    return this.model.updateMany({ where, data });
   }
 
-  /**
-   * Upsert a record
-   */
   async upsert(where: any, create: any, update: any): Promise<T> {
-    return this.model.upsert({
-      where,
-      create,
-      update,
-    });
+    return this.model.upsert({ where, create, update });
   }
 
-  /**
-   * Delete a record
-   */
   async delete(id: number | string): Promise<T> {
     try {
       return await this.model.delete({
@@ -195,42 +202,29 @@ export abstract class BaseRepository<T> {
     }
   }
 
-  /**
-   * Delete multiple records
-   */
   async deleteMany(where: any): Promise<{ count: number }> {
-    return this.model.deleteMany({
-      where,
-    });
+    return this.model.deleteMany({ where });
   }
 
-  /**
-   * Check if a record exists
-   */
   async exists(where: any): Promise<boolean> {
     const count = await this.model.count({ where });
     return count > 0;
   }
 
-  /**
-   * Count records
-   */
   async count(where: any = {}): Promise<number> {
     return this.model.count({ where });
   }
 
-  /**
-   * Execute a transaction
-   */
   async transaction<R>(
     callback: (tx: TransactionClient) => Promise<R>
   ): Promise<R> {
     return this.prisma.$transaction(callback);
   }
 
-  /**
-   * Link related records
-   */
+  getModelName() {
+    return this.modelName;
+  }
+
   async link(
     id: number | string,
     relation: string,
@@ -248,9 +242,6 @@ export abstract class BaseRepository<T> {
     });
   }
 
-  /**
-   * Unlink related records
-   */
   async unlink(
     id: number | string,
     relation: string,
@@ -266,9 +257,5 @@ export abstract class BaseRepository<T> {
         },
       },
     });
-  }
-
-  getModelName() {
-    return this.modelName;
   }
 }
