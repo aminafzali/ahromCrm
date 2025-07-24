@@ -23,6 +23,19 @@ export const dashboardMenuItems = [
     href: "/adminDivider",
   },
   {
+    id: "role",
+    label: "نقش ها",
+    icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
+    href: "/dashboard/roles",
+  },
+  {
+    id: "workspaceUser",
+    label: "مخاطبین ورک اسپیس",
+    icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
+    href: "/dashboard/workspace-users",
+  },
+
+  {
     id: "user",
     label: "مخاطبین",
     icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
