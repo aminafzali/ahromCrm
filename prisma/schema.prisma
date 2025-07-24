@@ -21,6 +21,17 @@ model Workspace {
   owner   User   @relation("OwnedWorkspaces", fields: [ownerId], references: [id], onDelete: Cascade)
 
   // --- Back-relations for ALL workspace-specific data ---
+
+  // ===== شروع اصلاحیه =====
+  // این خط، رابطه متقابل و ضروری را به مدل Role اضافه می‌کند
+  roles Role[]
+  // ===== پایان اصلاحیه =====
+
+  // ===== شروع اصلاحیه =====
+  // این خط، رابطه متقابل را به مدل Permission اضافه می‌کند
+  permissions Permission[]
+  // ===== پایان اصلاحیه =====
+
   members                 WorkspaceUser[]
   requests                Request[]
   invoices                Invoice[]
@@ -72,23 +83,47 @@ model WorkspaceUser {
 }
 
 model Role {
-  id          Int              @id @default(autoincrement())
-  name        String           @unique
+  id Int @id @default(autoincrement())
+
+  // ===== شروع اصلاحات =====
+  workspaceId Int // ۱. این فیلد برای اتصال به ورک‌اسپیس اضافه شد
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade) // ۲. این رابطه برای اتصال به ورک‌اسپیس اضافه شد
+  // ===== پایان اصلاحات =====
+
+  name        String
   description String?
   permissions RolePermission[]
   users       WorkspaceUser[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  // name @unique // <-- این خط باید حذف شود
+  // ===== پایان اصلاحات =====
+
+  // ===== شروع اصلاحات =====
+  // ۳. نام نقش اکنون باید در هر ورک‌اسپیس یکتا باشد، نه در کل سیستم
+  @@unique([name, workspaceId])
 }
 
 model Permission {
-  id          Int              @id @default(autoincrement())
+  id Int @id @default(autoincrement())
+
+  // ===== شروع اصلاحیه =====
+  workspaceId Int // ۱. این فیلد برای اتصال به ورک‌اسپیس اضافه شد
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade) // ۲. این رابطه اضافه شد
+  // ===== پایان اصلاحیه =====
+
   action      String           @unique
   description String?
   module      String
   roles       RolePermission[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  // action @unique // <-- این خط باید حذف شود
+  // ===== پایان اصلاحیه =====
+
+  // ===== شروع اصلاحیه =====
+  // نام دسترسی (action) اکنون باید در هر ورک‌اسپیس یکتا باشد
+  @@unique([action, workspaceId])
 }
 
 model RolePermission {
