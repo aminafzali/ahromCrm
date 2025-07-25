@@ -1,60 +1,37 @@
+// مسیر فایل: src/modules/requests/data/fetch.ts
+
+import { Prisma } from "@prisma/client"; // ۱. Prisma را برای دسترسی به تایپ‌ها ایمپورت می‌کنیم
+
 export const include = {
-  preferredDate: false,
-  preferredTime: false,
-  note: false,
-  address: false,
-  priority: false,
-  assignedToId: false,
-  estimatedPrice: false,
-  actualPrice: false,
   status: true,
   serviceType: true,
-  formSubmissionid: false,
-  formSubmission: false,
-  user: {
-    select: {
-      id: true,
-      name: true,
-      phone: true,
-      address: true,
-      labels: {
-        include: {
-          _count: {
-            select: {
-              users: true,
-            },
-          },
-        },
-      },
+  workspaceUser: {
+    include: {
+      user: true,
+      role: true,
+    },
+  },
+  assignedTo: {
+    include: {
+      user: true,
     },
   },
   notes: {
-    select: {
-      id: true,
-      content: true,
-      createdAt: true,
-    },
+    orderBy: { createdAt: "desc" as const }, // ۲. از "as const" برای تعیین تایپ دقیق استفاده می‌کنیم
+    select: { id: true, content: true, createdAt: true },
   },
   notifications: {
-    orderBy: {
-      createdAt: "desc",
-    },
-    select: {
-      id: true,
-      title: true,
-      message: true,
-      isRead: true,
-      createdAt: true,
-    },
+    orderBy: { createdAt: "desc" as const }, // ۲. از "as const" برای تعیین تایپ دقیق استفاده می‌کنیم
+    select: { id: true, title: true, message: true, isRead: true, createdAt: true },
   },
-  // +++ این بخش را اضافه کنید +++
   actualServices: {
     include: {
-      actualService: true, // جزئیات کامل هر خدمت را هم می‌گیریم
+      actualService: true,
     },
   },
 };
 
-export const searchFileds = ["serviceType", "status", "description"];
+// این بخش‌ها بدون تغییر باقی می‌مانند
+export const searchFileds = ["workspaceUser.user.name", "workspaceUser.user.phone", "description"];
 export const relations = ["notes", "notifications", "formSubmission"];
-export const connects = ["user", "serviceType", "status"];
+export const connects = ["workspaceUser", "serviceType", "status", "assignedTo"];

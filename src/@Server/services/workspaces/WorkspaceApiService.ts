@@ -8,7 +8,6 @@ import prisma from "@/lib/prisma";
 import { Workspace } from "@prisma/client";
 import { z } from "zod";
 
-// اسکیمای اعتبارسنجی در همین فایل تعریف می‌شود تا کاملا مستقل باشد
 export const workspaceSchema = z.object({
   name: z.string().min(3, "نام ورک‌اسپیس باید حداقل ۳ کاراکتر باشد."),
   slug: z
@@ -17,13 +16,7 @@ export const workspaceSchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "اسلاگ نامعتبر است."),
 });
 
-/**
- * این یک سرویس کاملاً مستقل برای مدیریت منطق کسب‌وکار ورک‌اسپیس‌ها است.
- */
 export class WorkspaceApiService {
-  /**
-   * یک ورک‌اسپیس جدید ایجاد کرده و مالک آن را به عنوان اولین عضو با نقش ادمین ثبت می‌کند.
-   */
   async create(data: any, context?: any): Promise<Workspace> {
     if (!context || !context.user) {
       throw new ForbiddenException(
@@ -31,7 +24,6 @@ export class WorkspaceApiService {
       );
     }
 
-    // اعتبارسنجی داده‌های ورودی
     try {
       const validatedData = workspaceSchema.parse(data);
       const { name, slug } = validatedData;
@@ -41,11 +33,18 @@ export class WorkspaceApiService {
         const workspace = await tx.workspace.create({
           data: { name, slug, ownerId },
         });
-        const adminRole = await tx.role.upsert({
-          where: { name: "Admin" },
-          update: {},
-          create: { name: "Admin", description: "دسترسی کامل" },
+
+        // ===== شروع اصلاحیه کلیدی =====
+        // به جای پیدا کردن نقش سراسری، یک نقش "Admin" جدید مخصوص همین ورک‌اسپیس می‌سازیم.
+        const adminRole = await tx.role.create({
+          data: {
+            name: "Admin",
+            description: "دسترسی کامل به تمام بخش‌های ورک‌اسپیس",
+            workspaceId: workspace.id, // نقش را به ورک‌اسپیس جدید متصل می‌کنیم
+          },
         });
+        // ===== پایان اصلاحیه کلیدی =====
+        
         await tx.workspaceUser.create({
           data: {
             workspaceId: workspace.id,
@@ -53,12 +52,14 @@ export class WorkspaceApiService {
             roleId: adminRole.id,
           },
         });
+        
         return workspace;
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
         throw new ValidationException(error.format());
       }
+      // خطای اصلی را دوباره پرتاب می‌کنیم تا در کنترلر مدیریت شود
       throw error;
     }
   }

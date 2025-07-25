@@ -20,8 +20,8 @@ export const include = {
 
 // فیلدهایی که در جستجوی کلی مورد استفاده قرار می‌گیرند
 // Prisma از جستجوی تو در تو به این شکل پشتیبانی می‌کند
-export const searchFileds = ["user.name", "user.phone", "role.name"];
+export const searchFileds = [];
 
 // این آرایه‌ها طبق الگوی ماژول brands خالی هستند
-export const relations = [];
+export const relations = ["user", "role"];
 export const connects = [];

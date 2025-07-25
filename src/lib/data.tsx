@@ -29,6 +29,12 @@ export const dashboardMenuItems = [
     href: "/dashboard/roles",
   },
   {
+    id: "permission",
+    label: "دسترسی ها",
+    icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
+    href: "/dashboard/permissions",
+  },
+  {
     id: "workspaceUser",
     label: "مخاطبین ورک اسپیس",
     icon: <DIcon icon="fa-user" cdi={false}></DIcon>,

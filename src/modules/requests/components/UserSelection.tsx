@@ -1,7 +1,12 @@
+// مسیر فایل: src/modules/requests/components/UserSelection.tsx
+
+"use client";
+
 import DIcon from "@/@Client/Components/common/DIcon";
 import ButtonCreate from "@/components/ButtonCreate/ButtonCreate";
-import { useUser } from "@/modules/users/hooks/useUser";
-import CreateUserPage from "@/modules/users/views/create/page";
+import { useWorkspaceUser } from "@/modules/workspace-users/hooks/useWorkspaceUser";
+import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
+import CreateWorkspaceUserPage from "@/modules/workspace-users/views/create/page";
 import { Button, Form, Input } from "ndui-ahrom";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -15,31 +20,29 @@ const schema = z.object({
 });
 
 export default function UserSelection({ onSelect }: UserSelectionProps) {
-  const { getAll, loading, error } = useUser();
-  const [users, setUsers] = useState<any[]>([]);
+  const { getAll, loading, error } = useWorkspaceUser();
+  const [members, setMembers] = useState<WorkspaceUserWithRelations[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchUsers();
+    fetchMembers();
   }, [searchTerm]);
 
   const handleSearch = (data: { search: string }) => {
     setSearchTerm(data.search);
   };
 
-  const fetchUsers = async () => {
+  const fetchMembers = async () => {
     try {
       const params: any = { page: 1, limit: 50 };
-
       if (searchTerm) {
         params.search = searchTerm;
       }
-
       const response = await getAll(params);
-      setUsers(response.data);
+      setMembers(response.data);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching workspace members:", error);
     }
   };
 
@@ -49,13 +52,13 @@ export default function UserSelection({ onSelect }: UserSelectionProps) {
   };
 
   if (loading) {
-    return <div className="text-center py-8">در حال بارگذاری...</div>;
+    return <div className="text-center py-8">در حال بارگذاری اعضا...</div>;
   }
 
   if (error) {
     return (
       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-        خطا در دریافت لیست کاربران
+        خطا در دریافت لیست اعضای ورک‌اسپیس
       </div>
     );
   }
@@ -64,10 +67,12 @@ export default function UserSelection({ onSelect }: UserSelectionProps) {
     <div>
       <div className="mb-4">
         <ButtonCreate
-          modalTitle="ایجاد مخاطب سری"
-          modalContent={<CreateUserPage back={false} after={fetchUsers} />}
+          modalTitle="دعوت عضو جدید به ورک‌اسپیس"
+          modalContent={
+            <CreateWorkspaceUserPage back={false} after={fetchMembers} />
+          }
         >
-          ایجاد مخاطب سریع
+          ایجاد عضو جدید
         </ButtonCreate>
         <Form schema={schema} onSubmit={handleSearch} className="grow">
           <div className="flex justify-start">
@@ -77,10 +82,9 @@ export default function UserSelection({ onSelect }: UserSelectionProps) {
                   name="search"
                   variant="primary"
                   className="bg-white"
-                  placeholder="جستجو کاربران ..."
+                  placeholder="جستجوی اعضا..."
                 />
               </div>
-
               <Button
                 variant="ghost"
                 type="submit"
@@ -94,23 +98,29 @@ export default function UserSelection({ onSelect }: UserSelectionProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-        {users.map((user) => (
+        {members.map((member) => (
+          // ===== شروع اصلاحیه کلیدی =====
+          // کلید یکتای هر آیتم در لیست، شناسه سراسری کاربر (userId) است
+          // که در کانتکست اعضای یک ورک‌اسپیس، منحصر به فرد می‌باشد.
           <button
-            key={user.id}
-            className={`bg-white rounded-lg p-2 cursor-pointer transition-all ${
-              selectedUserId === user.id
+            key={member.userId}
+            className={`bg-white rounded-lg p-2 cursor-pointer transition-all text-right ${
+              selectedUserId === member.userId
                 ? "border-2 border-primary"
                 : "hover:shadow-md"
             }`}
-            onClick={() => handleUserSelect(user.id)}
+            onClick={() => handleUserSelect(member.userId)}
           >
+            {/* ===== پایان اصلاحیه کلیدی ===== */}
             <div className="p-1">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="font-semibold">{user.name || "بدون نام"}</h3>
-                  <p className="text-gray-600">{user.phone}</p>
+                  <h3 className="font-semibold">
+                    {member.user?.name || "بدون نام"}
+                  </h3>
+                  <p className="text-gray-600">{member.user?.phone}</p>
                 </div>
-                {selectedUserId === user.id && (
+                {selectedUserId === member.userId && (
                   <DIcon
                     icon="fa-check-circle"
                     classCustom="text-2xl text-primary"

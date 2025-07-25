@@ -1,3 +1,5 @@
+// مسیر فایل: src/modules/requests/components/RequestForm.tsx
+
 "use client";
 
 import DIcon from "@/@Client/Components/common/DIcon";
@@ -7,19 +9,15 @@ import { Button, Form, Input } from "ndui-ahrom";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { z } from "zod";
 import { useRequest } from "../hooks/useRequest";
 import AuthenticationStep from "./AuthenticationStep";
 import RequestSteps from "./RequestSteps";
 import RequestStepsAdmin from "./RequestStepsAdmin";
 import ServiceSelection from "./ServiceSelection";
+// اطمینان از ایمپورت کامپوننت صحیح UserSelection که با WorkspaceUser کار می‌کند
+import { z } from "zod";
+import { createRequestSchema } from "../validation/schema"; // ایمپورت اسکیمای جدید
 import UserSelection from "./UserSelection";
-
-const schema = z.object({
-  serviceTypeId: z.number().min(1, "نوع خدمات را انتخاب کنید"),
-  description: z.string().min(10, "توضیحات باید حداقل 10 کاراکتر باشد"),
-  address: z.string().optional(),
-});
 
 export default function RequestForm({
   params,
@@ -37,43 +35,58 @@ export default function RequestForm({
     success,
     setError,
   } = useRequest();
-  const [currentStep, setCurrentStep] = useState(
-    session?.user.role === "ADMIN" ? 0 : 1
-  );
+
+  // بررسی نقش ادمین باید از context ورک‌اسپیس انجام شود، اما فعلا منطق قدیمی را حفظ می‌کنیم
+  const isAdmin = session?.user.role === "ADMIN";
+  const [currentStep, setCurrentStep] = useState(isAdmin ? 0 : 1);
+
+  // userId در state اکنون به درستی مدیریت می‌شود
   const [formData, setFormData] = useState({
     serviceTypeId: 0,
     description: "",
     address: "",
-    userId: session?.user.role === "USER" ? session?.user?.id : undefined,
+    userId: isAdmin ? undefined : parseInt(session?.user?.id || "0"), // اگر کاربر عادی است، خودش مشتری است
     statusId: 0,
   });
 
+  const schema = z.object({
+    serviceTypeId: z.number().min(1, "نوع خدمات را انتخاب کنید"),
+    description: z.string().min(10, "توضیحات باید حداقل 10 کاراکتر باشد"),
+    address: z.string().optional(),
+  });
+
   useEffect(() => {
-    if (session?.user.role === "USER") {
-      setFormData((prev) => ({ ...prev, userId: session?.user.id }));
+    // اگر نقش کاربر تغییر کرد (مثلا پس از لاگین)، userId را آپدیت می‌کنیم
+    if (session?.user && !isAdmin) {
+      setFormData((prev) => ({ ...prev, userId: parseInt(session.user.id) }));
     }
-  }, [session]);
+  }, [session, isAdmin]);
 
   if (status === "loading") return <Loading />;
 
   const handleNextStep = async () => {
     if (currentStep === 2) {
-      const validation = schema.safeParse(formData);
+      // از اسکیمای Zod برای اعتبارسنجی بخش توضیحات استفاده می‌کنیم
+      const validation = createRequestSchema
+        .pick({ description: true })
+        .safeParse(formData);
       if (!validation.success) {
-        setError("توضیحات باید حداقل 10 کاراکتر باشد");
+        setError(
+          validation.error.flatten().fieldErrors.description?.[0] ||
+            "خطا در اعتبارسنجی"
+        );
         return;
       }
     }
 
     if (currentStep === 1) {
-      // Get initial status
-      const statuses = await getAllStatuses({
+      const statusesRes = await getAllStatuses({
         orderBy: "id",
         orderDirection: "asc",
         page: 1,
         limit: 1,
       });
-      const initialStatus = statuses.data[0];
+      const initialStatus = statusesRes.data[0];
       if (initialStatus) {
         setFormData((prev) => ({ ...prev, statusId: initialStatus.id }));
       }
@@ -93,51 +106,55 @@ export default function RequestForm({
 
   const handleSubmit = async (data: any) => {
     try {
-      if (session) {
-        if (session?.user.role === "USER") {
-          formData.userId = session?.user?.id;
-        }
-      }
-
-      // If user is not authenticated and not admin, store form data and show auth step
       if (!session) {
         sessionStorage.setItem("pendingRequest", JSON.stringify(data));
-        setCurrentStep(4); // Show authentication step
+        setCurrentStep(4); // نمایش مرحله احراز هویت
         return;
       }
 
-      // Add userId to request data
-      const requestData = {
+      // داده‌های نهایی را بر اساس اسکیمای کامل اعتبارسنجی می‌کنیم
+      const finalData = {
+        ...formData,
         ...data,
-        userId: formData.userId || session?.user?.id,
-        serviceTypeId: formData.serviceTypeId,
-        statusId: formData.statusId,
+        userId: formData.userId, // اطمینان از وجود userId مشتری
       };
 
-      const res: any = await create(requestData);
-      if (session?.user.role === "ADMIN")
-        router.push(`/dashboard/requests/${res?.data.id}`);
-      else router.push(`/panel/requests/${res?.data.id}`);
-    } catch (error) {
-      console.error("Error submitting request:", error);
+      const validation = createRequestSchema.safeParse(finalData);
+      if (!validation.success) {
+        // تبدیل خطاهای Zod به یک پیام قابل نمایش
+        const errorMessages = Object.values(
+          validation.error.flatten().fieldErrors
+        )
+          .flat()
+          .join("\n");
+        setError(errorMessages);
+        return;
+      }
+
+      const res: any = await create(validation.data);
+
+      if (isAdmin) router.push(`/dashboard/requests/${res?.id}`);
+      else router.push(`/panel/requests/${res?.id}`);
+    } catch (err) {
+      console.error("Error submitting request:", err);
+      // handleError از useCrud به صورت خودکار خطا را نمایش می‌دهد
     }
   };
 
   const handleAuthenticationSuccess = async (userId: number) => {
     try {
-      // Get stored form data
       const storedData = sessionStorage.getItem("pendingRequest");
       if (!storedData) return;
 
       const requestData = {
         ...JSON.parse(storedData),
-        userId,
+        userId, // شناسه کاربر جدید را اضافه می‌کنیم
         serviceTypeId: formData.serviceTypeId,
         statusId: formData.statusId,
       };
 
       const res: any = await create(requestData);
-      router.push(`/panel/requests/${res?.data.id}`);
+      router.push(`/panel/requests/${res?.id}`);
       sessionStorage.removeItem("pendingRequest");
     } catch (error) {
       console.error("Error submitting request after authentication:", error);

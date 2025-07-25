@@ -62,18 +62,34 @@ export class QueryBuilder {
       return this;
     }
 
-    const searchConditions = fields.map((field) => ({
-      [field]: { contains: value },
-    }));
+    // ===== شروع اصلاحیه کلیدی =====
+    // این منطق جدید، فیلدهای تو در تو (مانند 'user.name') را به درستی پردازش می‌کند
+    const searchConditions = fields.map((field) => {
+      const parts = field.split(".");
+      if (parts.length > 1) {
+        // ساختن آبجکت تو در تو برای فیلدهای مرتبط
+        return parts.reduceRight((acc, part) => ({ [part]: acc }), {
+          contains: value,
+          mode: "insensitive", // برای جستجوی بهتر
+        } as any);
+      }
+      // برای فیلدهای ساده
+      return { [field]: { contains: value, mode: "insensitive" } };
+    });
+    // ===== پایان اصلاحیه کلیدی =====
 
     if (!this.where.OR) {
-      this.where.OR = searchConditions;
-    } else {
-      this.where.OR = [...this.where.OR, ...searchConditions];
+      this.where.OR = [];
     }
+    if (!Array.isArray(this.where.OR)) {
+        this.where.OR = [this.where.OR];
+    }
+    
+    this.where.OR.push(...searchConditions);
 
     return this;
   }
+  
 
   /**
    * Add a date range condition

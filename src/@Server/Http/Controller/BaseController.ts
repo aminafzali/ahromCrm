@@ -429,20 +429,25 @@ export abstract class BaseController<T extends { userId?: number | null }> {
       return this.handleException(error);
     }
   }
-
   protected handleException(error: unknown): NextResponse {
-    // ===== شروع اصلاحیه =====
-    // این بخش تضمین می‌کند که حتی اگر یک مقدار غیر استاندارد (مثل null) پرتاب شود،
-    // ما آن را به یک آبجکت Error واقعی تبدیل می‌کنیم تا از کرش سرور جلوگیری شود.
+    console.warn("⚠️ Raw error received:", error); // اضافه کن
+
     let properError: Error;
-    if (error instanceof Error) {
-      properError = error;
-    } else {
-      properError = new Error(
-        `An unexpected non-error value was thrown: ${JSON.stringify(error)}`
-      );
+
+    try {
+      if (error instanceof Error) {
+        properError = error;
+      } else if (typeof error === "object" && error !== null) {
+        properError = new Error("Non-standard error thrown");
+        Object.assign(properError, error); // تلاش برای نگه داشتن اطلاعات اضافی
+      } else {
+        properError = new Error(
+          `Non-object error thrown: ${JSON.stringify(error)}`
+        );
+      }
+    } catch (jsonErr) {
+      properError = new Error("Error during error handling.");
     }
-    // ===== پایان اصلاحیه =====
 
     console.error("====== SERVER ERROR (BaseController) ======", properError);
 
@@ -466,7 +471,7 @@ export abstract class BaseController<T extends { userId?: number | null }> {
     }
 
     return NextResponse.json(
-      { error: "An unexpected internal server error occurred" },
+      { error: "An unexpected internal server error occurred." },
       { status: 500 }
     );
   }
