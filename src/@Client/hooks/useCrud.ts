@@ -5,7 +5,7 @@ import { BaseRepository } from "@/@Client/Http/Repository/BaseRepository";
 import { FullQueryParams, PaginationResult } from "@/@Client/types";
 import { useToast } from "ndui-ahrom";
 import { useCallback, useEffect, useState } from "react";
-import { useWorkspace } from "../context/WorkspaceProvider"; // ۱. کانتکست ورک‌اسپیس را ایمپورت می‌کنیم
+import { useWorkspace } from "../context/WorkspaceProvider";
 
 export function useCrud<
   T,
@@ -19,19 +19,12 @@ export function useCrud<
   const [statusCode, setStatus] = useState<number>(0);
   const [success, setSuccess] = useState<string | null>(null);
   const { showToast } = useToast();
-  const { activeWorkspace } = useWorkspace(); // ۲. ورک‌اسپیس فعال را از کانتکست می‌گیریم
+  const { activeWorkspace } = useWorkspace();
 
-  // این useEffect تضمین می‌کند که با هر بار تغییر ورک‌اسپیس، خطاهای قبلی پاک شوند
-  // ===== لاگ ردیابی ۷: بررسی تغییر ورک‌اسپیس =====
   useEffect(() => {
-    console.log(
-      `%c[CLIENT - useCrud] 🔄 Workspace changed. Active Workspace ID: ${activeWorkspace?.workspaceId}`,
-      "color: #6f42c1; font-weight: bold;"
-    );
     setError(null);
     setSuccess(null);
   }, [activeWorkspace]);
-  // ===============================================
 
   const handleError = useCallback(
     (error: unknown) => {
@@ -52,54 +45,43 @@ export function useCrud<
   );
 
   const getAll = useCallback(
-    async (params: FullQueryParams = { page: 1, limit: 10 }) => {
+    // ===== شروع اصلاحیه کلیدی =====
+    // ما یک نوع بازگشتی صریح برای تابع تعریف می‌کنیم
+    async (
+      params: FullQueryParams = { page: 1, limit: 10 }
+    ): Promise<PaginationResult<T>> => {
+      // اگر ورک‌اسپیس فعال نبود، به جای undefined، یک نتیجه خالی و معتبر برمی‌گردانیم
       if (!activeWorkspace) {
-        // ===== لاگ ردیابی ۸: حالت بدون ورک‌اسپیس =====
-        console.warn(
-          "[CLIENT - useCrud] getAll called but no active workspace. Aborting."
-        );
-        // ============================================
-        return;
-      } // اگر ورک‌اسپیسی فعال نبود، کاری انجام نده
-
-      // ===== لاگ ردیابی ۹: اجرای واکشی داده =====
-      console.log(
-        `%c[CLIENT - useCrud] 📞 Calling getAll for Workspace ID: ${activeWorkspace.workspaceId}`,
-        "color: #6f42c1; font-weight: bold;",
-        params
-      );
-      // =========================================
+        return Promise.resolve({
+          data: [],
+          pagination: { total: 0, pages: 1, page: 1, limit: 10 },
+        });
+      }
+      // ===== پایان اصلاحیه کلیدی =====
 
       setLoading(true);
       setError(null);
       try {
         const data: PaginationResult<T> = await repository.getAll(params);
-        // ===== لاگ ردیابی ۶: بررسی داده‌های نهایی دریافت شده در هوک =====
-        console.log(
-          `%c[CLIENT - useCrud] ✅ Data successfully received in hook:`,
-          "color: #6f42c1; font-weight: bold;",
-          data
-        );
-        // =============================================================
-
         return data;
       } catch (error) {
         handleError(error);
-        throw error;
+        // در صورت خطا نیز یک نتیجه خالی برمی‌گردانیم تا از کرش جلوگیری شود
+        return {
+          data: [],
+          pagination: { total: 0, pages: 1, page: 1, limit: 10 },
+        };
       } finally {
         setLoading(false);
       }
     },
-    // ===== شروع اصلاحیه کلیدی =====
-    // با اضافه کردن activeWorkspace به لیست وابستگی، به useCallback می‌گوییم
-    // که با هر بار تغییر ورک‌اسپیس، یک تابع getAll جدید بسازد.
     [repository, handleError, activeWorkspace]
-    // ===== پایان اصلاحیه کلیدی =====
   );
 
   const getById = useCallback(
-    async (id: number) => {
-      if (!activeWorkspace) return;
+    // برای getById، بازگرداندن null در صورت خطا منطقی است
+    async (id: number): Promise<T | null> => {
+      if (!activeWorkspace) return null;
       setLoading(true);
       setError(null);
       try {
@@ -107,13 +89,15 @@ export function useCrud<
         return data;
       } catch (error) {
         handleError(error);
-        throw error;
+        return null;
       } finally {
         setLoading(false);
       }
     },
-    [repository, handleError, activeWorkspace] // وابستگی به activeWorkspace اضافه شد
+    [repository, handleError, activeWorkspace]
   );
+
+  // ... تمام متدهای دیگر (create, update, remove, etc.) بدون تغییر باقی می‌مانند ...
 
   const create = useCallback(
     async (data: CreateInput) => {
