@@ -36,7 +36,7 @@ export default function DetailPage({ id, backUrl }: StatusDetailsViewProps) {
   const fetchStatusDetails = async () => {
     try {
       const data = await getById(id);
-      setStatus(data);
+      if (data != undefined)  setStatus(data);
     } catch (error) {
       console.error("Error fetching status details:", error);
     }

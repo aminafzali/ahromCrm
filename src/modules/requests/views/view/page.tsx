@@ -9,7 +9,6 @@ import { ActionButton } from "@/@Client/types";
 import { listItemRender2 } from "@/modules/notifications/data/table";
 import { Button, Card } from "ndui-ahrom"; // Button اضافه شده است
 import { useEffect, useState } from "react";
-import ReminderButton from "../../components/ReminderButton";
 import RequestStatusForm from "../../components/RequestStatusForm";
 import { useRequest } from "../../hooks/useRequest";
 import { RequestWithRelations } from "../../types";
@@ -64,39 +63,42 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
     try {
       const data = await getById(id);
       console.log("fetchRequestDetail data :", data);
-      setRequest(data); // state برای نمایش اطلاعات در DetailWrapper آپدیت می‌شود
+      if (data != undefined) setRequest(data); // state برای نمایش اطلاعات در DetailWrapper آپدیت می‌شود
 
       // ++ راه‌حل نهایی: ساخت یک آبجکت تمیز فقط با فیلدهای مورد نیاز فرم ++
-      const formValues = {
-        userId: data.userId,
-        description: data.description,
-        // تبدیل null به undefined برای جلوگیری از خطا
-        serviceTypeId: data.serviceTypeId ?? undefined,
-        statusId: data.statusId ?? undefined,
-        address: data.address ?? undefined,
-        formSubmissionid: data.formSubmissionid ?? undefined,
+      if (data != undefined) {
+        const formValues = {
+          // todo:t3 نیاز به اصلاح دارد خیلی مهمه
+          // userId: data.userId,
+          description: data.description,
+          // تبدیل null به undefined برای جلوگیری از خطا
+          serviceTypeId: data.serviceTypeId ?? undefined,
+          statusId: data.statusId ?? undefined,
+          address: data.address ?? undefined,
+          formSubmissionid: data.formSubmissionid ?? undefined,
 
-        // تبدیل آبجکت Date به رشته متنی برای ورودی‌های تاریخ و زمان
-        preferredDate: data.preferredDate
-          ? new Date(data.preferredDate).toISOString().split("T")[0]
-          : undefined,
-        preferredTime: data.preferredTime
-          ? new Date(data.preferredTime)
-              .toISOString()
-              .split("T")[1]
-              .substring(0, 5)
-          : undefined,
+          // تبدیل آبجکت Date به رشته متنی برای ورودی‌های تاریخ و زمان
+          preferredDate: data.preferredDate
+            ? new Date(data.preferredDate).toISOString().split("T")[0]
+            : undefined,
+          preferredTime: data.preferredTime
+            ? new Date(data.preferredTime)
+                .toISOString()
+                .split("T")[1]
+                .substring(0, 5)
+            : undefined,
 
-        // تبدیل ساختار خدمات به ساختاری که فرم انتظار دارد
-        actualServices:
-          data.actualServices?.map((item) => ({
-            actualServiceId: item.actualServiceId,
-            quantity: item.quantity,
-            price: item.price,
-          })) || [],
-      };
-      console.log("fetchRequestDetail formValues :", formValues);
-      reset(formValues); // فرم با مقادیر صحیح و تمیز پر می‌شود
+          // تبدیل ساختار خدمات به ساختاری که فرم انتظار دارد
+          actualServices:
+            data.actualServices?.map((item) => ({
+              actualServiceId: item.actualServiceId,
+              quantity: item.quantity,
+              price: item.price,
+            })) || [],
+        };
+        console.log("fetchRequestDetail formValues :", formValues);
+        reset(formValues); // فرم با مقادیر صحیح و تمیز پر می‌شود
+      }
     } catch (error) {
       console.error("Error fetching request details:", error);
     }
@@ -224,11 +226,12 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
           excludeFields={excludeFields}
           actionButtons={getActionButtons()}
           loading={loading}
-          headerContent={
-            request.user && (
-              <ReminderButton requestId={id} userId={request.user.id} />
-            )
-          }
+          // todo:t3 نیاز به اصلاح دارد خیلی مهمه
+          // headerContent={
+          //   request.user && (
+          //     <ReminderButton requestId={id} userId={request.user.id} />
+          //   )
+          // }
           error={error}
           success={success}
           customRenderers={customRenderers}

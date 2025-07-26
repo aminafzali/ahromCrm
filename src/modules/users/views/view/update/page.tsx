@@ -47,9 +47,11 @@ export default function UpdateUserPage({ id }: UpdateUserPageProps) {
         getAllLabels({ page: 1, limit: 50 }),
         getAllGroups({ page: 1, limit: 50 }),
       ]);
-
-      if (!userData.address) {
-        userData.address = "";
+      
+      if (userData != undefined) {
+        if (!userData.address) {
+          userData.address = "";
+        }
       }
 
       setUserData(userData);

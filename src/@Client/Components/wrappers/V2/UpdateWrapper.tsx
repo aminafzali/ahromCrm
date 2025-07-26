@@ -65,7 +65,7 @@ const UpdateWrapper = <
     const fetchData = async () => {
       try {
         const entityData = await getById(Number(id));
-        setDefaultValues(entityData);
+        if (entityData != undefined) setDefaultValues(entityData);
       } catch (error) {
         console.error("Error fetching entity:", error);
       }

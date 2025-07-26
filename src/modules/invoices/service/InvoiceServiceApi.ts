@@ -33,11 +33,11 @@ export class InvoiceServiceApi extends BaseService<any> {
   //  * Handle after create hook
   //  */
   private async handleAfterCreate(entity: any): Promise<void> {
-    const invoice = await this.getById(entity.id , {
-      include:{
-        request:true
-      }
-    })
+    const invoice = await this.getById(entity.id, {
+      include: {
+        request: true,
+      },
+    });
     let baseLink: string = process.env.NEXTAUTH_URL
       ? process.env.NEXTAUTH_URL
       : "http://localhost:3011";
@@ -45,11 +45,12 @@ export class InvoiceServiceApi extends BaseService<any> {
     const message =
       `یک فاکتور برای شما ثبت شد` + "\n" + "شماره پیگیری :‌ " + entity.id;
     // Create initial status notification
-    await this.notifRepo.create({
-      userId: invoice.userId,
-      title: "ثبت فاکتور",
-      message,
-    });
+    //todo:t3 نیاز به اصلاحیه جدی
+    // await this.notifRepo.create({
+    //   userId: invoice.userId,
+    //   title: "ثبت فاکتور",
+    //   message,
+    // });
   }
 
   // /**

@@ -37,7 +37,7 @@ export default function DetailPage({ id }: ServiceTypeDetailsViewProps) {
   const fetchServiceTypeDetails = async () => {
     try {
       const data = await getById(id);
-      setServiceType(data);
+      if (data != undefined) setServiceType(data);
     } catch (error) {
       console.error("Error fetching service type details:", error);
     }

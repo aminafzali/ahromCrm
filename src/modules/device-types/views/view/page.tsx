@@ -35,7 +35,8 @@ export default function DetailPage({ id }: DeviceTypeDetailsViewProps) {
   const fetchDeviceType = async () => {
     try {
       const data = await getById(id); // 'id' اینجا از قبل یک عدد است
-      setDeviceType(data);
+        
+     if(data != undefined) setDeviceType(data);
     } catch (error) {
       console.error("Error fetching device type:", error);
     }

@@ -64,19 +64,25 @@ model Workspace {
 }
 
 model WorkspaceUser {
+  // ===== شروع اصلاحیه کلیدی =====
+  // ۱. یک شناسه منحصر به فرد و خودکار به مدل اضافه می‌کنیم
+  // این کار، مدل را با تمام کامپوننت‌های عمومی سازگار می‌کند.
+  id Int @id @default(autoincrement())
+  // ===== پایان اصلاحیه کلیدی =====
+
   workspaceId Int
   userId      Int
   roleId      Int
 
   displayName String?
-  phone       String? // **فیلد تلفن اضافه شد**
-  name        String? // **فیلد نام اضافه شد**
+  phone       String?
+  name        String?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   role      Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
-  // ===== شروع اصلاحات: انتقال کامل روابط از User به WorkspaceUser =====
+  // روابط به درخواست‌ها، فاکتورها و ...
   requests             Request[]
   requestsAssigned     Request[]              @relation("AssignedTo")
   notifications        Notification[]
@@ -89,12 +95,12 @@ model WorkspaceUser {
   receivedDevices      ReceivedDevice[]
   statusChanges        RequestStatusHistory[]
 
-  // روابط چند به چند جدید
+  // روابط چند به چند
   labels     LabelsOnWorkspaceUsers[]
   userGroups UserGroupsOnWorkspaceUsers[]
-  // ===== پایان اصلاحات =====
 
-  @@id([workspaceId, userId])
+  // کلید ترکیبی را به عنوان یک محدودیت یکتایی نگه می‌داریم تا یک کاربر نتواند دوبار عضو یک ورک‌اسپیس شود
+  @@unique([workspaceId, userId])
 }
 
 model Role {

@@ -47,7 +47,7 @@ export default function DetailPage({ id }: LabelDetailsViewProps) {
   const fetchLabelDetails = async () => {
     try {
       const data = await getById(id);
-      setLabel(data);
+     if (data != undefined) setLabel(data);
     } catch (error) {
       console.error("Error fetching label details:", error);
     }

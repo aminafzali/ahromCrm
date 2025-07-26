@@ -40,7 +40,7 @@ export default function DetailPage({ id }: ActualServiceDetailsViewProps) {
     try {
       const data = await getById(id);
       // todo:T3 نیاز به اصلاح
-      //  setActualService(data);
+      if (data != undefined)  setActualService(data);
     } catch (error) {
       console.error("Error fetching actual service details:", error);
     }

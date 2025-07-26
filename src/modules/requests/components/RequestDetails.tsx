@@ -26,7 +26,7 @@ export default function RequestDetails({
   const fetchRequestDetails = async () => {
     try {
       const data = await getById(id);
-      setRequest(data);
+    if (data != undefined)   setRequest(data);
     } catch (error) {
       console.error("Error fetching request details:", error);
     }

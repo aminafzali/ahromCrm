@@ -78,24 +78,45 @@ export function useCrud<
     [repository, handleError, activeWorkspace]
   );
 
+  // todo:t3
+  //  getById بصورت موقت جایگزین شد  باید اصلاح شود متد گامنت شده زیری یعنی بعد از همین متد با اسم یگسان
   const getById = useCallback(
-    // برای getById، بازگرداندن null در صورت خطا منطقی است
-    async (id: number): Promise<T | null> => {
-      if (!activeWorkspace) return null;
+    async (id: number) => {
+    
       setLoading(true);
       setError(null);
       try {
+          if (!activeWorkspace) return  ;
         const data: T = await repository.getById(id);
         return data;
       } catch (error) {
         handleError(error);
-        return null;
+        throw error;
       } finally {
         setLoading(false);
       }
     },
-    [repository, handleError, activeWorkspace]
+    [repository, handleError, activeWorkspace] // وابستگی به activeWorkspace اضافه شد
   );
+
+  // const getById = useCallback(
+  //   // برای getById، بازگرداندن null در صورت خطا منطقی است
+  //   async (id: number): Promise<T | null> => {
+  //     if (!activeWorkspace) return null;
+  //     setLoading(true);
+  //     setError(null);
+  //     try {
+  //       const data: T = await repository.getById(id);
+  //       return data;
+  //     } catch (error) {
+  //       handleError(error);
+  //       return null;
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   },
+  //   [repository, handleError, activeWorkspace]
+  // );
 
   // ... تمام متدهای دیگر (create, update, remove, etc.) بدون تغییر باقی می‌مانند ...
 
@@ -280,8 +301,6 @@ export function useCrud<
   };
 }
 
-
-
 // // مسیر فایل: src/@Client/hooks/useCrud.ts
 
 // import { ApiError } from "@/@Client/Exceptions/ApiError";
@@ -381,23 +400,23 @@ export function useCrud<
 //     // ===== پایان اصلاحیه کلیدی =====
 //   );
 
-//   const getById = useCallback(
-//     async (id: number) => {
-//       if (!activeWorkspace) return;
-//       setLoading(true);
-//       setError(null);
-//       try {
-//         const data: T = await repository.getById(id);
-//         return data;
-//       } catch (error) {
-//         handleError(error);
-//         throw error;
-//       } finally {
-//         setLoading(false);
-//       }
-//     },
-//     [repository, handleError, activeWorkspace] // وابستگی به activeWorkspace اضافه شد
-//   );
+// const getById = useCallback(
+//   async (id: number) => {
+//     if (!activeWorkspace) return;
+//     setLoading(true);
+//     setError(null);
+//     try {
+//       const data: T = await repository.getById(id);
+//       return data;
+//     } catch (error) {
+//       handleError(error);
+//       throw error;
+//     } finally {
+//       setLoading(false);
+//     }
+//   },
+//   [repository, handleError, activeWorkspace] // وابستگی به activeWorkspace اضافه شد
+// );
 
 //   const create = useCallback(
 //     async (data: CreateInput) => {

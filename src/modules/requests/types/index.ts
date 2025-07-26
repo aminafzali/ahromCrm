@@ -31,7 +31,7 @@ export interface ActualServiceOnRequest {
 
 // تایپ نهایی برای یک درخواست با تمام روابط مورد نیاز بر اساس معماری جدید
 export type RequestWithRelations = Request & {
-  status?: Status;
+  status: Status;
   serviceType?: ServiceType;
   // مشتری اکنون یک پروفایل ورک‌اسپیسی کامل است
   workspaceUser?: WorkspaceUserProfile;

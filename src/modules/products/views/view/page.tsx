@@ -41,7 +41,7 @@ export default function DetailPage({ id }: ProductDetailsViewProps) {
   const fetchProduct = async () => {
     try {
       const data = await getById(id);
-      setProduct(data);
+     if (data != undefined) setProduct(data);
     } catch (error) {
       console.error("Error fetching product:", error);
     }

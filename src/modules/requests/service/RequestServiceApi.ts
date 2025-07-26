@@ -165,14 +165,15 @@ export class RequestServiceApi extends BaseService<any> {
 
     const message = `درخواست شما با موفقیت ثبت شد\nشماره پیگیری: ${entity.id}`;
     // با ساختار جدید NotificationServiceApi هماهنگ شده است
-    await this.notifRepo.create({
-      workspaceId: entity.workspaceId,
-      workspaceUserUserId: customer.userId,
-      workspaceUserWorkspaceId: entity.workspaceId,
-      requestId: entity.id,
-      title: "ثبت درخواست",
-      message,
-    });
+    //todo:t3 نیاز به اصلاحیه جدی
+    // await this.notifRepo.create({
+    //   workspaceId: entity.workspaceId,
+    //   workspaceUserUserId: customer.userId,
+    //   workspaceUserWorkspaceId: entity.workspaceId,
+    //   requestId: entity.id,
+    //   title: "ثبت درخواست",
+    //   message,
+    // });
   }
 
   /**
@@ -185,16 +186,16 @@ export class RequestServiceApi extends BaseService<any> {
     let message = `درخواست شما به روز رسانی شد از وضعیت ${data.oldStatus} به ${data.newStatus}`;
     if (entity.note) message += `\n\n${entity.note}`;
     message += `\nشماره پیگیری: ${entity.id}`;
-
-    await this.notifRepo.create({
-      workspaceId: entity.workspaceId,
-      workspaceUserUserId: customer.userId,
-      workspaceUserWorkspaceId: entity.workspaceId,
-      requestId: entity.id,
-      title: "تغییر وضعیت",
-      message,
-      sendSms: data.sendSms,
-    });
+    //todo:t3 نیاز به اصلاحیه جدی
+    // await this.notifRepo.create({
+    //   workspaceId: entity.workspaceId,
+    //   workspaceUserUserId: customer.userId,
+    //   workspaceUserWorkspaceId: entity.workspaceId,
+    //   requestId: entity.id,
+    //   title: "تغییر وضعیت",
+    //   message,
+    //   sendSms: data.sendSms,
+    // });
   }
 
   // این بخش کامنت شده از کد شما، دست‌نخورده باقی می‌ماند

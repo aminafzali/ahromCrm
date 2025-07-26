@@ -32,7 +32,11 @@ export default function DetailPage({ id }: BrandDetailsViewProps) {
   const fetchBrandDetails = async () => {
     try {
       const data = await getById(id);
-      setBrand(data);
+      
+      if(data != undefined){
+        setBrand(data);
+      }
+     
     } catch (error) {
       console.error("Error fetching brand details:", error);
     }

@@ -32,7 +32,7 @@ export default function InvoiceDetails({
   const fetchInvoiceDetails = async () => {
     try {
       const data = await getById(id);
-      setInvoice(data);
+    if (data != undefined)   setInvoice(data);
     } catch (error) {
       console.error("Error fetching invoice details:", error);
     }

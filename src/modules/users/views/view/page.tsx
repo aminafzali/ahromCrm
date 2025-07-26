@@ -35,7 +35,7 @@ export default function DetailPage({ id }: UserDetailsViewProps) {
   const fetchUserDetails = async () => {
     try {
       const data = await getById(id);
-      setUser(data);
+      if (data != undefined)  setUser(data);
     } catch (error) {
       console.error("Error fetching details:", error);
     }

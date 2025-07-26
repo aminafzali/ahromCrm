@@ -7,38 +7,43 @@ const service = new FormServiceApi();
 
 class UserController extends BaseController<any> {
   constructor() {
-    super(service , includeForms);
+    super(service, includeForms);
   }
 }
 
 const controller = new UserController();
 
 export async function GET(
-  req: NextRequest, id : number // ✅ Correct format
+  req: NextRequest,
+  id: number // ✅ Correct format
 ) {
   return controller.getById(req, id); // ✅ Convert id to number
 }
 
 export async function PATCH(
-  req: NextRequest, id : number // ✅ Correct format
+  req: NextRequest,
+  id: number // ✅ Correct format
 ) {
   return controller.update(req, id); // ✅ Convert id to number
 }
 
 export async function POST(
-  req: NextRequest, id : number // ✅ Correct format
+  req: NextRequest,
+  id: number // ✅ Correct format
 ) {
   return controller.update(req, id); // ✅ Convert id to number
 }
 
-
+//todo:t3 من بجای put از update استفاده کردم
+// کد ایراد داره باید بعدا اصلاح بشه
+//
 export async function PUT(req: NextRequest, id: number) {
-  return controller.put(req, id);
+  return controller.update(req, id);
 }
 
-
 export async function DELETE(
-  req: NextRequest, id : number // ✅ Correct format
+  req: NextRequest,
+  id: number // ✅ Correct format
 ) {
   return controller.delete(req, id); // ✅ Convert id to number
 }

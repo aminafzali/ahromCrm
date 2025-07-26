@@ -48,7 +48,7 @@ export default function DetailPage({ id }: UserGroupDetailsViewProps) {
   const fetchUserGroupDetails = async () => {
     try {
       const data = await getById(id);
-      setUserGroup(data);
+      if (data != undefined)  setUserGroup(data);
     } catch (error) {
       console.error("Error fetching user group details:", error);
     }

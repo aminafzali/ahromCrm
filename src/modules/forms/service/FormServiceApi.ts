@@ -24,27 +24,28 @@ export class FormServiceApi extends BaseService<any> {
     const formData = {
       ...data,
     };
-    return super.create(formData);
+    // todo:t3 نیاز به اصلاحیه جدی
+    // return super.create(formData);
   }
 
   // Override update method to handle nested fields and options
   async update(id: number, data: any) {
     const formData = {
       ...data,
-      
     };
     return super.update(id, formData);
   }
 
   async put(id: number, data: any) {
     const formData = {
-      
-      fields: data.fields ? {
-        deleteMany: {},
-        create: data.fields.map((field: any) => ({
-          fieldId:field.id
-        }))
-      } : undefined
+      fields: data.fields
+        ? {
+            deleteMany: {},
+            create: data.fields.map((field: any) => ({
+              fieldId: field.id,
+            })),
+          }
+        : undefined,
     };
     const entity = await this.repository.update(id, formData);
 

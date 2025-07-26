@@ -32,7 +32,10 @@ export default function DetailPage({ id }: CategoryDetailsViewProps) {
   const fetchCategoryDetails = async () => {
     try {
       const data = await getById(id);
-      setCategory(data);
+       if(data != undefined){
+        setCategory(data);
+      }
+     
     } catch (error) {
       console.error("Error fetching category details:", error);
     }

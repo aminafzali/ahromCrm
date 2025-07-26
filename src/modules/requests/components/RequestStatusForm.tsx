@@ -8,7 +8,7 @@ import { updateRequestStatusSchema } from "../validation/schema";
 
 interface RequestStatusFormProps {
   requestId: number;
-  currentStatus: number;
+  currentStatus: number ;
   onSuccess: () => void;
 }
 

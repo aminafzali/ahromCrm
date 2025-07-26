@@ -44,10 +44,11 @@ export class PaymentServiceApi extends BaseService<any> {
       entity.reference;
 
     // Create notification
-    await this.notifRepo.create({
-      userId: entity.userId,
-      title: "پرداخت موفق",
-      message,
-    });
+     //todo:t3 نیاز به اصلاحیه جدی
+    // await this.notifRepo.create({
+    //   userId: entity.userId,
+    //   title: "پرداخت موفق",
+    //   message,
+    // });
   }
 }

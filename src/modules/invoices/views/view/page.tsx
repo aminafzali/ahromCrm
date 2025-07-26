@@ -40,7 +40,7 @@ export default function DetailPage({ id, isAdmin }: InvoiceDetailsViewProps) {
   const fetchInvoiceDetails = async () => {
     try {
       const data = await getById(id);
-      setInvoice(data);
+      if (data != undefined) setInvoice(data);
     } catch (error) {
       console.error("Error fetching invoice details:", error);
     }

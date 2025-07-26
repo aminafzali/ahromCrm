@@ -29,7 +29,9 @@ export default function DetailPage({ id }: DetailsPageProps) {
 
   const fetchItem = async () => {
     try {
-      setItem(await getById(id));
+        const data = await getById(id);
+     if (data != undefined) setItem(data);
+     
     } catch (error) {
       console.error("Error fetching item details:", error);
     }
