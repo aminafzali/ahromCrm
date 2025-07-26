@@ -1,11 +1,11 @@
 // مسیر فایل: src/modules/workspace-users/data/form.ts
 
 import { FormConfig } from "@/@Client/types/form";
+import { columnsForSelect } from "@/modules/roles/data/table";
 import {
   createWorkspaceUserSchema,
   updateWorkspaceUserSchema,
 } from "../validation/schema";
-
 /**
  * این تابع، پیکربندی فرم دعوت عضو جدید را برمی‌گرداند.
  * دقیقاً از الگوی getBrandFormConfig و getReceivedDeviceFormConfig پیروی می‌کند.
@@ -14,12 +14,18 @@ import {
 export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
   fields: [
     {
-      name: "name",
-      label: "نام نمایشی",
+      name: "displayName",
+      label: "نام اصلی نمایشی",
       type: "text",
       placeholder: "نام عضو را وارد کنید",
       required: true,
-      col: 2,
+    },
+    {
+      name: "name",
+      label: "نام واقعی",
+      type: "text",
+      placeholder: "نام عضو را وارد کنید",
+      required: true,
     },
     {
       name: "phone",
@@ -32,9 +38,10 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
     {
       name: "roleId",
       label: "نقش",
-      type: "select",
+      type: "dataTable",
       // گزینه‌ها از داده‌های ورودی خوانده می‌شوند، که خطا را برطرف می‌کند
-      options: data?.get("roles") || [],
+      data: data?.get("roles") || [],
+      columns: columnsForSelect,
       required: true,
       col: 2,
     },

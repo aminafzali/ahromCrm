@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 export const createWorkspaceUserSchema = z.object({
+  displayName: z.string().min(1, "نام نمایشی الزامی است."),
   name: z.string().min(1, "نام عضو الزامی است."),
   phone: z
     .string()

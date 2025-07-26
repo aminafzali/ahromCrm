@@ -1,6 +1,5 @@
 // مسیر فایل: src/@Server/Http/Service/BaseService.ts
 
-import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { ValidationException } from "../../Exceptions/BaseException";
 import {
@@ -191,8 +190,9 @@ export abstract class BaseService<T> {
       notified: false,
       status: "PENDING",
     };
-    const entity = await prisma.reminder.create({ data: reminderData });
-    return entity;
+    // Todo: خیلی مهمه اصلاح بشه
+    // const entity = await prisma.reminder.create({ data: reminderData });
+    //  return entity;
   }
 
   async updateMany(where: any, data: any): Promise<{ count: number }> {

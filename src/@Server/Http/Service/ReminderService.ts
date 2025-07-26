@@ -70,7 +70,8 @@ export class ReminderService extends BaseService<any> {
         2
       )}`
     );
-    await this.notificationService.create(notificationData);
+    // خیلی مهمه که سریغ اصلاخ بشه
+  //  await this.notificationService.create(notificationData);
   }
 
   async checkDueReminders(batchSize = 50, offset = 0) {
@@ -173,7 +174,8 @@ export class ReminderService extends BaseService<any> {
         updatedAt: new Date(),
       };
       delete newReminder.id;
-      await this.create(newReminder);
+      // todo: خیلی  مهمه که سریغ اصلاح بشه
+ //     await this.create(newReminder);
     }
   }
 

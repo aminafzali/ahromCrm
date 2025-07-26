@@ -27,8 +27,8 @@ export class WorkspaceUserServiceApi extends BaseService<any> {
       searchFileds,
       relations
     );
-    this.repository = new Repository(); // این خط نیز دقیقاً مانند ماژول brands است
     this.connect = connects;
+    this.repository = new Repository(); // این خط نیز دقیقاً مانند ماژول brands است
   }
 
   /**

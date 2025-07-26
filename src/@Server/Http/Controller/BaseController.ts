@@ -20,7 +20,7 @@ export type AuthContext = {
   workspaceUser: (WorkspaceUser & { role: Role }) | null;
 };
 
-export abstract class BaseController<T extends { userId?: number | null }> {
+export abstract class BaseController<T> {
   protected service: BaseService<T>;
   protected include: Record<string, boolean | object>;
   protected own: boolean;
@@ -299,7 +299,7 @@ export abstract class BaseController<T extends { userId?: number | null }> {
         throw new NotFoundException("Entity not found in this workspace.");
 
       if (context.role?.name !== "Admin") {
-        if (this.own && entityToDelete.userId !== context.user.id) {
+        if (this.own) {
           throw new ForbiddenException(
             "Permission denied to delete this entity."
           );

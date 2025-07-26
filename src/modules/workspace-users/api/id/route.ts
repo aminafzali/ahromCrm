@@ -1,15 +1,16 @@
 // مسیر فایل: src/modules/workspace-users/api/id/route.ts
 
 import { BaseController } from "@/@Server/Http/Controller/BaseController";
+import { WorkspaceUser } from "@prisma/client";
 import { NextRequest } from "next/server";
 import { include } from "../../data/fetch";
 import { WorkspaceUserServiceApi } from "../../service/WorkspaceUserServiceApi";
 
 const service = new WorkspaceUserServiceApi();
 
-class WorkspaceUserController extends BaseController<any> {
+class WorkspaceUserController extends BaseController<WorkspaceUser> {
   constructor() {
-    super(service, include, false);
+    super(service, include);
   }
 }
 

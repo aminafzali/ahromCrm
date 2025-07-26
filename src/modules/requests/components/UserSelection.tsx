@@ -116,9 +116,11 @@ export default function UserSelection({ onSelect }: UserSelectionProps) {
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="font-semibold">
-                    {member.user?.name || "بدون نام"}
+                    {member?.user?.name || member?.name || "بدون نام"}
                   </h3>
-                  <p className="text-gray-600">{member.user?.phone}</p>
+                  <p className="text-gray-600">
+                    {member?.user?.phone || member?.phone}
+                  </p>
                 </div>
                 {selectedUserId === member.userId && (
                   <DIcon

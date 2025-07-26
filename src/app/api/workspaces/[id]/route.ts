@@ -1,4 +1,4 @@
-// مسیر فایل: src/app/api/workspaces/[id]/route.ts
+// // مسیر فایل: src/app/api/workspaces/[id]/route.ts
 
 import {
   BaseException,
@@ -32,11 +32,11 @@ const updateWorkspaceSchema = z.object({
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const context = await AuthProvider.isAuthenticated(req);
-    const numericId = parseInt(params.id, 10);
+    const numericId = parseInt((await params).id, 10);
 
     // اینجا چون فقط در حال خواندن هستیم، نیازی به سرویس خاصی نیست و می‌توان مستقیم از پریزما خواند
     const workspace = await prisma.workspace.findFirst({
@@ -78,11 +78,11 @@ export async function GET(
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const context = await AuthProvider.isAuthenticated(req);
-    const numericId = parseInt(params.id, 10);
+    const numericId = parseInt((await params).id, 10);
 
     // ابتدا ورک‌اسپیس را پیدا می‌کنیم
     const workspace = await prisma.workspace.findUnique({
@@ -133,11 +133,11 @@ export async function PATCH(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const context = await AuthProvider.isAuthenticated(req);
-    const numericId = parseInt(params.id, 10);
+    const numericId = parseInt((await params).id, 10);
 
     const workspace = await prisma.workspace.findUnique({
       where: { id: numericId },

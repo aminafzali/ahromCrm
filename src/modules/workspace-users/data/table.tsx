@@ -7,15 +7,15 @@ import { Column } from "ndui-ahrom/dist/components/Table/Table";
 export const columnsForAdmin: Column[] = [
   {
     name: "name",
-    field: "user.name", // دسترسی به نام از طریق رابطه
+    field: "name", // دسترسی به نام از طریق رابطه
     label: "نام عضو",
-    render: (row) => row.user?.name || "-", // نمایش نام کاربر
+    render: (row) => row?.name || "-", // نمایش نام کاربر
   },
   {
     name: "phone",
-    field: "user.phone", // دسترسی به تلفن از طریق رابطه
+    field: "phone", // دسترسی به تلفن از طریق رابطه
     label: "شماره تلفن",
-    render: (row) => row.user?.phone || "-", // نمایش شماره تلفن
+    render: (row) => row?.phone || "-", // نمایش شماره تلفن
   },
   {
     name: "role",

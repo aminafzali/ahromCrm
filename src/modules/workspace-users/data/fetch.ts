@@ -21,9 +21,9 @@ export const include = {
 // ===== شروع اصلاحیه برای تست =====
 // ما به صورت موقت، فیلدهای جستجوی تو در تو را حذف می‌کنیم
 // و فقط بر اساس یک فیلد ساده و مستقیم (displayName) جستجو را فعال می‌کنیم.
-export const searchFileds = ["displayName"];
+export const searchFileds = ["name"];
 // ===== پایان اصلاحیه برای تست =====
 
 // این آرایه‌ها طبق الگوی ماژول brands خالی هستند
 export const relations = [];
-export const connects = [];
+export const connects = ["role", "user"];

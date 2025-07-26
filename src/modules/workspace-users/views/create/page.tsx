@@ -15,7 +15,7 @@ export default function CreateWorkspaceUserPage({
   after,
 }: CreatePageProps) {
   // ۲. هوک useRole را برای دسترسی به متد getAll آن فراخوانی می‌کنیم
-  const { getAll: getAllRoles } = useRole();
+  const { getAll } = useRole();
 
   return (
     <CreateWrapper
@@ -23,8 +23,7 @@ export default function CreateWorkspaceUserPage({
       fetchers={[
         {
           key: "roles",
-          fetcher: () =>
-            getAllRoles({ page: 1, limit: 100 }).then((res) => res.data),
+          fetcher: () => getAll({ page: 1, limit: 50 }).then((res) => res.data),
         },
       ]}
       title="دعوت عضو جدید"

@@ -23,30 +23,30 @@ export const dashboardMenuItems = [
     href: "/adminDivider",
   },
   {
-    id: "role",
+    id: "roles",
     label: "نقش ها",
     icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
     href: "/dashboard/roles",
   },
   {
-    id: "permission",
+    id: "permissions",
     label: "دسترسی ها",
     icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
     href: "/dashboard/permissions",
   },
   {
-    id: "workspaceUser",
-    label: "مخاطبین ورک اسپیس",
+    id: "workspace-users",
+    label: "مخاطبین",
     icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
     href: "/dashboard/workspace-users",
   },
 
-  {
-    id: "user",
-    label: "مخاطبین",
-    icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
-    href: "/dashboard/users",
-  },
+  // {
+  //   id: "user",
+  //   label: "مخاطبین",
+  //   icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
+  //   href: "/dashboard/users",
+  // },
   {
     id: "userGroups",
     label: "گروه‌های کاربری",

@@ -28,3 +28,17 @@ export const columnsForAdmin: Column[] = [
     ),
   },
 ];
+
+
+export const columnsForSelect: Column[] = [
+  {
+    name: "name",
+    field: "name",
+    label: "نام نقش",
+  },
+  {
+    name: "description",
+    field: "description",
+    label: "توضیحات",
+  }
+];

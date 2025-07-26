@@ -44,7 +44,7 @@ export class WorkspaceApiService {
           },
         });
         // ===== پایان اصلاحیه کلیدی =====
-        
+
         await tx.workspaceUser.create({
           data: {
             workspaceId: workspace.id,
@@ -52,7 +52,7 @@ export class WorkspaceApiService {
             roleId: adminRole.id,
           },
         });
-        
+
         return workspace;
       });
     } catch (error) {
