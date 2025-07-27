@@ -31,6 +31,5 @@ export const searchFileds = [
 ];
 // ===== پایان اصلاحیه برای تست =====
 
-
 export const relations = [];
-export const connects = [];
+export const connects = ["user", "role", "labels", "userGroups"];

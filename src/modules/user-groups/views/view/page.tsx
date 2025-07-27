@@ -6,7 +6,7 @@ import { useUserGroup } from "../../hooks/useUserGroup";
 import { UserGroupWithRelations } from "../../types";
 
 import { listItemRender as listItemRenderLabel } from "@/modules/labels/data/table";
-import { listItemRender as listItemRenderUsers } from "@/modules/users/data/table";
+import { listItemRender as listItemRenderworkspaceUsers } from "@/modules/workspace-users/data/table";
 import { useRouter } from "next/navigation";
 
 interface UserGroupDetailsViewProps {
@@ -48,7 +48,7 @@ export default function DetailPage({ id }: UserGroupDetailsViewProps) {
   const fetchUserGroupDetails = async () => {
     try {
       const data = await getById(id);
-      if (data != undefined)  setUserGroup(data);
+      if (data != undefined) setUserGroup(data);
     } catch (error) {
       console.error("Error fetching user group details:", error);
     }
@@ -67,13 +67,13 @@ export default function DetailPage({ id }: UserGroupDetailsViewProps) {
         )}
       </div>
     ),
-    users: (value: []) => (
+    workspaceUsers: (value: []) => (
       <div>
         {value && value.length > 0 && (
           <div className="my-4">
             <h3>کاربران</h3>
             <div className="grid lg:grid-cols-2 gap-2 my-2">
-              {value.map((item) => listItemRenderUsers(item))}
+              {value.map((item) => listItemRenderworkspaceUsers(item))}
             </div>
           </div>
         )}

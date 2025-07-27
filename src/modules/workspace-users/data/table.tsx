@@ -125,8 +125,8 @@ export const listItemRender = (row: any) => (
         <ActionsTable
           actions={["view", "edit", "delete"]}
           row={row}
-          onView={`/dashboard/users/${row.id}`}
-          onEdit={`/dashboard/users/${row.id}/update`}
+          onView={`/dashboard/workspace-users/${row.id}`}
+          onEdit={`/dashboard/workspace-users/${row.id}/update`}
           showLabels
           className="justify-between px-4 w-full "
         />

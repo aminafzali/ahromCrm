@@ -1,7 +1,7 @@
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
 import { DetailPageWrapper } from "@/@Client/Components/wrappers";
-import { listItemRender as listItemRenderUsers } from "@/modules/users/data/table";
+import { listItemRender as listItemRenderworkspaceUsers } from "@/modules/workspace-users/data/table";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLabel } from "../../hooks/useLabel";
@@ -47,20 +47,20 @@ export default function DetailPage({ id }: LabelDetailsViewProps) {
   const fetchLabelDetails = async () => {
     try {
       const data = await getById(id);
-     if (data != undefined) setLabel(data);
+      if (data != undefined) setLabel(data);
     } catch (error) {
       console.error("Error fetching label details:", error);
     }
   };
 
   const customRenderers = {
-    users: (value: []) => (
+    workspaceUsers: (value: []) => (
       <div>
         {value && value.length > 0 && (
           <div className="my-4">
             <h3>کاربران</h3>
             <div className="grid lg:grid-cols-2 gap-2 my-2">
-              {value.map((item) => listItemRenderUsers(item))}
+              {value.map((item) => listItemRenderworkspaceUsers(item))}
             </div>
           </div>
         )}

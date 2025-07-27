@@ -1,6 +1,6 @@
 import { CreateWrapper } from "@/@Client/Components/wrappers";
 import { CreatePageProps } from "@/@Client/types/crud";
-import { useUser } from "@/modules/users/hooks/useUser";
+import { useWorkspaceUser } from "@/modules/workspace-users/hooks/useWorkspaceUser";
 import { getUserGroupFormConfig } from "../../data/form";
 import { UserGroupRepository } from "../../repo/UserGroupRepository";
 import { createUserGroupSchema } from "../../validation/schema";
@@ -9,13 +9,13 @@ export default function CreateUserGroupPage({
   back = true,
   after,
 }: CreatePageProps) {
-  const { getAll } = useUser();
+  const { getAll } = useWorkspaceUser();
 
   return (
     <CreateWrapper
       fetchers={[
         {
-          key: "users",
+          key: "workspaceUsers",
           fetcher: () => getAll({ page: 1, limit: 50 }).then((res) => res.data),
         },
       ]}

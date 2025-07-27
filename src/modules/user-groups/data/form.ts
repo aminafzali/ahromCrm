@@ -3,7 +3,6 @@ import { columnsForSelect } from "@/modules/users/data/table";
 import { z } from "zod";
 import { createUserGroupSchema } from "../validation/schema";
 
-
 export const getUserGroupFormConfig = (data?: Map<string, any>): FormConfig => {
   return {
     fields: [
@@ -23,20 +22,20 @@ export const getUserGroupFormConfig = (data?: Map<string, any>): FormConfig => {
         placeholder: "توضیحات گروه را وارد کنید",
       },
       {
-        name: "users",
+        name: "workspaceUsers",
         label: "مخاطب ها",
         type: "dataTable",
-        data: data?.get("users") || [],
+        data: data?.get("workspaceUsers") || [],
         col: 2,
         columns: columnsForSelect,
-        multiple:true
-      }
+        multiple: true,
+      },
     ],
     validation: createUserGroupSchema,
     layout: {
       columns: 4,
-      gap: 4
-    }
+      gap: 4,
+    },
   };
 };
 
@@ -62,6 +61,6 @@ export const userGroupFormConfig: FormConfig = {
   }),
   layout: {
     columns: 1,
-    gap: 4
-  }
+    gap: 4,
+  },
 };

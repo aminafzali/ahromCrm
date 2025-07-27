@@ -1,8 +1,8 @@
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
 import DynamicUpdateWrapper from "@/@Client/Components/wrappers/DynamicUpdateWrapper";
-import { useUser } from "@/modules/users/hooks/useUser";
-import { UserWithRelations } from "@/modules/users/types";
+import { useWorkspaceUser } from "@/modules/workspace-users/hooks/useWorkspaceUser";
+import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -30,8 +30,10 @@ export default function UpdateUserGroupPage({ id }: UpdateUserGroupPageProps) {
   } = useUserGroup();
   const [userGroupData, setUserGroupData] = useState<any>(null);
 
-  const { getAll, loading: loadingUsers } = useUser();
-  const [users, setUsers] = useState<UserWithRelations[]>([]);
+  const { getAll, loading: loadingUsers } = useWorkspaceUser();
+  const [workspaceUsers, setWorkspaceUsers] = useState<
+    WorkspaceUserWithRelations[]
+  >([]);
 
   useEffect(() => {
     fetchUserGroup();
@@ -46,9 +48,9 @@ export default function UpdateUserGroupPage({ id }: UpdateUserGroupPageProps) {
 
       const dataU = await getAll(params);
 
-      setUsers(dataU.data);
+      setWorkspaceUsers(dataU.data);
     } catch (error) {
-      console.error("Error fetching user group:", error);
+      console.error("Error fetching workspaceUser group:", error);
     }
   };
 
@@ -68,7 +70,7 @@ export default function UpdateUserGroupPage({ id }: UpdateUserGroupPageProps) {
       await remove(id);
       router.push("/dashboard/user-groups");
     } catch (error) {
-      console.error("Error deleting user group:", error);
+      console.error("Error deleting workspaceUser group:", error);
     }
   };
 
@@ -78,7 +80,7 @@ export default function UpdateUserGroupPage({ id }: UpdateUserGroupPageProps) {
   if (loadingUsers) return <Loading />;
 
   const data = new Map<string, any>();
-  data.set("users", users);
+  data.set("workspaceUsers", workspaceUsers);
 
   return (
     <DynamicUpdateWrapper

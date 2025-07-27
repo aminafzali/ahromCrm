@@ -1,15 +1,15 @@
 export const include = {
-  _count: {  // تعداد برچسب‌های هر کاربر
+  _count: {
+    // تعداد برچسب‌های هر کاربر
     select: {
-      users: true,
+      workspaceUsers: true,
     },
   },
   updatedAt: false,
-  users: {
+  workspaceUsers: {
     include: {
       labels: true,
     },
-    
   },
   labels: {
     select: {
@@ -22,4 +22,4 @@ export const include = {
 
 export const searchFileds = ["name"];
 export const relations = [];
-export const connect = ["users", "labels"];
+export const connect = ["workspaceUsers", "labels"];

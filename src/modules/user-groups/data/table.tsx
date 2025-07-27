@@ -47,7 +47,7 @@ export const listItemRender = (row: any) => (
 
       <div className="my-auto">
         <DIcon icon="fa-user" />
-        <span>{row._count.users}</span>
+        <span>{row._count.workspaceUsers}</span>
       </div>
     </div>
   </Link>

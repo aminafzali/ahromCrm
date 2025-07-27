@@ -1,7 +1,7 @@
-import { Label, User, UserGroup } from "@prisma/client";
+import { Label, UserGroup, WorkspaceUser } from "@prisma/client";
 
 export type UserGroupWithRelations = UserGroup & {
-  users?: User[];
+  workspaceUsers?: WorkspaceUser[];
   labels?: Label[];
 };
 
