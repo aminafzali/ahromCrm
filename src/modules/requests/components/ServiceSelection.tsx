@@ -44,7 +44,7 @@ export default function ServiceSelection({
       {services.map((service: any) => (
         <button
           key={service.id}
-          className={`rounded-lg flex justify-between items-center cursor-pointer transition-all bg-white rounded-xl border-2 p-3 py-6 ${
+          className={`rounded-lg flex justify-between items-center cursor-pointer transition-all bg-white border-2 p-3 py-6 ${
             selectedService === service.id
               ? " rounded-lg border-primary shadow-lg"
               : ""

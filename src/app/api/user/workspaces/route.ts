@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   try {
     // احراز هویت کاربر. در اینجا نیازی به ارسال هدر ورک‌اسپیس نیست.
     const context = await AuthProvider.isAuthenticated(req, true, false);
-
+    
     if (!context.user) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
     }

@@ -36,7 +36,7 @@ export class WorkspaceUserServiceApi extends BaseService<any> {
    */
   async create(data: any, context: AuthContext): Promise<any> {
     const validatedData = this.validate(this.createSchema, data);
-    const { name, phone, roleId } = validatedData;
+    const { displayName, name, phone, roleId } = validatedData;
 
     return prisma.$transaction(async (tx) => {
       const user = await tx.user.upsert({

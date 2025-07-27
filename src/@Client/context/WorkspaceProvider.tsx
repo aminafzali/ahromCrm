@@ -25,6 +25,7 @@ interface Workspace {
   slug: string;
 }
 export interface UserWorkspace {
+  id: number;
   workspaceId: number;
   userId: number;
   roleId: number;
