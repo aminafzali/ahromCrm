@@ -68,7 +68,7 @@ export const listItemRender = (row: any) => (
         <h3 className="text-gray-700 text-md">{row.name || "نامشخص"}</h3>
         <span>
           <DIcon icon="fa-user" cdi={false} />
-          <span>{row._count.users}</span>
+          <span>{row._count.workspaceUsers}</span>
         </span>
       </div>
     </div>

@@ -16,17 +16,52 @@ export const include = {
       name: true,
     },
   },
-  labels: { include: { label: true } }, // اطلاعات کامل برچسب‌ها
-  userGroups: { include: { userGroup: true } }, // اطلاعات کامل گروه‌ها
+  updatedAt: false,
+  requests: {
+    select: {
+      serviceType: true,
+      status: true,
+    },
+  },
+  notifications: {
+    select: {
+      title: true,
+      message: true,
+    },
+  },
+  labels: {
+    include: {
+      _count: {
+        select: {
+          workspaceUsers: true, // تعداد کاربران مرتبط با هر label
+        },
+      },
+    },
+  },
+  userGroups: {
+    include: {
+      _count: {
+        select: {
+          workspaceUsers: true, // تعداد کاربران مرتبط با هر label
+        },
+      },
+    },
+  }, // Include the relation normally
+  _count: {
+    select: {
+      labels: true, // Count labels
+      userGroups: true, // Count groups
+    },
+  },
 };
 
 // ===== شروع اصلاحیه برای تست =====
 // ما به صورت موقت، فیلدهای جستجوی تو در تو را حذف می‌کنیم
 // و فقط بر اساس یک فیلد ساده و مستقیم (displayName) جستجو را فعال می‌کنیم.
 export const searchFileds = [
-  "user.name",
-  "user.phone",
-  "role.name",
+  // "user.name",
+  // "user.phone",
+  // "role.name",
   "displayName",
 ];
 // ===== پایان اصلاحیه برای تست =====
