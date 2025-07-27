@@ -4,7 +4,9 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import Loading from "@/@Client/Components/common/Loading";
+import { useLabel } from "@/modules/labels/hooks/useLabel";
 import { useRole } from "@/modules/roles/hooks/useRole";
+import { useUserGroup } from "@/modules/user-groups/hooks/useUserGroup";
 import { Button, Form, Input, Select } from "ndui-ahrom";
 import { useEffect, useState } from "react";
 import {
@@ -16,7 +18,7 @@ interface WorkspaceUserFormProps {
   onSubmit: (data: any) => void;
   defaultValues?: any;
   loading?: boolean;
-  isUpdate?: boolean; // برای تشخیص حالت ویرایش
+  isUpdate?: boolean;
 }
 
 export default function WorkspaceUserForm({
@@ -25,40 +27,93 @@ export default function WorkspaceUserForm({
   loading = false,
   isUpdate = false,
 }: WorkspaceUserFormProps) {
+  // States for main fields
   const [name, setName] = useState<string>(defaultValues.user?.name || "");
+  const [displayName, setDisplayName] = useState<string>(
+    defaultValues.displayName || ""
+  );
   const [phone, setPhone] = useState<string>(defaultValues.user?.phone || "");
   const [roleId, setRoleId] = useState<number | undefined>(
     defaultValues.roleId
   );
 
+  // ===== شروع اصلاحیه ۱: تغییر تایپ State ها به string[] =====
+  const [selectedLabels, setSelectedLabels] = useState<string[]>(
+    defaultValues.labels?.map((l: any) => String(l.labelId)) || []
+  );
+  const [selectedGroups, setSelectedGroups] = useState<string[]>(
+    defaultValues.userGroups?.map((ug: any) => String(ug.userGroupId)) || []
+  );
+  // ===== پایان اصلاحیه ۱ =====
+
+  // States for fetching options
   const [roles, setRoles] = useState<{ label: string; value: number }[]>([]);
+  const [labels, setLabels] = useState<{ label: string; value: number }[]>([]);
+  const [groups, setGroups] = useState<{ label: string; value: number }[]>([]);
+
+  // Hooks for fetching data
   const { getAll: getAllRoles, loading: loadingRoles } = useRole();
+  const { getAll: getAllLabels, loading: loadingLabels } = useLabel();
+  const { getAll: getAllGroups, loading: loadingGroups } = useUserGroup();
 
   const [errors, setErrors] = useState<any>({});
 
-  // واکشی لیست نقش‌ها برای نمایش در فیلد select
   useEffect(() => {
-    const fetchRoles = async () => {
+    const fetchDropdownData = async () => {
       try {
-        const rolesRes = await getAllRoles({ page: 1, limit: 100 });
-        const roleOptions = (rolesRes?.data || []).map((role: any) => ({
-          label: role.name,
-          value: role.id,
-        }));
-        setRoles(roleOptions);
+        const [rolesRes, labelsRes, groupsRes] = await Promise.all([
+          getAllRoles({ page: 1, limit: 100 }),
+          getAllLabels({ page: 1, limit: 100 }),
+          getAllGroups({ page: 1, limit: 100 }),
+        ]);
+
+        setRoles(
+          (rolesRes?.data || []).map((role: any) => ({
+            label: role.name,
+            value: role.id,
+          }))
+        );
+        setLabels(
+          (labelsRes?.data || []).map((label: any) => ({
+            label: label.name,
+            value: label.id,
+          }))
+        );
+        setGroups(
+          (groupsRes?.data || []).map((group: any) => ({
+            label: group.name,
+            value: group.id,
+          }))
+        );
       } catch (error) {
-        console.error("Error fetching roles:", error);
+        console.error("Error fetching form data:", error);
       }
     };
-    fetchRoles();
+    fetchDropdownData();
   }, []);
 
   const handleSubmit = () => {
-    const dataToValidate = isUpdate ? { roleId } : { name, phone, roleId };
+    // ===== شروع اصلاحیه ۳: تبدیل رشته‌ها به عدد قبل از اعتبارسنجی =====
+    const dataToValidate = isUpdate
+      ? {
+          displayName,
+          roleId,
+          labels: selectedLabels.map(Number),
+          userGroups: selectedGroups.map(Number),
+        }
+      : {
+          name,
+          displayName,
+          phone,
+          roleId,
+          labels: selectedLabels.map(Number),
+          userGroups: selectedGroups.map(Number),
+        };
+    // ===== پایان اصلاحیه ۳ =====
+
     const schema = isUpdate
       ? updateWorkspaceUserSchema
       : createWorkspaceUserSchema;
-
     const validation = schema.safeParse(dataToValidate);
 
     if (!validation.success) {
@@ -71,23 +126,23 @@ export default function WorkspaceUserForm({
     onSubmit(validation.data);
   };
 
-  if (loadingRoles) return <Loading />;
+  if (loadingRoles || loadingLabels || loadingGroups) return <Loading />;
 
   return (
     <Form
       schema={isUpdate ? updateWorkspaceUserSchema : createWorkspaceUserSchema}
       onSubmit={handleSubmit}
     >
-      <div className="bg-white rounded-lg p-4 border space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white rounded-lg p-6 border space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {!isUpdate && (
             <>
               <Input
                 name="name"
-                label="نام نمایشی"
+                label="نام واقعی (جهت احراز هویت)"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                //           error={errors.name?.[0]}
+                onError={errors.name?.[0]}
                 required
               />
               <Input
@@ -95,19 +150,58 @@ export default function WorkspaceUserForm({
                 label="شماره تلفن"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                //         error={errors.phone?.[0]}
+                onError={errors.phone?.[0]}
                 required
               />
             </>
           )}
+          <Input
+            name="displayName"
+            label="نام نمایشی (در این ورک‌اسپیس)"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            onError={errors.displayName?.[0]}
+          />
           <Select
             name="roleId"
             label="نقش"
             options={roles}
             value={roleId}
             onChange={(e) => setRoleId(Number(e.target.value))}
-            //     error={errors.roleId?.[0]}
+            onError={errors.roleId?.[0]}
             required
+          />
+          <Select
+            name="labels"
+            label="برچسب‌ها"
+            options={labels}
+            value={selectedLabels} // value اکنون string[] است
+            onChange={
+              (e) =>
+                // ===== شروع اصلاحیه ۲: عدم تبدیل به عدد در onChange =====
+                setSelectedLabels(
+                  Array.from(e.target.selectedOptions, (option) => option.value)
+                )
+              // ===== پایان اصلاحیه ۲ =====
+            }
+            multiple
+            onError={errors.labels?.[0]}
+          />
+          <Select
+            name="groups"
+            label="گروه‌ها"
+            options={groups}
+            value={selectedGroups} // value اکنون string[] است
+            onChange={
+              (e) =>
+                // ===== شروع اصلاحیه ۲: عدم تبدیل به عدد در onChange =====
+                setSelectedGroups(
+                  Array.from(e.target.selectedOptions, (option) => option.value)
+                )
+              // ===== پایان اصلاحیه ۲ =====
+            }
+            multiple
+            onError={errors.groups?.[0]}
           />
         </div>
       </div>

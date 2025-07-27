@@ -64,12 +64,7 @@ model Workspace {
 }
 
 model WorkspaceUser {
-  // ===== شروع اصلاحیه کلیدی =====
-  // ۱. یک شناسه منحصر به فرد و خودکار به مدل اضافه می‌کنیم
-  // این کار، مدل را با تمام کامپوننت‌های عمومی سازگار می‌کند.
-  id Int @id @default(autoincrement())
-  // ===== پایان اصلاحیه کلیدی =====
-
+  id          Int @id @default(autoincrement())
   workspaceId Int
   userId      Int
   roleId      Int
@@ -97,11 +92,10 @@ model WorkspaceUser {
   receivedDevices      ReceivedDevice[]
   statusChanges        RequestStatusHistory[]
 
-  // روابط چند به چند
-  labels     LabelsOnWorkspaceUsers[]
-  userGroups UserGroupsOnWorkspaceUsers[]
+  // روابط چند به چند ساده (Implicit)
+  labels     Label[]     @relation("WorkspaceUserLabels")
+  userGroups UserGroup[] @relation("WorkspaceUserGroups")
 
-  // کلید ترکیبی را به عنوان یک محدودیت یکتایی نگه می‌داریم تا یک کاربر نتواند دوبار عضو یک ورک‌اسپیس شود
   @@unique([workspaceId, userId])
 }
 
@@ -160,29 +154,6 @@ model User {
   // روابط سراسری کاربر (گذرنامه) - تمام روابط دیگر حذف شده‌اند
   ownedWorkspaces Workspace[]     @relation("OwnedWorkspaces")
   workspaces      WorkspaceUser[] // لیست تمام پروفایل‌های این کاربر (ویزاها)
-}
-
-// ===== شروع مدل‌های واسط جدید =====
-model LabelsOnWorkspaceUsers {
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  labelId                  Int
-
-  workspaceUser WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
-  label         Label         @relation(fields: [labelId], references: [id], onDelete: Cascade)
-
-  @@id([workspaceUserWorkspaceId, workspaceUserUserId, labelId])
-}
-
-model UserGroupsOnWorkspaceUsers {
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  userGroupId              Int
-
-  workspaceUser WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
-  userGroup     UserGroup     @relation(fields: [userGroupId], references: [id], onDelete: Cascade)
-
-  @@id([workspaceUserWorkspaceId, workspaceUserUserId, userGroupId])
 }
 
 // ===== پایان مدل‌های واسط جدید =====
@@ -411,29 +382,28 @@ model RequestCancellation {
   cancelledAt DateTime @default(now())
 }
 
-// مدل‌های Label و UserGroup دیگر نیازی به رابطه مستقیم با User ندارند
 model Label {
-  id             Int                      @id @default(autoincrement())
+  id             Int             @id @default(autoincrement())
   workspaceId    Int
-  workspace      Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name           String
-  color          String                   @default("primary")
-  createdAt      DateTime                 @default(now())
-  updatedAt      DateTime                 @updatedAt
-  workspaceUsers LabelsOnWorkspaceUsers[]
+  color          String          @default("primary")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  workspaceUsers WorkspaceUser[] @relation("WorkspaceUserLabels")
 
   @@unique([name, workspaceId])
 }
 
 model UserGroup {
-  id             Int                          @id @default(autoincrement())
+  id             Int             @id @default(autoincrement())
   workspaceId    Int
-  workspace      Workspace                    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name           String
-  description    String?                      @db.Text
-  createdAt      DateTime                     @default(now())
-  updatedAt      DateTime                     @updatedAt
-  workspaceUsers UserGroupsOnWorkspaceUsers[]
+  description    String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  workspaceUsers WorkspaceUser[] @relation("WorkspaceUserGroups")
 
   @@unique([name, workspaceId])
 }

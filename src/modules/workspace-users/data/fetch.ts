@@ -16,14 +16,21 @@ export const include = {
       name: true,
     },
   },
+  labels: { include: { label: true } }, // اطلاعات کامل برچسب‌ها
+  userGroups: { include: { userGroup: true } }, // اطلاعات کامل گروه‌ها
 };
 
 // ===== شروع اصلاحیه برای تست =====
 // ما به صورت موقت، فیلدهای جستجوی تو در تو را حذف می‌کنیم
 // و فقط بر اساس یک فیلد ساده و مستقیم (displayName) جستجو را فعال می‌کنیم.
-export const searchFileds = ["name"];
+export const searchFileds = [
+  "user.name",
+  "user.phone",
+  "role.name",
+  "displayName",
+];
 // ===== پایان اصلاحیه برای تست =====
 
-// این آرایه‌ها طبق الگوی ماژول brands خالی هستند
+
 export const relations = [];
-export const connects = ["role", "user"];
+export const connects = [];

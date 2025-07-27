@@ -1,6 +1,5 @@
 // مسیر فایل: src/modules/workspace-users/service/WorkspaceUserServiceApi.ts
 
-import { NotFoundException } from "@/@Server/Exceptions/BaseException";
 import { AuthContext } from "@/@Server/Http/Controller/BaseController";
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
@@ -31,12 +30,10 @@ export class WorkspaceUserServiceApi extends BaseService<any> {
     this.repository = new Repository(); // این خط نیز دقیقاً مانند ماژول brands است
   }
 
-  /**
-   * متد create برای پیاده‌سازی منطق "دعوت عضو جدید" بازنویسی می‌شود.
-   */
   async create(data: any, context: AuthContext): Promise<any> {
     const validatedData = this.validate(this.createSchema, data);
-    const { displayName, name, phone, roleId } = validatedData;
+    const { name, phone, roleId, displayName, labels, userGroups } =
+      validatedData;
 
     return prisma.$transaction(async (tx) => {
       const user = await tx.user.upsert({
@@ -50,28 +47,56 @@ export class WorkspaceUserServiceApi extends BaseService<any> {
           workspaceId: context.workspaceId!,
           userId: user.id,
           roleId: roleId,
+          displayName: displayName || name, // اگر نام نمایشی نبود، از نام اصلی استفاده کن
+          // اتصال به برچسب‌ها و گروه‌های کاربری
+          labels: labels
+            ? {
+                create: labels.map((labelId: number) => ({
+                  label: { connect: { id: labelId } },
+                })),
+              }
+            : undefined,
+          userGroups: userGroups
+            ? {
+                create: userGroups.map((groupId: number) => ({
+                  userGroup: { connect: { id: groupId } },
+                })),
+              }
+            : undefined,
         },
-        include: {
-          user: true,
-          role: true,
-        },
+        include: { user: true, role: true, labels: true, userGroups: true },
       });
 
       return workspaceUser;
     });
   }
 
-  /**
-   * متد update برای تغییر نقش کاربر بازنویسی می‌شود.
-   */
   async update(id: number, data: any): Promise<any> {
     const validatedData = this.validate(this.updateSchema, data);
+    const { roleId, displayName, labels, userGroups } = validatedData;
 
-    const workspaceUser = await this.repository.findById(id);
-    if (!workspaceUser) {
-      throw new NotFoundException("Workspace user not found");
-    }
+    const finalData = {
+      roleId,
+      displayName,
+      labels: labels
+        ? {
+            // تمام روابط قبلی را حذف و روابط جدید را جایگزین می‌کند
+            deleteMany: {},
+            create: labels.map((labelId: number) => ({
+              label: { connect: { id: labelId } },
+            })),
+          }
+        : undefined,
+      userGroups: userGroups
+        ? {
+            deleteMany: {},
+            create: userGroups.map((groupId: number) => ({
+              userGroup: { connect: { id: groupId } },
+            })),
+          }
+        : undefined,
+    };
 
-    return this.repository.update(id, validatedData);
+    return this.repository.update(id, finalData);
   }
 }
