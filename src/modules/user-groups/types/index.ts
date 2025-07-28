@@ -5,15 +5,15 @@ export type UserGroupWithRelations = UserGroup & {
   labels?: Label[];
 };
 
-export interface PaginatedUserGroupResponse {
-  data: UserGroupWithRelations[];
-  pagination: {
-    total: number;
-    pages: number;
-    page: number;
-    limit: number;
-  };
-}
+// export interface PaginatedUserGroupResponse {
+//   data: UserGroupWithRelations[];
+//   pagination: {
+//     total: number;
+//     pages: number;
+//     page: number;
+//     limit: number;
+//   };
+// }
 
 export interface UserGroupListProps {
   isAdmin?: boolean;

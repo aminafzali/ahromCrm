@@ -42,77 +42,95 @@ export abstract class BaseRepository<T> {
     const {
       page = 1,
       limit = 10,
-      filters = {}, // این فیلتر اکنون شامل workspaceId است
+      filters = {},
       orderBy = params.orderBy || this.defaultOrderBy,
       include = this.defaultInclude,
       search = "",
       searchFields = this.searchableFields,
     } = params;
-    // ===== لاگ ردیابی ۵: بررسی فیلترهای دریافتی در ریپازیتوری =====
+
+    // ===== لاگ ردیابی ۱: بررسی پارامترهای ورودی =====
     console.log(
-      `%c[SERVER - BaseRepository] 🟠 Received filters in findAll:`,
+      `%c[SERVER - REPO] 1. Initial params received in findAll for model "${this.modelName}":`,
       "color: #fd7e14; font-weight: bold;",
-      filters
+      { page, limit, filters, orderBy, include, search, searchFields }
     );
-    // ============================================================
+    // ===============================================
 
-    // ===== شروع اصلاحیه کلیدی و نهایی =====
-    // ما QueryBuilder را می‌سازیم، اما فیلترهای امن (شامل workspaceId) را به عنوان پایه به آن می‌دهیم.
     const queryBuilder = new QueryBuilder();
-    queryBuilder.setWhere(filters); // این خط تضمین می‌کند که workspaceId همیشه به عنوان شرط پایه اعمال شود.
+    queryBuilder.setWhere(filters);
 
-    // حالا منطق جستجو را به فیلترهای موجود اضافه می‌کنیم (بدون اینکه فیلترهای قبلی را از بین ببرد)
     if (search && searchFields && searchFields.length > 0) {
       queryBuilder.search(searchFields, search);
     }
 
-    // بقیه تنظیمات بدون تغییر باقی می‌مانند
     queryBuilder.setOrderBy(orderBy);
     queryBuilder.setInclude(include);
     queryBuilder.setPagination(page, limit);
 
     const query = queryBuilder.build();
-    // ===== پایان اصلاحیه کلیدی و نهایی =====
 
-    // ===== لاگ ردیابی ۶: بررسی شرط WHERE نهایی قبل از ارسال به Prisma =====
-    console.log(
-      `%c[SERVER - BaseRepository] 🔴 Final 'where' clause for Prisma:`,
-      "color: #dc3545; font-weight: bold;",
-      JSON.stringify(query.where, null, 2)
-    );
-    // =====================================================================
-
-    const [data, total] = await Promise.all([
-      this.model.findMany({
-        where: query.where,
-        orderBy: query.orderBy,
-        include: query.include,
-        skip: query.skip,
-        take: query.take,
-      }),
-      this.model.count({ where: query.where }),
-    ]);
-    // ===== لاگ ردیابی ۵: بررسی داده‌های خام بازگشتی از Prisma =====
-    console.log(
-      `%c[SERVER - BaseRepository] 📦 Raw data fetched from DB (Count: ${data.length}):`,
-      "color: #dc3545; font-weight: bold;",
-      data
-    );
-    console.log(
-      `%c[SERVER - BaseRepository] 🔢 Total count from DB: ${total}`,
-      "color: #dc3545; font-weight: bold;"
-    );
-    // ==============================================================
-
-    return {
-      data,
-      pagination: {
-        total,
-        pages: Math.ceil(total / limit),
-        page,
-        limit,
-      },
+    const findManyArgs = {
+      where: query.where,
+      orderBy: query.orderBy,
+      include: query.include,
+      skip: query.skip,
+      take: query.take,
     };
+
+    // ===== لاگ ردیابی ۲: بررسی آبجکت نهایی کوئری =====
+    console.log(
+      `%c[SERVER - REPO] 2. Final Prisma Query Args for model "${this.modelName}":`,
+      "color: #dc3545; font-weight: bold;",
+      JSON.stringify(findManyArgs, null, 2)
+    );
+    // ============================================
+
+    try {
+      // ===== لاگ ردیابی ۳: شروع اجرای تراکنش =====
+      console.log(
+        `%c[SERVER - REPO] 3. Starting Prisma transaction for "${this.modelName}"...`,
+        "color: #17a2b8;"
+      );
+      // =========================================
+
+      const [data, total] = await this.prisma.$transaction([
+        this.model.findMany(findManyArgs),
+        this.model.count({ where: query.where }),
+      ]);
+
+      // ===== لاگ ردیابی ۴: بررسی داده‌های خام بازگشتی از Prisma =====
+      console.log(
+        `%c[SERVER - REPO] 4. ✅ Raw data fetched from DB (Count: ${data.length}):`,
+        "color: #28a745; font-weight: bold;",
+        data
+      );
+      console.log(
+        `%c[SERVER - REPO] 🔢    Total count from DB: ${total}`,
+        "color: #28a745; font-weight: bold;"
+      );
+      // ==============================================================
+
+      return {
+        data,
+        pagination: {
+          total,
+          pages: Math.ceil(total / limit),
+          page,
+          limit,
+        },
+      };
+    } catch (error) {
+      // ===== لاگ ردیابی ۵: لاگ دقیق خطای Prisma =====
+      // این مهم‌ترین بخش است. اگر خطایی رخ دهد، اینجا آن را خواهیم دید.
+      console.error(
+        `%c[SERVER - REPO] 🔴 PRISMA QUERY FAILED for model "${this.modelName}"!`,
+        "color: #ff0000; font-weight: bold;"
+      );
+      console.error(error);
+      // ============================================
+      throw error; // خطا را دوباره پرتاب می‌کنیم تا BaseController آن را مدیریت کند
+    }
   }
 
   /**

@@ -14,7 +14,7 @@ export class LabelServiceApi extends BaseService<any> {
     super(
       new Repository(),
       createLabelSchema,
-      createLabelSchema,
+      createLabelSchema.partial(),
       searchFileds,
       relations
     );

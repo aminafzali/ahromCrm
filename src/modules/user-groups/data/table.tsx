@@ -47,7 +47,8 @@ export const listItemRender = (row: any) => (
 
       <div className="my-auto">
         <DIcon icon="fa-user" />
-        <span>{row._count.workspaceUsers}</span>
+        {/* todo:t3 این بخش باید بعدا اصلاح شود */}
+        {/* <span>{row._count.workspaceUsers}</span> */}
       </div>
     </div>
   </Link>

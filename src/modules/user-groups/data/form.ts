@@ -1,5 +1,5 @@
 import { FormConfig } from "@/@Client/types/form";
-import { columnsForSelect } from "@/modules/users/data/table";
+import { columnsForSelect } from "@/modules/workspace-users/data/table";
 import { z } from "zod";
 import { createUserGroupSchema } from "../validation/schema";
 

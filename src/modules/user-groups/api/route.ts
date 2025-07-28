@@ -7,7 +7,7 @@ const service = new UserGroupServiceApi();
 
 class UserGroupController extends BaseController<any> {
   constructor() {
-    super(service, include);
+    super(service, include, false);
   }
 }
 

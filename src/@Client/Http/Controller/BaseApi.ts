@@ -1,5 +1,4 @@
 // مسیر فایل: src/@Client/Http/Controller/BaseApi.ts
-// (نسخه نهایی با حداقل تغییرات ضروری)
 
 import { ApiError } from "../../Exceptions/ApiError";
 
@@ -20,7 +19,7 @@ export class BaseApi {
     params: Record<string, any> = {}
   ): Promise<T> {
     const url = this.buildUrl(endpoint, params);
-    return this.request<T>(url);
+    return this.request<T>(url, { method: "GET" });
   }
 
   protected async post<T>(endpoint: string, data: any): Promise<T> {
@@ -47,23 +46,35 @@ export class BaseApi {
   }
 
   private buildUrl(endpoint: string, params: Record<string, any> = {}): string {
+    const fullPath = `${this.baseUrl}/${
+      endpoint.startsWith("/") ? endpoint.substring(1) : endpoint
+    }`;
+
     const url = new URL(
-      `${this.baseUrl}/${
-        endpoint.startsWith("/") ? endpoint.substring(1) : endpoint
-      }`,
-      typeof window !== "undefined" ? window.location.origin : this.baseUrl
+      fullPath,
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "http://localhost"
     );
+
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         url.searchParams.append(key, String(value));
       }
     });
+
+    // ===== لاگ ردیابی ۱: بررسی URL ساخته شده =====
+    console.log(
+      `%c[CLIENT - BaseApi] 🔗 URL Built:`,
+      "color: #007acc;",
+      url.toString()
+    );
+    // ===========================================
+
     return url.toString();
   }
 
   private async request<T>(url: string, options: RequestInit = {}): Promise<T> {
-    // ===== شروع اصلاحیه کلیدی =====
-    // این کد به صورت خودکار قبل از هر درخواست اجرا می‌شود
     const activeWorkspaceId =
       typeof window !== "undefined"
         ? localStorage.getItem("activeWorkspaceId")
@@ -71,17 +82,15 @@ export class BaseApi {
 
     const mergedOptions: RequestInit = {
       ...options,
-      // ۱. به fetch می‌گوییم کوکی‌ها را برای احراز هویت ارسال کن
       credentials: "include",
       headers: {
         ...this.defaultHeaders,
         ...options.headers,
-        // ۲. هدر ورک‌اسپیس را به صورت هوشمند اضافه می‌کنیم
         ...(activeWorkspaceId && { "X-Workspace-Id": activeWorkspaceId }),
       },
     };
 
-    // ===== لاگ ردیابی ۱: بررسی درخواست قبل از ارسال =====
+    // ===== لاگ ردیابی ۲: بررسی درخواست قبل از ارسال =====
     console.log(
       `%c[CLIENT - BaseApi] 🚀 Sending Request:`,
       "color: #007acc; font-weight: bold;",
@@ -95,8 +104,8 @@ export class BaseApi {
 
     try {
       const response = await fetch(url, mergedOptions);
- 
-      // ===== لاگ ردیابی ۲: بررسی پاسخ خام دریافتی =====
+
+      // ===== لاگ ردیابی ۳: بررسی پاسخ خام دریافتی =====
       console.log(
         `%c[CLIENT - BaseApi] 📥 Received Raw Response:`,
         "color: #007acc; font-weight: bold;",
@@ -108,13 +117,21 @@ export class BaseApi {
         }
       );
       // =================================================
-      
+
       if (response.status === 204) {
-        // No Content
         return {} as T;
       }
 
       const textData = await response.text();
+
+      // ===== لاگ ردیابی ۴: بررسی متن خام پاسخ قبل از پردازش =====
+      console.log(
+        `%c[CLIENT - BaseApi] 📄 Received Raw Text Data:`,
+        "color: #007acc;",
+        textData
+      );
+      // ========================================================
+
       const data = textData ? JSON.parse(textData) : { success: response.ok };
 
       if (!response.ok) {
@@ -127,6 +144,14 @@ export class BaseApi {
 
       return data as T;
     } catch (error) {
+      // ===== لاگ ردیابی ۵: لاگ دقیق خطا در کلاینت =====
+      console.error(
+        `%c[CLIENT - BaseApi] ❌ Request Failed:`,
+        "color: #dc3545; font-weight: bold;",
+        error
+      );
+      // ==============================================
+
       if (error instanceof ApiError) {
         throw error;
       }

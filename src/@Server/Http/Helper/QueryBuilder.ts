@@ -1,7 +1,6 @@
+// مسیر فایل: src/@Server/Http/Helper/QueryBuilder.ts
+
 export class QueryBuilder {
-  buildPrismaQuery(): { [x: string]: any; where: any } {
-    throw new Error("Method not implemented.");
-  }
   private where: any = {};
   private orderBy: any = { createdAt: "desc" };
   private include: any = {};
@@ -12,6 +11,7 @@ export class QueryBuilder {
    * Set the where clause
    */
   setWhere(where: any): QueryBuilder {
+    console.log(`[QueryBuilder - LOG] Setting initial 'where' clause:`, where);
     this.where = { ...this.where, ...where };
     return this;
   }
@@ -50,7 +50,7 @@ export class QueryBuilder {
       }
       this.where[field][operator] = value;
     }
-
+    console.log(`[QueryBuilder - LOG] Added condition: ${field} ${operator} ${value}`);
     return this;
   }
 
@@ -62,22 +62,25 @@ export class QueryBuilder {
       return this;
     }
 
+    console.log(`[QueryBuilder - LOG] Applying search term "${value}" on fields:`, fields);
+
     // ===== شروع اصلاحیه کلیدی =====
-    // این منطق جدید، فیلدهای تو در تو (مانند 'user.name') را به درستی پردازش می‌کند
+    // این منطق جدید، فیلدهای تو در تو (مانند 'user.name') را به ساختار صحیح Prisma تبدیل می‌کند
     const searchConditions = fields.map((field) => {
       const parts = field.split(".");
       if (parts.length > 1) {
         // ساختن آبجکت تو در تو برای فیلدهای مرتبط
+        // "user.name" => { user: { name: { contains: value } } }
         return parts.reduceRight((acc, part) => ({ [part]: acc }), {
           contains: value,
-          mode: "insensitive", // برای جستجوی بهتر
+          mode: "insensitive",
         } as any);
       }
       // برای فیلدهای ساده
       return { [field]: { contains: value, mode: "insensitive" } };
     });
     // ===== پایان اصلاحیه کلیدی =====
-
+    
     if (!this.where.OR) {
       this.where.OR = [];
     }
@@ -86,10 +89,10 @@ export class QueryBuilder {
     }
     
     this.where.OR.push(...searchConditions);
+    console.log(`[QueryBuilder - LOG] Added search conditions to 'OR' clause.`);
 
     return this;
   }
-  
 
   /**
    * Add a date range condition
@@ -114,7 +117,7 @@ export class QueryBuilder {
     if (endDate) {
       this.where[field].lte = new Date(endDate);
     }
-
+    console.log(`[QueryBuilder - LOG] Applied date range on field "${field}".`);
     return this;
   }
 
@@ -137,7 +140,7 @@ export class QueryBuilder {
     if (max !== undefined) {
       this.where[field].lte = max;
     }
-
+    console.log(`[QueryBuilder - LOG] Applied numeric range on field "${field}".`);
     return this;
   }
 
@@ -161,6 +164,7 @@ export class QueryBuilder {
    * Set the order by clause
    */
   setOrderBy(orderBy: any): QueryBuilder {
+    console.log(`[QueryBuilder - LOG] Setting 'orderBy':`, orderBy);
     this.orderBy = orderBy;
     return this;
   }
@@ -169,6 +173,7 @@ export class QueryBuilder {
    * Set the include clause
    */
   setInclude(include: any): QueryBuilder {
+    console.log(`[QueryBuilder - LOG] Setting 'include':`, include);
     this.include = { ...this.include, ...include };
     return this;
   }
@@ -177,6 +182,7 @@ export class QueryBuilder {
    * Set pagination parameters
    */
   setPagination(page: number, limit: number): QueryBuilder {
+    console.log(`[QueryBuilder - LOG] Setting pagination: page=${page}, limit=${limit}`);
     this.page = page;
     this.limit = limit;
     return this;
@@ -192,12 +198,16 @@ export class QueryBuilder {
     skip: number;
     take: number;
   } {
-    return {
+    const finalQuery = {
       where: this.where,
       orderBy: this.orderBy,
       include: this.include,
       skip: (this.page - 1) * this.limit,
       take: this.limit,
     };
+    
+    console.log(`[QueryBuilder - LOG] Final query built:`, JSON.stringify(finalQuery, null, 2));
+    
+    return finalQuery;
   }
 }

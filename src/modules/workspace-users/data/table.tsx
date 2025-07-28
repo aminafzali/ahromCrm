@@ -77,6 +77,28 @@ export const columnsForAdmin: Column[] = [
   },
 ];
 
+export const columnsForSelect: Column[] = [
+  {
+    name: "name",
+    field: "user.name",
+    label: "نام عضو",
+    // رندر نیز باید از مسیر صحیح تو در تو داده را بخواند
+    render: (row: any) => row.displayName || row.user?.name || "-",
+  },
+  {
+    name: "phone",
+    field: "user.phone",
+    label: "شماره تلفن",
+    render: (row: any) => row.user?.phone || "-",
+  },
+  {
+    name: "role",
+    field: "role.name",
+    label: "نقش",
+    render: (row: any) => row.role?.name || "-",
+  }
+]
+
 export const listItemRender = (row: any) => (
   <div className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
     <div className="flex justify-between items-start mb-3">

@@ -5,13 +5,19 @@ import { createUserGroupSchema } from "../validation/schema";
 
 class Repository extends BaseRepository<any> {
   constructor() {
-    super("UserGroup");
+    super("userGroup");
   }
 }
 
 export class UserGroupServiceApi extends BaseService<any> {
   constructor() {
-    super(new Repository(), createUserGroupSchema, createUserGroupSchema, searchFileds, relations);
+    super(
+      new Repository(),
+      createUserGroupSchema,
+      createUserGroupSchema.partial(),
+      searchFileds,
+      relations
+    );
     this.repository = new Repository();
     this.connect = connect;
   }

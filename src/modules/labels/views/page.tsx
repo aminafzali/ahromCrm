@@ -5,6 +5,7 @@ import { LabelRepository } from "../repo/LabelRepository";
 export default function IndexPage({}) {
   return (
     <IndexWrapper
+      title="برچسپ ها"
       columns={columnsForAdmin}
       listItemRender={listItemRender}
       repo={new LabelRepository()}

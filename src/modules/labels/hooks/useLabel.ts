@@ -1,7 +1,7 @@
 import { useCrud } from "@/@Client/hooks/useCrud";
+import { z } from "zod";
 import { LabelRepository } from "../repo/LabelRepository";
 import { LabelWithRelations } from "../types";
-import { z } from "zod";
 import { createLabelSchema } from "../validation/schema";
 
 export function useLabel() {
