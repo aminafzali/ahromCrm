@@ -6,15 +6,16 @@ export const createNotificationSchema = z.object({
   title: z.string().min(1, "عنوان الزامی است."),
   message: z.string().min(1, "متن پیام الزامی است."),
 
+ 
   // ===== شروع اصلاحیه کلیدی =====
-  // به جای انتظار برای یک عدد، اکنون منتظر یک آبجکت هستیم
-  // که نماینده پروفایل ورک‌اسپیسی کاربر است.
-  workspaceUser: z.object(
-    { id: z.coerce.number() }, // فقط به شناسه آن برای اتصال نیاز داریم
-    { required_error: "انتخاب کاربر الزامی است." }
-  ),
+  // این فیلد اکنون به صورت اختیاری تعریف شده تا با مدل پریزما هماهنگ باشد
+  workspaceUser: z
+    .object({
+      id: z.coerce.number(),
+    })
+    .optional()
+    .nullable(),
   // ===== پایان اصلاحیه کلیدی =====
-
   requestId: z.number().optional().nullable(),
   sendSms: z.boolean().optional().default(true),
   sendEmail: z.boolean().optional().default(false),

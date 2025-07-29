@@ -1,6 +1,13 @@
 // مسیر فایل: src/modules/workspace-users/types/index.ts
 
-import { Label, Role, User, UserGroup, WorkspaceUser } from "@prisma/client";
+import {
+  Label,
+  Notification,
+  Role,
+  User,
+  UserGroup,
+  WorkspaceUser,
+} from "@prisma/client";
 
 // ۱. یک اینترفیس برای رکوردهای جدول واسط LabelsOnWorkspaceUsers تعریف می‌کنیم
 // که شامل آبجکت کامل خود Label است.
@@ -11,4 +18,5 @@ export type WorkspaceUserWithRelations = WorkspaceUser & {
   // روابط جدید را با تایپ‌های صحیح و تو در تو تعریف می‌کنیم
   labels?: Label[];
   userGroups?: UserGroup[];
+  notifications?: Notification[];
 };

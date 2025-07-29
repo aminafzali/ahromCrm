@@ -4,10 +4,11 @@ import DIcon from "@/@Client/Components/common/DIcon";
 
 export const dashboardMenuItems = [
   {
-    id: "workspaces",
-    label: "فضای کاری",
-    icon: <DIcon icon="fa-grid" cdi={false}></DIcon>,
-    href: "/dashboard/workspaces",
+    id: "notifications",
+    value: "notifications",
+    label: "اعلان ها",
+    icon: <DIcon icon="fa-bell" cdi={false}></DIcon>,
+    href: "/dashboard/notifications",
   },
   {
     id: "dashboard",
@@ -165,13 +166,6 @@ export const dashboardMenuItems = [
     label: "یادآوری ها",
     icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
     href: "/dashboard/reminders",
-  },
-  {
-    id: "notifications",
-    value: "notifications",
-    label: "اعلان ها",
-    icon: <DIcon icon="fa-bell" cdi={false}></DIcon>,
-    href: "/dashboard/notifications",
   },
 ];
 

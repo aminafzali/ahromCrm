@@ -1,12 +1,31 @@
 // مسیر فایل: src/modules/notifications/data/fetch.ts
 
-// الگوبرداری دقیق از ماژول‌های دیگر
+// ۱. تعریف include صحیح برای واکشی تمام روابط مورد نیاز
 export const include = {
-  // واکشی پروفایل ورک‌اسپیسی کاربر
-  workspaceUser: true,
-  request: true,
+  workspaceUser: {
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+        },
+      },
+    },
+  },
+  request: {
+    select: {
+      id: true,
+      // می‌توانید فیلدهای دیگری از درخواست را نیز در اینجا اضافه کنید
+    },
+  },
 };
 
-export const searchFileds = ["title", "message", "workspaceUser.displayName"];
+// ۲. تعریف فیلدهای قابل جستجو با مسیر صحیح
+export const searchFileds = ["title", "message", "workspaceUser.user.name"];
+
+// ۳. این آرایه طبق الگوی شما خالی است
 export const relations = [];
+
+// ۴. اضافه کردن "workspaceUser" به connects تا BaseService به درستی کار کند
 export const connects = ["request"];
