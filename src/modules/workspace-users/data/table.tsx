@@ -53,7 +53,7 @@ export const columnsForAdmin: Column[] = [
     name: "userGroups",
     label: "گروه‌ها",
     render: (row: any) =>
-      row.userGroups?.map((item: any) => item.userGroup.name).join(", ") || "-",
+      row.userGroups?.map((item: any) => item.name).join(", ") || "-",
   },
   // ===== پایان اصلاحیه کلیدی =====
   {
@@ -96,8 +96,8 @@ export const columnsForSelect: Column[] = [
     field: "role.name",
     label: "نقش",
     render: (row: any) => row.role?.name || "-",
-  }
-]
+  },
+];
 
 export const listItemRender = (row: any) => (
   <div className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">

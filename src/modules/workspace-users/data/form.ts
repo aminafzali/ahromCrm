@@ -39,7 +39,7 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
       col: 2,
     },
     {
-      name: "roleId",
+      name: "role",
       label: "نقش",
       type: "dataTable",
       data: data?.get("roles") || [],
@@ -88,7 +88,7 @@ export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
       col: 2,
     },
     {
-      name: "roleId",
+      name: "role",
       label: "نقش",
       type: "dataTable", // از دیتا تیبل برای هماهنگی استفاده می‌کنیم
       data: data?.get("roles") || [],
@@ -109,7 +109,7 @@ export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
       name: "userGroups",
       label: "گروه‌ها",
       type: "dataTable",
-      data: data?.get("userGroups") || [],
+      data: data?.get("user-groups") || [],
       columns: columnsForSelectGroup,
       multiple: true,
       col: 2,

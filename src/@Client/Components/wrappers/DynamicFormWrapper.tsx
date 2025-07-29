@@ -29,6 +29,13 @@ const DynamicFormWrapper: React.FC<DynamicFormWrapperProps> = ({
   submitIcon = <DIcon icon="fa-save" cdi={false} classCustom="ml-2" />,
 }) => {
   const renderField = (field: FormField) => {
+    // ===== لاگ ردیابی ۱: بررسی رندر شدن هر فیلد =====
+    console.log(
+      `%c[DynamicFormWrapper] 렌 Rendering Field:`,
+      "color: #17a2b8;",
+      field
+    );
+    // ===============================================
     switch (field.type) {
       case "dataTable":
         return (
@@ -130,11 +137,24 @@ const DynamicFormWrapper: React.FC<DynamicFormWrapperProps> = ({
     }
   };
 
+  const handleFormSubmit = (data: any) => {
+    // ===== لاگ ردیابی ۲: بررسی ارسال فرم =====
+    // این مهم‌ترین لاگ است. اگر این لاگ را پس از کلیک نمی‌بینید،
+    // یعنی FormWrapper یا کامپوننت Button شما onSubmit را فراخوانی نمی‌کند.
+    console.log(
+      `%c[DynamicFormWrapper] 🚀 Form Submitted! Data from FormWrapper:`,
+      "color: #28a745; font-weight: bold;",
+      data
+    );
+    // =======================================
+    onSubmit(data);
+  };
+
   return (
     <FormWrapper
       title={title}
       schema={config.validation}
-      onSubmit={onSubmit}
+      onSubmit={handleFormSubmit} // از تابع جدید handleFormSubmit استفاده می‌کنیم
       defaultValues={defaultValues}
       isLoading={isLoading}
       error={error}

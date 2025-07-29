@@ -142,7 +142,7 @@ export default function WorkspaceUserForm({
                 label="نام واقعی (جهت احراز هویت)"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                onError={errors.name?.[0]}
+                //        onError={errors.name?.[0]}
                 required
               />
               <Input
@@ -150,7 +150,7 @@ export default function WorkspaceUserForm({
                 label="شماره تلفن"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                onError={errors.phone?.[0]}
+                //       onError={errors.phone?.[0]}
                 required
               />
             </>
@@ -160,7 +160,7 @@ export default function WorkspaceUserForm({
             label="نام نمایشی (در این ورک‌اسپیس)"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            onError={errors.displayName?.[0]}
+            //    onError={errors.displayName?.[0]}
           />
           <Select
             name="roleId"
@@ -168,7 +168,7 @@ export default function WorkspaceUserForm({
             options={roles}
             value={roleId}
             onChange={(e) => setRoleId(Number(e.target.value))}
-            onError={errors.roleId?.[0]}
+            //     onError={errors.roleId?.[0]}
             required
           />
           <Select
@@ -185,7 +185,7 @@ export default function WorkspaceUserForm({
               // ===== پایان اصلاحیه ۲ =====
             }
             multiple
-            onError={errors.labels?.[0]}
+            //     onError={errors.labels?.[0]}
           />
           <Select
             name="groups"
@@ -201,7 +201,7 @@ export default function WorkspaceUserForm({
               // ===== پایان اصلاحیه ۲ =====
             }
             multiple
-            onError={errors.groups?.[0]}
+            //   onError={errors.groups?.[0]}
           />
         </div>
       </div>

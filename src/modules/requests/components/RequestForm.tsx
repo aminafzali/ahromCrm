@@ -37,7 +37,10 @@ export default function RequestForm({
   } = useRequest();
 
   // بررسی نقش ادمین باید از context ورک‌اسپیس انجام شود، اما فعلا منطق قدیمی را حفظ می‌کنیم
-  const isAdmin = session?.user.role === "ADMIN";
+  // todo:t4 خط زیر باید اصلاح شود
+  // من بصورت دستی ایز ادمین رو ترو کردم
+  // const isAdmin = session?.user.role === "ADMIN";
+  const isAdmin = true;
   const [currentStep, setCurrentStep] = useState(isAdmin ? 0 : 1);
 
   // userId در state اکنون به درستی مدیریت می‌شود

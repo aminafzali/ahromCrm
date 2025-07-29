@@ -1,10 +1,11 @@
 // مسیر فایل: src/modules/workspace-users/service/WorkspaceUserServiceApi.ts
 
+import { NotFoundException } from "@/@Server/Exceptions/BaseException";
 import { AuthContext } from "@/@Server/Http/Controller/BaseController";
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
 import prisma from "@/lib/prisma";
-import { connects, relations, searchFileds } from "../data/fetch";
+import { connects, include, relations, searchFileds } from "../data/fetch";
 import {
   createWorkspaceUserSchema,
   updateWorkspaceUserSchema,
@@ -26,13 +27,16 @@ export class WorkspaceUserServiceApi extends BaseService<any> {
       searchFileds,
       relations
     );
+    this.repository = new Repository();
     this.connect = connects;
-    this.repository = new Repository(); // این خط نیز دقیقاً مانند ماژول brands است
   }
 
+  /**
+   * متد create را برای پیاده‌سازی منطق "دعوت عضو جدید" و ترجمه داده‌ها بازنویسی می‌کنیم.
+   */
   async create(data: any, context: AuthContext): Promise<any> {
     const validatedData = this.validate(this.createSchema, data);
-    const { name, phone, roleId, displayName, labels, userGroups } =
+    const { name, phone, role, displayName, labels, userGroups } =
       validatedData;
 
     return prisma.$transaction(async (tx) => {
@@ -46,56 +50,63 @@ export class WorkspaceUserServiceApi extends BaseService<any> {
         data: {
           workspaceId: context.workspaceId!,
           userId: user.id,
-          roleId: roleId,
-          displayName: displayName || name, // اگر نام نمایشی نبود، از نام اصلی استفاده کن
-          // اتصال به برچسب‌ها و گروه‌های کاربری
+          // ===== شروع اصلاحیه (ترجمه) =====
+          // شناسه را از آبجکت role استخراج کرده و به فیلد roleId پاس می‌دهیم
+          roleId: role.id,
+          displayName: displayName || name,
+
+          // برای روابط چند به چند نیز داده‌ها را به فرمت صحیح Prisma ترجمه می‌کنیم
           labels: labels
             ? {
-                create: labels.map((labelId: number) => ({
-                  label: { connect: { id: labelId } },
+                connect: labels.map((label: { id: number }) => ({
+                  id: label.id,
                 })),
               }
             : undefined,
           userGroups: userGroups
             ? {
-                create: userGroups.map((groupId: number) => ({
-                  userGroup: { connect: { id: groupId } },
+                connect: userGroups.map((group: { id: number }) => ({
+                  id: group.id,
                 })),
               }
             : undefined,
+          // ===== پایان اصلاحیه (ترجمه) =====
         },
-        include: { user: true, role: true, labels: true, userGroups: true },
+        include: include,
       });
 
       return workspaceUser;
     });
   }
 
+  /**
+   * متد update را برای تغییر نقش و پروفایل کاربر بازنویسی می‌کنیم.
+   */
   async update(id: number, data: any): Promise<any> {
     const validatedData = this.validate(this.updateSchema, data);
-    const { roleId, displayName, labels, userGroups } = validatedData;
+    const { role, displayName, labels, userGroups } = validatedData;
 
+    // داده‌ها را برای Prisma ترجمه می‌کنیم
     const finalData = {
-      roleId,
       displayName,
+      roleId: role.id,
       labels: labels
         ? {
-            // تمام روابط قبلی را حذف و روابط جدید را جایگزین می‌کند
-            deleteMany: {},
-            create: labels.map((labelId: number) => ({
-              label: { connect: { id: labelId } },
-            })),
+            // set تمام روابط قبلی را حذف و روابط جدید را جایگزین می‌کند
+            set: labels.map((label: { id: number }) => ({ id: label.id })),
           }
         : undefined,
       userGroups: userGroups
         ? {
-            deleteMany: {},
-            create: userGroups.map((groupId: number) => ({
-              userGroup: { connect: { id: groupId } },
-            })),
+            set: userGroups.map((group: { id: number }) => ({ id: group.id })),
           }
         : undefined,
     };
+
+    const workspaceUser = await this.repository.findById(id);
+    if (!workspaceUser) {
+      throw new NotFoundException("Workspace user not found");
+    }
 
     return this.repository.update(id, finalData);
   }
