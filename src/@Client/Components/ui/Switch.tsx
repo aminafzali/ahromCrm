@@ -5,10 +5,11 @@
 import React from "react";
 import { useFormContext } from "react-hook-form";
 
-interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+interface SwitchProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   label?: string;
   name: string;
-  placeholder?: string; // پراپ placeholder اضافه شد
+  placeholder?: string;
   size?: "xs" | "sm" | "md" | "lg";
   className?: string;
 }
@@ -17,18 +18,23 @@ interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 
 const Switch: React.FC<SwitchProps> = ({
   name,
   label,
-  placeholder, // placeholder دریافت شد
+  placeholder,
   size = "md",
   className = "",
   ...props
 }) => {
-  const methods = useFormContext();
-  if (!methods) {
-    console.error("❌ useFormContext() is null! Make sure this Switch component is inside a FormProvider.");
-    return null;
-  }
+  // ===== شروع اصلاحیه کلیدی =====
+  // اکنون دقیقاً از همان الگوی هوشمندانه شما برای مدیریت context استفاده می‌کنیم
+  const methods = useFormContext() ?? {
+    register: () => ({}),
+    formState: { errors: {} },
+  };
+  // ===== پایان اصلاحیه کلیدی =====
 
-  const { register, formState: { errors } } = methods;
+  const {
+    register,
+    formState: { errors },
+  } = methods;
   const error = errors[name]?.message as string | undefined;
 
   return (
@@ -36,8 +42,9 @@ const Switch: React.FC<SwitchProps> = ({
       <label className="label cursor-pointer justify-start gap-4 py-0">
         <div className="flex flex-col">
           {label && <span className="label-text font-semibold">{label}</span>}
-          {/* از placeholder به عنوان متن راهنما در زیر لیبل استفاده می‌کنیم */}
-          {placeholder && <span className="text-xs text-gray-400">{placeholder}</span>}
+          {placeholder && (
+            <span className="text-xs text-gray-400">{placeholder}</span>
+          )}
         </div>
         <input
           type="checkbox"
@@ -48,7 +55,7 @@ const Switch: React.FC<SwitchProps> = ({
           {...register(name)}
         />
       </label>
-       {error && (
+      {error && (
         <label className="label">
           <span className="label-text-alt text-error">{error}</span>
         </label>
