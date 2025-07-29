@@ -115,6 +115,7 @@ const DynamicFormWrapper: React.FC<DynamicFormWrapperProps> = ({
             name={field.name}
             label={field.label}
             className={field.className}
+            placeholder={field.placeholder}
           />
         );
       // ===== پایان اصلاحیه =====
