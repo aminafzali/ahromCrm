@@ -3,27 +3,10 @@
 // الگوبرداری دقیق از ماژول‌های دیگر
 export const include = {
   // واکشی پروفایل ورک‌اسپیسی کاربر
-  workspaceUser: {
-    include: {
-      user: {
-        // و سپس اطلاعات سراسری کاربر از داخل آن
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-        },
-      },
-    },
-  },
-  request: {
-    select: {
-      id: true,
-      serviceType: true,
-      status: true,
-    },
-  },
+  workspaceUser: true,
+  request: true,
 };
 
-export const searchFileds = ["title", "message", "workspaceUser.user.name"];
+export const searchFileds = ["title", "message", "workspaceUser.displayName"];
 export const relations = [];
-export const connects = ["workspaceUser", "request"];
+export const connects = ["request"];

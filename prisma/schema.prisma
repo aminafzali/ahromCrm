@@ -280,12 +280,13 @@ model Reminder {
 }
 
 model Notification {
-  id                       Int           @id @unique @default(autoincrement())
-  workspaceId              Int
-  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  workspaceUser            WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
+  id              Int            @id @unique @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace      @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  // ===== شروع اصلاحیه کلیدی =====
+  // حذف کلیدهای ترکیبی و استفاده از شناسه ساده
+  workspaceUserId Int?
+  workspaceUser   WorkspaceUser? @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
   requestId Int?
   request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)

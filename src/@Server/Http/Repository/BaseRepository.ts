@@ -276,10 +276,41 @@ export abstract class BaseRepository<T> {
     });
   }
 
+  /**
+   * Create a new record
+   */
   async create(data: any): Promise<T> {
-    return this.model.create({ data });
-  }
+    // ===== شروع لاگ ردیابی و اصلاحیه =====
+    console.log(
+      `%c[SERVER - REPO]  C.1. Attempting to CREATE new "${this.modelName}" with data:`,
+      "color: #dc3545; font-weight: bold;",
+      JSON.stringify(data, null, 2)
+    );
 
+    try {
+      const entity = await this.model.create({ data });
+
+      console.log(
+        `%c[SERVER - REPO] C.2. ✅ SUCCESS! Created new "${this.modelName}":`,
+        "color: #28a745; font-weight: bold;",
+        entity
+      );
+
+      return entity;
+    } catch (error) {
+      // این مهم‌ترین بخش است. اگر Prisma خطایی بدهد، در اینجا آن را خواهیم دید.
+      console.error(
+        `%c[SERVER - REPO] ❌ PRISMA CREATE FAILED for model "${this.modelName}"!`,
+        "color: #ff0000; font-weight: bold;"
+      );
+      console.error("Data sent to Prisma:", JSON.stringify(data, null, 2));
+      console.error("Prisma Error:", error);
+
+      // خطا را دوباره پرتاب می‌کنیم تا BaseController آن را مدیریت کند
+      throw error;
+    }
+    // ===== پایان لاگ ردیابی و اصلاحیه =====
+  }
   async createMany(data: any[]): Promise<{ count: number }> {
     return this.model.createMany({ data });
   }

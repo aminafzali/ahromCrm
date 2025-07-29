@@ -10,7 +10,7 @@ type WorkspaceUserProfile = WorkspaceUser & {
 // تایپ نهایی برای یک نوتیفیکیشن با تمام روابط مورد نیاز
 export type NotificationWithRelations = Notification & {
   // رابطه user با workspaceUser جایگزین شده است
-  workspaceUser: WorkspaceUserProfile;
+  workspaceUser: WorkspaceUser;
   request?: Pick<Request, "id" | "serviceTypeId" | "statusId">;
 };
 
