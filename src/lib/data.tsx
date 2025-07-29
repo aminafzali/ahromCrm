@@ -166,15 +166,22 @@ export const dashboardMenuItems = [
     icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
     href: "/dashboard/reminders",
   },
+  {
+    id: "notifications",
+    value: "notifications",
+    label: "اعلان ها",
+    icon: <DIcon icon="fa-bell" cdi={false}></DIcon>,
+    href: "/dashboard/notifications",
+  },
 ];
 
 export const dashboardBottomItems = [
   {
-    id: "user",
-    value: "user",
+    id: "workspace-user",
+    value: "workspace-user",
     label: "مخاطبین",
     icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
-    href: "/dashboard/users",
+    href: "/dashboard/workspace-users",
   },
   {
     id: "hand",

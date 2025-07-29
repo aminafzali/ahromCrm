@@ -1,3 +1,4 @@
+import ActionsTable from "@/@Client/Components/common/ActionsTable";
 import DIcon from "@/@Client/Components/common/DIcon";
 import DateDisplay from "@/@Client/Components/DateTime/DateDisplay";
 import { Column } from "ndui-ahrom/dist/components/Table/Table";
@@ -35,6 +36,60 @@ export const columns: Column[] = [
     render: (row) => <DateDisplay date={row.createdAt} />,
   },
 ];
+
+export const columnsForAdmin: Column[] = [
+  {
+    name: "user",
+    label: "کاربر",
+    field: "workspaceUser.user.name",
+    render: (row: any) =>
+      row.workspaceUser?.displayName || row.workspaceUser?.user?.name || "-",
+  },
+  {
+    name: "title",
+    field: "title",
+    label: "عنوان",
+  },
+  {
+    name: "message",
+    field: "message",
+    label: "پیام",
+    render: (row) => <p className="line-clamp-2">{row.message}</p>,
+  },
+  {
+    name: "isRead",
+    label: "وضعیت",
+    render: (row) =>
+      row.isRead ? (
+        <span className="text-green-500 flex items-center gap-1">
+          <DIcon icon="fa-check-circle" /> خوانده شده
+        </span>
+      ) : (
+        <span className="text-yellow-500 flex items-center gap-1">
+          <DIcon icon="fa-clock" /> خوانده نشده
+        </span>
+      ),
+  },
+  {
+    name: "createdAt",
+    field: "createdAt",
+    label: "تاریخ ارسال",
+    render: (row: any) => <DateDisplay date={row.createdAt} />,
+  },
+  {
+    name: "actions",
+    label: "عملیات",
+    render: (row) => (
+      <ActionsTable
+        actions={["delete"]} // معمولاً نوتیفیکیشن‌ها فقط حذف می‌شوند
+        row={row}
+        showLabels
+      />
+    ),
+  },
+];
+
+
 
 export const listItemRender = (row: any) => (
   <Link

@@ -1,9 +1,18 @@
+// مسیر فایل: src/modules/notifications/data/fetch.ts
+
+// الگوبرداری دقیق از ماژول‌های دیگر
 export const include = {
-  user: {
-    select: {
-      id: true,
-      name: true,
-      phone: true,
+  // واکشی پروفایل ورک‌اسپیسی کاربر
+  workspaceUser: {
+    include: {
+      user: {
+        // و سپس اطلاعات سراسری کاربر از داخل آن
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+        },
+      },
     },
   },
   request: {
@@ -15,5 +24,6 @@ export const include = {
   },
 };
 
-export const searchFileds = ["title", "message"];
-export const relations = ["user", "request"];
+export const searchFileds = ["title", "message", "workspaceUser.user.name"];
+export const relations = [];
+export const connects = ["workspaceUser", "request"];

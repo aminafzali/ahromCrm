@@ -7,7 +7,7 @@ export interface Option {
   [key: string]: any; // Allow additional properties for custom rendering
 }
 
-export type FieldType = 
+export type FieldType =
   | "text"
   | "number"
   | "email"
@@ -21,7 +21,10 @@ export type FieldType =
   | "dropdown"
   | "radio"
   | "dataTable"
-  | "color";
+  | "color"
+  // ===== شروع اصلاحیه =====
+  | "switch"; // ۱. تایپ جدید را به لیست اضافه می‌کنیم
+// ===== پایان اصلاحیه =====
 
 export interface FormField {
   name: string;

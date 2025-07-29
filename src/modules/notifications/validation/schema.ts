@@ -3,25 +3,23 @@
 import { z } from "zod";
 
 export const createNotificationSchema = z.object({
-  userId: z.number().min(1, "شناسه کاربر الزامی است"),
-  // ++ اصلاحیه کلیدی: اضافه کردن .nullable() برای پذیرش مقدار null ++
+  title: z.string().min(1, "عنوان الزامی است."),
+  message: z.string().min(1, "متن پیام الزامی است."),
+
+  // ===== شروع اصلاحیه کلیدی =====
+  // به جای انتظار برای یک عدد، اکنون منتظر یک آبجکت هستیم
+  // که نماینده پروفایل ورک‌اسپیسی کاربر است.
+  workspaceUser: z.object(
+    { id: z.coerce.number() }, // فقط به شناسه آن برای اتصال نیاز داریم
+    { required_error: "انتخاب کاربر الزامی است." }
+  ),
+  // ===== پایان اصلاحیه کلیدی =====
+
   requestId: z.number().optional().nullable(),
-  title: z.string().min(1, "عنوان اعلان الزامی است"),
-  message: z.string().min(1, "متن پیام الزامی است"),
-  note: z.string().optional().nullable(), // این فیلد را نیز برای هماهنگی بیشتر nullable می‌کنیم
-  isRead: z.boolean().default(false),
-  sendSms: z.boolean().default(true),
-  sendEmail: z.boolean().default(false), // این فیلد در مدل شما بود و باید در اسکیما باشد
+  sendSms: z.boolean().optional().default(true),
+  sendEmail: z.boolean().optional().default(false),
 });
 
-// قبلی
-// import { z } from "zod";
-
-// export const createNotificationSchema = z.object({
-//   userId: z.number().min(1, "شناسه کاربر الزامی است"),
-//   requestId: z.number().optional(),
-//   title: z.string().min(1, "عنوان اعلان الزامی است"),
-//   message: z.string().min(1, "متن پیام الزامی است"),
-//   isRead: z.boolean().default(false),
-//   sendSms: z.boolean().default(true),
-// });
+export const updateNotificationSchema = z.object({
+  isRead: z.boolean(),
+});

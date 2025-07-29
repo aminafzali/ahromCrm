@@ -2,6 +2,7 @@ import { ButtonSelectWithTable, DropdownV2, Input, Select } from "ndui-ahrom";
 import { FormWrapper } from ".";
 import { FormConfig, FormField } from "../../types/form";
 import DIcon from "../common/DIcon";
+import Switch from "../ui/Switch";
 
 interface DynamicFormWrapperProps {
   config: FormConfig;
@@ -30,11 +31,11 @@ const DynamicFormWrapper: React.FC<DynamicFormWrapperProps> = ({
 }) => {
   const renderField = (field: FormField) => {
     // ===== لاگ ردیابی ۱: بررسی رندر شدن هر فیلد =====
-    console.log(
-      `%c[DynamicFormWrapper] 렌 Rendering Field:`,
-      "color: #17a2b8;",
-      field
-    );
+    // console.log(
+    //   `%c[DynamicFormWrapper] 렌 Rendering Field:`,
+    //   "color: #17a2b8;",
+    //   field
+    // );
     // ===============================================
     switch (field.type) {
       case "dataTable":
@@ -106,6 +107,17 @@ const DynamicFormWrapper: React.FC<DynamicFormWrapperProps> = ({
             type="textarea"
           />
         );
+      // ===== شروع اصلاحیه =====
+      case "switch":
+        return (
+          <Switch
+            key={field.name}
+            name={field.name}
+            label={field.label}
+            className={field.className}
+          />
+        );
+      // ===== پایان اصلاحیه =====
 
       default:
         return (
