@@ -59,20 +59,20 @@ export const columnsForAdmin: Column[] = [
     label: "پیام",
     render: (row) => <p className="line-clamp-2">{row.message}</p>,
   },
-  {
-    name: "isRead",
-    label: "وضعیت",
-    render: (row) =>
-      row.isRead ? (
-        <span className="text-green-500 flex items-center gap-1">
-          <DIcon icon="fa-check-circle" /> خوانده شده
-        </span>
-      ) : (
-        <span className="text-yellow-500 flex items-center gap-1">
-          <DIcon icon="fa-clock" /> خوانده نشده
-        </span>
-      ),
-  },
+  // {
+  //   name: "isRead",
+  //   label: "وضعیت",
+  //   render: (row) =>
+  //     row.isRead ? (
+  //       <span className="text-green-500 flex items-center gap-1">
+  //         <DIcon icon="fa-check-circle" /> خوانده شده
+  //       </span>
+  //     ) : (
+  //       <span className="text-yellow-500 flex items-center gap-1">
+  //         <DIcon icon="fa-clock" /> خوانده نشده
+  //       </span>
+  //     ),
+  // },
   {
     name: "createdAt",
     field: "createdAt",
@@ -84,8 +84,9 @@ export const columnsForAdmin: Column[] = [
     label: "عملیات",
     render: (row) => (
       <ActionsTable
-        actions={["delete"]} // معمولاً نوتیفیکیشن‌ها فقط حذف می‌شوند
+        actions={["view", "delete"]} // معمولاً نوتیفیکیشن‌ها فقط حذف می‌شوند
         row={row}
+        onView={`/dashboard/notifications/${row.id}`}
         showLabels
       />
     ),

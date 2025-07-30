@@ -29,6 +29,6 @@ export const updateWorkspaceUserSchema = z.object({
     { required_error: "انتخاب نقش الزامی است." }
   ),
   displayName: z.string().optional(),
-  labels: z.array(z.number()).optional(),
-  userGroups: z.array(z.number()).optional(),
+  labels: z.array(z.object({ id: z.number() })).optional(),
+  userGroups: z.array(z.object({ id: z.number() })).optional(),
 });

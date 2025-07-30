@@ -109,7 +109,7 @@ export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
       name: "userGroups",
       label: "گروه‌ها",
       type: "dataTable",
-      data: data?.get("user-groups") || [],
+      data: data?.get("userGroups") || [],
       columns: columnsForSelectGroup,
       multiple: true,
       col: 2,

@@ -25,7 +25,7 @@ export const include = {
 export const searchFileds = ["title", "message", "workspaceUser.user.name"];
 
 // ۳. این آرایه طبق الگوی شما خالی است
-export const relations = [];
+export const relations = ["workspaceUser"];
 
 // ۴. اضافه کردن "workspaceUser" به connects تا BaseService به درستی کار کند
 export const connects = ["workspaceUser", "request"];
