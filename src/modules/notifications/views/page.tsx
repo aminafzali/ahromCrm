@@ -1,13 +1,7 @@
-import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper";
 import IndexWrapper from "@/@Client/Components/wrappers/IndexWrapper/Index";
-import {
-  columnsForAdmin,
-  listItemRender,
-  listItemRender2,
-} from "../data/table";
+import { columnsForAdmin, listItemRender2 } from "../data/table";
 import { useNotification } from "../hooks/useNotification";
 import { NotificationRepository } from "../repo/NotificationRepository";
-import { NotificationWithRelations } from "../types";
 
 export default function IndexPage({ title = "اعلان‌ها" }) {
   const { getAll, loading, error } = useNotification();
@@ -19,7 +13,7 @@ export default function IndexPage({ title = "اعلان‌ها" }) {
         listItemRender={listItemRender2}
         repo={new NotificationRepository()}
       />
-      <DataTableWrapper<NotificationWithRelations>
+      {/* <DataTableWrapper<NotificationWithRelations>
         columns={columnsForAdmin}
         loading={loading}
         error={error}
@@ -29,7 +23,7 @@ export default function IndexPage({ title = "اعلان‌ها" }) {
         showIconViews={false}
         onSearch={false}
         listItemRender={listItemRender}
-      />
+      /> */}
     </div>
   );
 }

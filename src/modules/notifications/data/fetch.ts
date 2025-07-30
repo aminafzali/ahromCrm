@@ -28,4 +28,4 @@ export const searchFileds = ["title", "message", "workspaceUser.user.name"];
 export const relations = [];
 
 // ۴. اضافه کردن "workspaceUser" به connects تا BaseService به درستی کار کند
-export const connects = ["request"];
+export const connects = ["workspaceUser", "request"];

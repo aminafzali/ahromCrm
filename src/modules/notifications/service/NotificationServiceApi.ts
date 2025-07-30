@@ -3,7 +3,7 @@
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
 import { SmsHelper } from "@/lib/smsHelper";
-import { connects, relations, searchFileds } from "../data/fetch";
+import { connects, include, relations, searchFileds } from "../data/fetch";
 import {
   createNotificationSchema,
   updateNotificationSchema,
@@ -37,25 +37,72 @@ export class NotificationServiceApi extends BaseService<any> {
    * این نسخه جدید، بهینه شده و با معماری WorkspaceUser کاملاً سازگار است.
    */
   private async handleAfterCreate(entity: any): Promise<void> {
+    // ===== شروع لاگ ردیابی ۱: بررسی entity اولیه =====
+    console.log(
+      `%c[NotificationService] 1. 'afterCreate' hook triggered for Notification ID: ${entity.id}`,
+      "color: #6f42c1; font-weight: bold;"
+    );
+    console.log(
+      `[NotificationService]    Initial entity received from BaseService:`,
+      entity
+    );
+    // =================================================
+
     try {
       // ===== شروع اصلاحیه کلیدی =====
-      // ۱. دیگر نیازی به واکشی مجدد کاربر نیست. اطلاعات از خود entity خوانده می‌شود.
-      const customerProfile = entity.workspaceUser;
+      // ۱. به جای تکیه بر entity ورودی، ما آن را با تمام روابط مورد نیاز از دیتابیس دوباره واکشی می‌کنیم.
+      const fullEntity = await this.repository.findById(entity.id, { include });
+
+      // ===== لاگ ردیابی ۲: بررسی entity کامل =====
+      console.log(
+        `%c[NotificationService] 2. Fetched full entity with relations:`,
+        "color: #6f42c1;",
+        fullEntity
+      );
+      // ===========================================
+
+      const customerProfile = fullEntity.workspaceUser;
       const customer = customerProfile?.user;
 
       // ۲. بررسی می‌کنیم که آیا کاربر، شماره تلفن و اجازه ارسال SMS وجود دارد یا خیر.
-      if (customer && customer.phone && entity.sendSms) {
-        console.log(`Sending notification SMS to: ${customer.phone}`);
+      if (customer && customer.phone && fullEntity.sendSms) {
+        // ===== لاگ ردیابی ۳: اقدام به ارسال SMS =====
+        console.log(
+          `%c[NotificationService] 3. ✅ Conditions met. Attempting to send SMS to: ${customer.phone}`,
+          "color: #28a745; font-weight: bold;"
+        );
+        // ==========================================
 
         await SmsHelper.sendNotification(
           customer.phone,
-          entity.title,
-          entity.message
+          fullEntity.title,
+          fullEntity.message
         );
+
+        console.log(
+          `%c[NotificationService] 4. ✅ SMS sent successfully.`,
+          "color: #28a745;"
+        );
+      } else {
+        // ===== لاگ ردیابی ۳ (حالت جایگزین): عدم ارسال SMS =====
+        console.warn(
+          `%c[NotificationService] 3. ⚠️ SMS not sent. Conditions not met:`,
+          "color: #fd7e14;",
+          {
+            hasCustomer: !!customer,
+            hasPhone: !!customer?.phone,
+            shouldSendSms: !!fullEntity.sendSms,
+          }
+        );
+        // ====================================================
       }
       // ===== پایان اصلاحیه کلیدی =====
     } catch (error) {
-      console.error("Error sending notification SMS:", error);
+      console.error(
+        `%c[NotificationService] ❌ Error in handleAfterCreate:`,
+        "color: #dc3545; font-weight: bold;",
+        error
+      );
     }
   }
 

@@ -39,11 +39,14 @@ export const columns: Column[] = [
 
 export const columnsForAdmin: Column[] = [
   {
-    name: "user",
+    name: "workspaceUser",
     label: "کاربر",
-    field: "workspaceUser.user.name",
+    field: "workspaceUser",
     render: (row: any) =>
-      row.workspaceUser?.displayName || row.workspaceUser?.user?.name || "-",
+      row.workspaceUser?.displayName ||
+      row.workspaceUser?.name ||
+      row.workspaceUser?.user?.name ||
+      "-",
   },
   {
     name: "title",
@@ -88,8 +91,6 @@ export const columnsForAdmin: Column[] = [
     ),
   },
 ];
-
-
 
 export const listItemRender = (row: any) => (
   <Link
