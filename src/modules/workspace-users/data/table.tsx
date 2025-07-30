@@ -23,7 +23,23 @@ export const columnsForAdmin: Column[] = [
     name: "role",
     field: "role.name",
     label: "نقش",
-    render: (row: any) => row.role?.name || "-",
+    render: (row: any) => {
+      // بررسی می‌کنیم که آیا نقش "Admin" است یا خیر
+      const isAdmin = row.role?.name === "Admin";
+
+      // بر اساس نقش، کلاس‌های رنگی متفاوتی را اعمال می‌کنیم
+      const badgeClass = isAdmin
+        ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+        : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+
+      return (
+        <span
+          className={`px-3 py-1 text-xs font-medium rounded-full ${badgeClass}`}
+        >
+          {isAdmin ? "مدیر" : "کاربر عادی"}
+        </span>
+      );
+    },
   },
   {
     name: "labels",

@@ -38,15 +38,6 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
       required: true,
       col: 2,
     },
-    {
-      name: "role",
-      label: "نقش",
-      type: "dataTable",
-      data: data?.get("roles") || [],
-      columns: columnsForSelectRole,
-      required: true,
-      col: 2,
-    },
     // ویرگول اضافی در اینجا حذف شد که باعث بروز خطا شده بود
     {
       name: "labels",
@@ -64,6 +55,15 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
       data: data?.get("userGroups") || [],
       columns: columnsForSelectGroup,
       multiple: true,
+      col: 2,
+    },
+    {
+      name: "role",
+      label: " (به مشتریان و کاربران عادی نقش کاربر عادی بدهید = User) نقش",
+      type: "dataTable",
+      data: data?.get("roles") || [],
+      columns: columnsForSelectRole,
+      required: true,
       col: 2,
     },
   ],
@@ -89,7 +89,7 @@ export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
     },
     {
       name: "role",
-      label: "نقش",
+      label: " ( به مشتریان و کاربران عادی نقش کاربر عادی بدهید = User) نقش",
       type: "dataTable", // از دیتا تیبل برای هماهنگی استفاده می‌کنیم
       data: data?.get("roles") || [],
       columns: columnsForSelectRole,

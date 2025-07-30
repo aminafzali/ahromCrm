@@ -24,18 +24,6 @@ export const dashboardMenuItems = [
     href: "/adminDivider",
   },
   {
-    id: "roles",
-    label: "نقش ها",
-    icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
-    href: "/dashboard/roles",
-  },
-  {
-    id: "permissions",
-    label: "دسترسی ها",
-    icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
-    href: "/dashboard/permissions",
-  },
-  {
     id: "workspace-users",
     label: "مخاطبین",
     icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
@@ -220,7 +208,7 @@ export const userMenuItems = [
     href: "/panel/notifications",
   },
   {
-    id: "notifications",
+    id: "invoices",
     label: "فاکتور ها",
     icon: <DIcon icon="fa-file-lines" cdi={false}></DIcon>,
     href: "/panel/invoices",
