@@ -62,44 +62,45 @@ export const dashboardMenuItems = [
   },
   // 2. خدمات و زیرمجموعه‌هایش
   {
-    id: "service-types-group", // شناسه برای جلوگیری از تداخل
+    id: "settings",
+    label: "وضعیت ها",
+    icon: <DIcon icon="fa-octagon-check" cdi={false}></DIcon>,
+    href: "/dashboard/statuses",
+  },
+  {
+    id: "service-types",
+    label: "دسته بندی خدمات",
+    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+    href: "/dashboard/service-types",
+  },
+  // +++ آیتم جدید در اینجا اضافه شده است +++
+  {
+    id: "actual-services",
     label: "خدمات",
     icon: <DIcon icon="fa-wrench" cdi={false}></DIcon>,
-    children: [
-      {
-        id: "settings",
-        label: "وضعیت ها",
-        icon: <DIcon icon="fa-octagon-check" cdi={false}></DIcon>,
-        href: "/dashboard/statuses",
-      },
-      {
-        id: "service-types",
-        label: "انواع خدمات",
-        icon: <DIcon icon="fa-screwdriver-wrench" cdi={false}></DIcon>,
-        href: "/dashboard/service-types",
-      },
-      // +++ آیتم جدید در اینجا اضافه شده است +++
-      {
-        id: "actual-services",
-        label: "خدمات واقعی",
-        icon: <DIcon icon="fa-tasks" cdi={false}></DIcon>,
-        href: "/dashboard/actual-services",
-      },
-    ],
+    href: "/dashboard/actual-services",
   },
   // 3. انواع دستگاه (آیتم جدید)
   {
-    id: "device-types",
-    label: "انواع دستگاه",
-    icon: <DIcon icon="fa-tags" cdi={false}></DIcon>,
-    href: "/dashboard/device-types",
-  },
-  {
-    id: "received-devices",
-    label: "دستگاه‌های دریافتی",
+    id: "service-types-group", // شناسه برای جلوگیری از تداخل
+    label: "مدیریت دریافتی ها",
     icon: <DIcon icon="fa-dolly" cdi={false}></DIcon>,
-    href: "/dashboard/received-devices",
+    children: [
+      {
+        id: "device-types",
+        label: "دسته بندی دستگاه",
+        icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+        href: "/dashboard/device-types",
+      },
+      {
+        id: "received-devices",
+        label: "دستگاه‌های دریافتی",
+        icon: <DIcon icon="fa-dolly" cdi={false}></DIcon>,
+        href: "/dashboard/received-devices",
+      },
+    ],
   },
+
   {
     id: "settingDivider",
     label: "فروشگاه",
@@ -108,7 +109,7 @@ export const dashboardMenuItems = [
   },
   {
     id: "categories",
-    label: "دسته بندی ها",
+    label: "دسته بندی محصولات",
     icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
     href: "/dashboard/categories",
   },

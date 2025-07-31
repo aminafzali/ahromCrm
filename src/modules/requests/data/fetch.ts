@@ -1,7 +1,5 @@
 // مسیر فایل: src/modules/requests/data/fetch.ts
 
-import { Prisma } from "@prisma/client"; // ۱. Prisma را برای دسترسی به تایپ‌ها ایمپورت می‌کنیم
-
 export const include = {
   status: true,
   serviceType: true,
@@ -22,7 +20,13 @@ export const include = {
   },
   notifications: {
     orderBy: { createdAt: "desc" as const }, // ۲. از "as const" برای تعیین تایپ دقیق استفاده می‌کنیم
-    select: { id: true, title: true, message: true, isRead: true, createdAt: true },
+    select: {
+      id: true,
+      title: true,
+      message: true,
+      isRead: true,
+      createdAt: true,
+    },
   },
   actualServices: {
     include: {
@@ -32,6 +36,16 @@ export const include = {
 };
 
 // این بخش‌ها بدون تغییر باقی می‌مانند
-export const searchFileds = ["workspaceUser.user.name", "workspaceUser.user.phone", "description"];
+export const searchFileds = [
+  "workspaceUser.user.name",
+  "workspaceUser.user.phone",
+  "description",
+];
 export const relations = ["notes", "notifications", "formSubmission"];
-export const connects = ["workspaceUser", "serviceType", "status", "assignedTo"];
+export const connects = [
+  "workspaceUser",
+  "serviceType",
+  "status",
+  "assignedTo",
+  "actualServices",
+];

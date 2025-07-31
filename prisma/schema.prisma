@@ -128,12 +128,22 @@ model Permission {
 }
 
 model RolePermission {
+  // ===== شروع اصلاحیه =====
+  id Int @id @default(autoincrement())
+  // ===== پایان اصلاحیه =====
+
   roleId       Int
   permissionId Int
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  @@id([roleId, permissionId])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // ===== پایان اصلاحیه =====
+
+  // ===== شروع اصلاحیه =====
+  // کلید اصلی ترکیبی به یک محدودیت یکتایی تبدیل شد
+  @@unique([roleId, permissionId])
 }
 
 // >>>>>>>>>>>>> CORE MODELS (Refactored for Workspace) <<<<<<<<<<<<<<
@@ -151,25 +161,21 @@ model User {
   otp        String?
   otpExpires DateTime?
 
-  // روابط سراسری کاربر (گذرنامه) - تمام روابط دیگر حذف شده‌اند
+  // روابط سراسری کاربر (گذرنامه)
   ownedWorkspaces Workspace[]     @relation("OwnedWorkspaces")
-  workspaces      WorkspaceUser[] // لیست تمام پروفایل‌های این کاربر (ویزاها)
+  workspaces      WorkspaceUser[]
 }
-
-// ===== پایان مدل‌های واسط جدید =====
 
 model Request {
   id          Int       @id @unique @default(autoincrement())
   workspaceId Int
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction) // NoAction to prevent multiple cascade paths
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
 
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  workspaceUser            WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
-  assignedToWorkspaceId Int?
-  assignedToUserId      Int?
-  assignedTo            WorkspaceUser? @relation("AssignedTo", fields: [assignedToWorkspaceId, assignedToUserId], references: [workspaceId, userId], onDelete: SetNull)
+  assignedToId Int?
+  assignedTo   WorkspaceUser? @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
 
   description      String          @db.Text
   serviceTypeId    Int?
@@ -202,14 +208,14 @@ model Request {
 }
 
 model Invoice {
-  id                       Int           @id @unique @default(autoincrement())
-  workspaceId              Int
-  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  requestId                Int?
-  request                  Request?      @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  workspaceUser            WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  requestId   Int?
+  request     Request?  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
   items           InvoiceItem[]
   type            InvoiceType   @default(SALES)
@@ -229,12 +235,11 @@ model Invoice {
 }
 
 model ReceivedDevice {
-  id                       Int           @id @default(autoincrement())
-  workspaceId              Int
-  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  workspaceUser            WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
+  id              Int           @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
   model              String?
   serialNumber       String?
@@ -254,12 +259,11 @@ model ReceivedDevice {
 }
 
 model Reminder {
-  id                       Int           @id @default(autoincrement())
-  workspaceId              Int
-  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  workspaceUser            WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
+  id              Int           @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
   title                String
   description          String?             @db.Text
@@ -280,16 +284,16 @@ model Reminder {
 }
 
 model Notification {
-  id              Int            @id @unique @default(autoincrement())
-  workspaceId     Int
-  workspace       Workspace      @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  // ===== شروع اصلاحیه کلیدی =====
-  // حذف کلیدهای ترکیبی و استفاده از شناسه ساده
-  workspaceUserId Int?
-  workspaceUser   WorkspaceUser? @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
   requestId Int?
   request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
   title     String
   note      String?
   message   String   @db.Text
@@ -301,12 +305,11 @@ model Notification {
 }
 
 model Payment {
-  id                       Int           @id @unique @default(autoincrement())
-  workspaceId              Int
-  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  workspaceUser            WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
+  id              Int           @id @unique @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
   invoiceId   Int?
   invoice     Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
@@ -322,12 +325,11 @@ model Payment {
 }
 
 model Review {
-  id                       Int           @id @default(autoincrement())
-  workspaceId              Int
-  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  workspaceUser            WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
+  id              Int           @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
   productId Int
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -338,12 +340,12 @@ model Review {
 }
 
 model RequestStatusHistory {
-  id                       Int           @id @unique @default(autoincrement())
-  workspaceId              Int
-  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  changedBy                WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  changedById Int
+  changedBy   WorkspaceUser @relation(fields: [changedById], references: [id], onDelete: Cascade)
 
   requestId   Int
   request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -352,35 +354,41 @@ model RequestStatusHistory {
   newStatusId Int
   newStatus   Status   @relation(name: "newStatus", fields: [newStatusId], references: [id])
   changedAt   DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model RequestReview {
-  id                       Int           @id @unique @default(autoincrement())
-  workspaceId              Int
-  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  workspaceUser            WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
+  id              Int           @id @unique @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
   requestId Int
   request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
   rating    Int
   comment   String?  @db.Text
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model RequestCancellation {
-  id                       Int           @id @unique @default(autoincrement())
-  workspaceId              Int
-  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserWorkspaceId Int
-  workspaceUserUserId      Int
-  cancelledBy              WorkspaceUser @relation(fields: [workspaceUserWorkspaceId, workspaceUserUserId], references: [workspaceId, userId], onDelete: Cascade)
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  cancelledById Int
+  cancelledBy   WorkspaceUser @relation(fields: [cancelledById], references: [id], onDelete: Cascade)
 
   requestId   Int
   request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
   reason      String   @db.Text
   cancelledAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Label {
@@ -408,8 +416,6 @@ model UserGroup {
 
   @@unique([name, workspaceId])
 }
-
-// ... سایر مدل‌هایی که به User متصل نبودند، بدون تغییر باقی می‌مانند ...
 
 model Product {
   id            Int                @id @default(autoincrement())
@@ -596,12 +602,21 @@ model Field {
 }
 
 model FieldOnForm {
-  formId  Int
-  fieldId Int
-  form    Form  @relation(fields: [formId], references: [id], onDelete: Cascade)
-  field   Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  // ===== شروع اصلاحیه =====
+  id Int @id @default(autoincrement())
+  // ===== پایان اصلاحیه =====
 
-  @@id([formId, fieldId])
+  formId    Int
+  fieldId   Int
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  field     Field    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // ===== پایان اصلاحیه =====
+
+  // ===== شروع اصلاحیه =====
+  // کلید اصلی ترکیبی به یک محدودیت یکتایی تبدیل شد
+  @@unique([formId, fieldId])
 }
 
 model FieldOption {
@@ -632,6 +647,8 @@ model FormSubmissionValue {
   submissionId Int
   submission   FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   value        String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 model ProductImage {
@@ -698,7 +715,8 @@ model RequestAttachment {
   request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
   fileUrl     String
   fileType    String
-  uploadedAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Note {
