@@ -33,6 +33,14 @@ export class BaseApi {
   }
 
   protected async patch<T>(endpoint: string, data: any): Promise<T> {
+    // ===== شروع لاگ ردیابی =====
+    console.log(
+      `%c[BaseApi - patch] 📞 Method called for endpoint: "${endpoint}"`,
+      "color: #007acc;",
+      { data }
+    );
+    // ===== پایان لاگ ردیابی =====
+
     const url = this.buildUrl(endpoint);
     return this.request<T>(url, {
       method: "PATCH",

@@ -153,28 +153,106 @@ export class RequestServiceApi extends BaseService<any> {
     return data;
   }
 
+  // private async handleAfterChangeStatus(entity: any, data: any): Promise<void> {
+  //   const customer = entity.workspaceUser;
+  //   if (!customer) return;
+
+  //   let message = `درخواست شما به روز رسانی شد از وضعیت ${data.oldStatus} به ${data.newStatus}`;
+  //   if (entity.note) message += `\n\n${entity.note}`;
+  //   message += `\nشماره پیگیری: ${entity.id}`;
+
+  //   // ===== شروع اصلاحیه کلیدی =====
+  //   // ما باید context را به درستی به متد create پاس دهیم تا BaseService آن را مدیریت کند
+  //   await this.notifRepo.create(
+  //     {
+  //       workspaceUser: customer, // فیلد اجباری را اضافه می‌کنیم
+  //       requestId: entity.id,
+  //       title: "تغییر وضعیت",
+  //       message,
+  //       sendSms: data.sendSms,
+  //     },
+  //     // context را برای استفاده در BaseService پاس می‌دهیم
+  //     { workspaceId: entity.workspaceId, user: customer.user } as AuthContext
+  //   );
+  //   // ===== پایان اصلاحیه کلیدی =====
+  // }
+
   private async handleAfterChangeStatus(entity: any, data: any): Promise<void> {
+    // ===== شروع لاگ‌های ردیابی =====
+    console.log(
+      `%c[RequestService - afterStatusChange] 1. Hook triggered for Request ID: ${entity.id}`,
+      "color: #8A2BE2; font-weight: bold;"
+    );
+    console.log(
+      `[RequestService - afterStatusChange]    - Received entity:`,
+      entity
+    );
+    console.log(
+      `[RequestService - afterStatusChange]    - Received data:`,
+      data
+    );
+    // =============================
+
     const customer = entity.workspaceUser;
-    if (!customer) return;
+    if (!customer) {
+      console.warn(
+        `%c[RequestService - afterStatusChange] ⚠️ Aborting: workspaceUser not found on the entity.`,
+        "color: #fd7e14;"
+      );
+      return;
+    }
+    console.log(
+      `[RequestService - afterStatusChange]   - Customer profile found:`,
+      customer
+    );
 
     let message = `درخواست شما به روز رسانی شد از وضعیت ${data.oldStatus} به ${data.newStatus}`;
     if (entity.note) message += `\n\n${entity.note}`;
     message += `\nشماره پیگیری: ${entity.id}`;
 
-    // ===== شروع اصلاحیه کلیدی =====
-    // ما باید context را به درستی به متد create پاس دهیم تا BaseService آن را مدیریت کند
-    await this.notifRepo.create(
-      {
-        workspaceUser: customer, // فیلد اجباری را اضافه می‌کنیم
-        requestId: entity.id,
-        title: "تغییر وضعیت",
-        message,
-        sendSms: data.sendSms,
-      },
-      // context را برای استفاده در BaseService پاس می‌دهیم
-      { workspaceId: entity.workspaceId, user: customer.user } as AuthContext
+    const notificationPayload = {
+      workspaceUser: customer,
+      requestId: entity.id,
+      title: "تغییر وضعیت",
+      message,
+      sendSms: data.sendSms,
+    };
+
+    const notificationContext = {
+      workspaceId: entity.workspaceId,
+      user: customer.user,
+    } as AuthContext;
+
+    // ===== لاگ ردیابی ۲: بررسی داده‌های ارسالی به سرویس نوتیفیکیشن =====
+    console.log(
+      `%c[RequestService - afterStatusChange] 2. Calling 'notifRepo.create' with payload:`,
+      "color: #8A2BE2; font-weight: bold;",
+      notificationPayload
     );
-    // ===== پایان اصلاحیه کلیدی =====
+    console.log(
+      `[RequestService - afterStatusChange]    - and context:`,
+      notificationContext
+    );
+    // ==============================================================
+
+    try {
+      await this.notifRepo.create(notificationPayload, notificationContext);
+
+      // ===== لاگ ردیابی ۳: عملیات موفقیت‌آمیز =====
+      console.log(
+        `%c[RequestService - afterStatusChange] 3. ✅ Notification created successfully.`,
+        "color: #28a745; font-weight: bold;"
+      );
+      // ============================================
+    } catch (error) {
+      // ===== لاگ ردیابی ۴: بروز خطا در ساخت نوتیفیکیشن =====
+      console.error(
+        `%c[RequestService - afterStatusChange] 4. ❌ Error during notification creation:`,
+        "color: #dc3545; font-weight: bold;",
+        error
+      );
+      // ===============================================
+    }
   }
 }
 

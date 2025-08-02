@@ -33,6 +33,7 @@ export abstract class BaseService<T> {
   protected afterDelete?: (id: number | string) => Promise<void>;
   protected beforeStatusChange?: (event: StatusChangeEvent) => Promise<void>;
   protected afterStatusChange?: (entity: T, data?: any) => Promise<void>;
+  service: any;
 
   constructor(
     repository: BaseRepository<T>,
@@ -295,7 +296,7 @@ export abstract class BaseService<T> {
       notified: false,
       status: "PENDING",
     };
-    // Todo: خیلی مهمه اصلاح بشه
+    // Todo:t4 خیلی مهمه اصلاح بشه
     // const entity = await prisma.reminder.create({ data: reminderData });
     //  return entity;
   }
@@ -524,7 +525,7 @@ export abstract class BaseService<T> {
   //         "color: #28a745; font-weight: bold;",
   //         updatedEntity
   //       );
-  //       //  return updatedEntity;
+  //       return updatedEntity;
   //     });
   //   } catch (error) {
   //     // این بخش، هر خطایی که در داخل تراکنش رخ دهد را ثبت می‌کند
@@ -537,6 +538,204 @@ export abstract class BaseService<T> {
   //   }
   // }
 
+  // async updateStatus(
+  //   id: number,
+  //   statusId: number,
+  //   note?: string,
+  //   sendSms?: boolean,
+  //   metadata: any = {},
+  //   context?: AuthContext,
+  //   include?: Record<string, boolean | object> // پارامتر include را دریافت می‌کنیم
+  // ): Promise<T> {
+  //   await prisma.$transaction(async (tx) => {
+  //     const modelName = this.repository.getModelName();
+  //     const modelDelegate = (tx as any)[modelName];
+
+  //     const entity = await modelDelegate.findUnique({
+  //       where: { id },
+  //       include: { status: true, workspaceUser: { include: { user: true } } },
+  //     });
+
+  //     if (!entity) {
+  //       throw new NotFoundException(`${modelName} not found`);
+  //     }
+
+  //     const oldStatus = entity.status;
+
+  //     const updatedEntity = await modelDelegate.update({
+  //       where: { id },
+  //       data: { statusId, note },
+  //       include: { status: true, workspaceUser: { include: { user: true } } },
+  //     });
+
+  //     const newStatus = updatedEntity.status;
+
+  //     if (context?.workspaceUser) {
+  //       await tx.requestStatusHistory.create({
+  //         data: {
+  //           requestId: id,
+  //           oldStatusId: oldStatus?.id,
+  //           newStatusId: newStatus.id,
+  //           changedById: context.workspaceUser.id,
+  //           workspaceId: context.workspaceId!,
+  //         },
+  //       });
+  //     }
+
+  //     if (this.afterStatusChange) {
+  //       await this.afterStatusChange(updatedEntity, {
+  //         sendSms,
+  //         note,
+  //         oldStatus: oldStatus?.name,
+  //         newStatus: newStatus.name,
+  //       });
+  //     }
+  //   });
+
+  //   // ===== شروع اصلاحیه کلیدی =====
+  //   // از پارامتر include که از کنترلر پاس داده شده، برای واکشی نهایی استفاده می‌کنیم
+  //   const finalInclude = include; //|| this.defaultInclude;
+  //   const cleanUpdatedEntity = await this.repository.findById(id, {
+  //     include: finalInclude,
+  //   });
+  //   return cleanUpdatedEntity;
+  //   // ===== پایان اصلاحیه کلیدی =====
+  // }
+  async updateStatus(
+    id: number,
+    statusId: number,
+    note?: string,
+    sendSms?: boolean,
+    metadata: any = {},
+    context?: AuthContext,
+    include?: Record<string, boolean | object>
+  ): Promise<T> {
+    console.log(
+      `%c[BaseService - updateStatus] 1. Service method initiated for ID: ${id}`,
+      "color: #fd7e14; font-weight: bold;",
+      { statusId, note, sendSms, include }
+    );
+
+    // ===== شروع اصلاحیه کلیدی ۱: تعریف متغیرها در Scope بالاتر =====
+    let updatedEntity: any;
+    let oldStatus: any;
+    let newStatus: any;
+    // ===== پایان اصلاحیه کلیدی ۱ =====
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        console.log(
+          `%c[BaseService - updateStatus] 2. Starting Prisma transaction...`,
+          "color: #fd7e14;"
+        );
+
+        const modelName = this.repository.getModelName();
+        const modelDelegate = (tx as any)[modelName];
+
+        console.log(
+          `[BaseService - updateStatus]   - Finding entity with ID: ${id}`
+        );
+        const entity = await modelDelegate.findUnique({
+          where: { id },
+          include: { status: true }, // فقط status را برای گرفتن oldStatus لازم داریم
+        });
+
+        if (!entity) {
+          throw new NotFoundException(`${modelName} not found`);
+        }
+        console.log(
+          `%c[BaseService - updateStatus] 3. Found initial entity.`,
+          "color: #fd7e14;"
+        );
+
+        oldStatus = entity.status;
+
+        console.log(
+          `[BaseService - updateStatus]   - Updating entity with new statusId: ${statusId}`
+        );
+        // آپدیت را بدون include انجام می‌دهیم تا سبک‌تر باشد
+        updatedEntity = await modelDelegate.update({
+          where: { id },
+          data: { statusId, note },
+          include: { status: true, workspaceUser: { include: { user: true } } }, // include کامل برای هوک
+        });
+        console.log(
+          `%c[BaseService - updateStatus] 4. ✅ Entity updated successfully inside transaction.`,
+          "color: #28a745;"
+        );
+
+        newStatus = updatedEntity.status;
+
+        if (context?.workspaceUser) {
+          console.log(
+            `%c[BaseService - updateStatus] 5. Creating status history record...`,
+            "color: #fd7e14;"
+          );
+          await tx.requestStatusHistory.create({
+            data: {
+              requestId: id,
+              oldStatusId: oldStatus?.id,
+              newStatusId: newStatus.id,
+              changedById: context.workspaceUser.id,
+              workspaceId: context.workspaceId!,
+            },
+          });
+          console.log(
+            `%c[BaseService - updateStatus] 6. ✅ Status history created.`,
+            "color: #28a745;"
+          );
+        }
+      });
+
+      console.log(
+        `%c[BaseService - updateStatus] 7. ✅ Transaction finished successfully.`,
+        "color: #28a745; font-weight: bold;"
+      );
+
+      // ===== شروع اصلاحیه کلیدی ۲: انتقال هوک به بعد از تراکنش =====
+      if (this.afterStatusChange) {
+        console.log(
+          `%c[BaseService - updateStatus] 8. Calling 'afterStatusChange' hook...`,
+          "color: #fd7e14;"
+        );
+        await this.afterStatusChange(updatedEntity, {
+          sendSms,
+          note,
+          oldStatus: oldStatus?.name,
+          newStatus: newStatus.name,
+        });
+        console.log(
+          `%c[BaseService - updateStatus] 9. ✅ 'afterStatusChange' hook finished.`,
+          "color: #28a745;"
+        );
+      }
+      // ===== پایان اصلاحیه کلیدی ۲ =====
+
+      const finalInclude = include || {};
+      console.log(
+        `%c[BaseService - updateStatus] 10. Re-fetching the updated entity with final include...`,
+        "color: #17a2b8; font-weight: bold;"
+      );
+
+      const cleanUpdatedEntity = await this.repository.findById(id, {
+        include: finalInclude,
+      });
+
+      console.log(
+        `%c[BaseService - updateStatus] 11. ✅ Final clean entity fetched successfully. Returning to controller.`,
+        "color: #28a745; font-weight: bold;"
+      );
+
+      return cleanUpdatedEntity;
+    } catch (error) {
+      console.error(
+        `%c[BaseService - updateStatus] ❌ ERROR during operation:`,
+        "color: #dc3545; font-weight: bold;",
+        error
+      );
+      throw error;
+    }
+  }
   // async updateStatus(
   //   id: number,
   //   statusId: number,
@@ -608,113 +807,113 @@ export abstract class BaseService<T> {
   //   }
   // }
 
-  async updateStatus(
-    id: number,
-    statusId: number,
-    note?: string,
-    sendSms?: boolean,
-    metadata: any = {},
-    context?: AuthContext
-  ): Promise<void> {
-    // ۱. نوع بازگشتی را به Promise<void> تغییر می‌دهیم
+  // async updateStatus(
+  //   id: number,
+  //   statusId: number,
+  //   note?: string,
+  //   sendSms?: boolean,
+  //   metadata: any = {},
+  //   context?: AuthContext
+  // ): Promise<void> {
+  //   // ۱. نوع بازگشتی را به Promise<void> تغییر می‌دهیم
 
-    console.log(
-      `%c[BaseService - updateStatus] 1. Service method initiated for ID: ${id}`,
-      "color: #fd7e14; font-weight: bold;",
-      { statusId, note, sendSms }
-    );
+  //   console.log(
+  //     `%c[BaseService - updateStatus] 1. Service method initiated for ID: ${id}`,
+  //     "color: #fd7e14; font-weight: bold;",
+  //     { statusId, note, sendSms }
+  //   );
 
-    try {
-      await prisma.$transaction(async (tx) => {
-        // ۲. دیگر از return در اینجا استفاده نمی‌کنیم
-        console.log(
-          `%c[BaseService - updateStatus] 2. Starting Prisma transaction...`,
-          "color: #fd7e14;"
-        );
+  //   try {
+  //     await prisma.$transaction(async (tx) => {
+  //       // ۲. دیگر از return در اینجا استفاده نمی‌کنیم
+  //       console.log(
+  //         `%c[BaseService - updateStatus] 2. Starting Prisma transaction...`,
+  //         "color: #fd7e14;"
+  //       );
 
-        const modelName = this.repository.getModelName();
-        const modelDelegate = (tx as any)[modelName];
+  //       const modelName = this.repository.getModelName();
+  //       const modelDelegate = (tx as any)[modelName];
 
-        const entity = await modelDelegate.findUnique({
-          where: { id },
-          include: { status: true, workspaceUser: { include: { user: true } } },
-        });
+  //       const entity = await modelDelegate.findUnique({
+  //         where: { id },
+  //         include: { status: true, workspaceUser: { include: { user: true } } },
+  //       });
 
-        if (!entity) {
-          throw new NotFoundException(`${modelName} not found`);
-        }
-        console.log(
-          `%c[BaseService - updateStatus] 3. Found initial entity.`,
-          "color: #fd7e14;"
-        );
+  //       if (!entity) {
+  //         throw new NotFoundException(`${modelName} not found`);
+  //       }
+  //       console.log(
+  //         `%c[BaseService - updateStatus] 3. Found initial entity.`,
+  //         "color: #fd7e14;"
+  //       );
 
-        const oldStatus = entity.status;
+  //       const oldStatus = entity.status;
 
-        const updatedEntity = await modelDelegate.update({
-          where: { id },
-          data: { statusId, note },
-          include: { status: true, workspaceUser: { include: { user: true } } },
-        });
-        console.log(
-          `%c[BaseService - updateStatus] 4. Entity updated successfully.`,
-          "color: #28a745;"
-        );
+  //       const updatedEntity = await modelDelegate.update({
+  //         where: { id },
+  //         data: { statusId, note },
+  //         include: { status: true, workspaceUser: { include: { user: true } } },
+  //       });
+  //       console.log(
+  //         `%c[BaseService - updateStatus] 4. Entity updated successfully.`,
+  //         "color: #28a745;"
+  //       );
 
-        const newStatus = updatedEntity.status;
+  //       const newStatus = updatedEntity.status;
 
-        if (context?.workspaceUser) {
-          console.log(
-            `%c[BaseService - updateStatus] 5. Creating status history record...`,
-            "color: #fd7e14;"
-          );
-          await tx.requestStatusHistory.create({
-            data: {
-              requestId: id,
-              oldStatusId: oldStatus?.id,
-              newStatusId: newStatus.id,
-              changedById: context.workspaceUser.id,
-              workspaceId: context.workspaceId!,
-            },
-          });
-          console.log(
-            `%c[BaseService - updateStatus] 6. Status history created.`,
-            "color: #28a745;"
-          );
-        }
+  //       if (context?.workspaceUser) {
+  //         console.log(
+  //           `%c[BaseService - updateStatus] 5. Creating status history record...`,
+  //           "color: #fd7e14;"
+  //         );
+  //         await tx.requestStatusHistory.create({
+  //           data: {
+  //             requestId: id,
+  //             oldStatusId: oldStatus?.id,
+  //             newStatusId: newStatus.id,
+  //             changedById: context.workspaceUser.id,
+  //             workspaceId: context.workspaceId!,
+  //           },
+  //         });
+  //         console.log(
+  //           `%c[BaseService - updateStatus] 6. Status history created.`,
+  //           "color: #28a745;"
+  //         );
+  //       }
 
-        if (this.afterStatusChange) {
-          console.log(
-            `%c[BaseService - updateStatus] 7. Calling 'afterStatusChange' hook...`,
-            "color: #fd7e14;"
-          );
-          await this.afterStatusChange(updatedEntity, {
-            sendSms,
-            note,
-            oldStatus: oldStatus?.name,
-            newStatus: newStatus.name,
-          });
-          console.log(
-            `%c[BaseService - updateStatus] 8. 'afterStatusChange' hook finished.`,
-            "color: #28a745;"
-          );
-        }
+  //       if (this.afterStatusChange) {
+  //         console.log(
+  //           `%c[BaseService - updateStatus] 7. Calling 'afterStatusChange' hook...`,
+  //           "color: #fd7e14;"
+  //         );
+  //         await this.afterStatusChange(updatedEntity, {
+  //           sendSms,
+  //           note,
+  //           oldStatus: oldStatus?.name,
+  //           newStatus: newStatus.name,
+  //         });
+  //         console.log(
+  //           `%c[BaseService - updateStatus] 8. 'afterStatusChange' hook finished.`,
+  //           "color: #28a745;"
+  //         );
+  //       }
 
-        console.log(
-          `%c[BaseService - updateStatus] 9. ✅ Transaction successful. No entity will be returned.`,
-          "color: #28a745; font-weight: bold;"
-        );
-        // ۳. هیچ مقداری را از تراکنش return نمی‌کنیم
-        // return updatedEntity; // <-- این خط حذف می‌شود
-      });
-    } catch (error) {
-      console.error(
-        `%c[BaseService - updateStatus] ❌ ERROR during transaction:`,
-        "color: #dc3545; font-weight: bold;",
-        error
-      );
-      throw error;
-    }
-  }
+  //       console.log(
+  //         `%c[BaseService - updateStatus] 9. ✅ Transaction successful. No entity will be returned.`,
+  //         "color: #28a745; font-weight: bold;"
+  //       );
+  //       // ۳. هیچ مقداری را از تراکنش return نمی‌کنیم
+  //       // return updatedEntity; // <-- این خط حذف می‌شود
+  //     });
+  //   } catch (error) {
+  //     console.error(
+  //       `%c[BaseService - updateStatus] ❌ ERROR during transaction:`,
+  //       "color: #dc3545; font-weight: bold;",
+  //       error
+  //     );
+  //     throw error;
+  //   }
+  // }
 
   async link(
     id: number | string,
