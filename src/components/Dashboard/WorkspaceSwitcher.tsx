@@ -35,7 +35,7 @@ export default function WorkspaceSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="btn btn-ghost d-flex align-items-center justify-content-between w-56">
+        <Button className="btn btn-ghost d-flex align-items-center justify-content-between w-30">
           <span className="truncate font-bold">
             {activeWorkspace.workspace.name}
           </span>

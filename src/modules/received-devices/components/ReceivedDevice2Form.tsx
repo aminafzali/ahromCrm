@@ -3,7 +3,7 @@
 import DIcon from "@/@Client/Components/common/DIcon";
 import Loading from "@/@Client/Components/common/Loading";
 import { listItemRenderUser } from "@/modules/requests/data/table";
-import { listItemRender } from "@/modules/users/data/table";
+import { listItemRender } from "@/modules/workspace-users/data/table";
 import { Button, Form, Input } from "ndui-ahrom";
 import { useEffect, useState } from "react";
 import { createReceivedDeviceSchema } from "../validation/schema";
@@ -57,7 +57,7 @@ export default function ReceivedDevice2Form({
 
   const onSetRequest = (selectedItem: any) => {
     setReq(selectedItem);
-    setUser((selectedItem as any).user);
+    setUser((selectedItem as any).workspaceUser);
   };
 
   const onSetUser = (selectedItem: any) => {
@@ -82,7 +82,7 @@ export default function ReceivedDevice2Form({
         initialCondition,
       };
       if (req) data["request"] = req;
-      if (user) data["user"] = user;
+      if (user) data["workspaceUser"] = user;
       if (deviceType) data["deviceType"] = deviceType;
       if (brand) data["brand"] = brand;
 

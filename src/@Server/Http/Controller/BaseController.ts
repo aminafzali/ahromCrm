@@ -315,9 +315,23 @@ export abstract class BaseController<T> {
     req: NextRequest,
     id: string | number
   ): Promise<NextResponse> {
+    // ===== شروع لاگ‌های ردیابی =====
+    console.log(
+      `%c[BaseController - updateStatus] 1. Received PATCH request for ID: ${id}`,
+      "color: #007acc; font-weight: bold;"
+    );
+    // =============================
+
     return this.executeAction(req, async () => {
       const numericId = typeof id === "string" ? parseInt(id, 10) : id;
+
       const context = await AuthProvider.isAuthenticated(req);
+      console.log(
+        `%c[BaseController - updateStatus] 2. AuthProvider Context:`,
+        "color: #007acc;",
+        context
+      );
+
       if (context.role?.name !== "Admin")
         throw new ForbiddenException(
           "Admin access required for status update."
@@ -326,20 +340,84 @@ export abstract class BaseController<T> {
       if (!context.workspaceId)
         throw new BadRequestException("Workspace ID is required.");
 
+      console.log(
+        `%c[BaseController - updateStatus] 3. Checking entity ownership...`,
+        "color: #007acc;"
+      );
       await this.service.getById(numericId, {
         filters: { workspaceId: context.workspaceId },
       });
+      console.log(
+        `%c[BaseController - updateStatus] 4. Ownership check passed.`,
+        "color: #28a745;"
+      );
 
       const body = await req.json();
+      console.log(
+        `%c[BaseController - updateStatus] 5. Received body:`,
+        "color: #007acc;",
+        body
+      );
+
+      console.log(
+        `%c[BaseController - updateStatus] 6. Calling service.updateStatus...`,
+        "color: #007acc;"
+      );
       await this.service.updateStatus(
         numericId,
         body.statusId,
         body.note,
-        body.sendSms
+        body.sendSms,
+        {}, // metadata
+        context
       );
-      return this.success("با موفقیت به روز رسانی شد", 201);
+
+      console.log(
+        `%c[BaseController - updateStatus] 7. ✅ Service call successful.`,
+        "color: #28a745; font-weight: bold;"
+      );
+      return this.success("با موفقیت به روز رسانی شد", 200);
     });
   }
+
+  // async updateStatus(
+  //   req: NextRequest,
+  //   id: string | number
+  // ): Promise<NextResponse> {
+  //   return this.executeAction(req, async () => {
+  //     const numericId = typeof id === "string" ? parseInt(id, 10) : id;
+  //     const context = await AuthProvider.isAuthenticated(req);
+
+  //     if (context.role?.name !== "Admin")
+  //       throw new ForbiddenException(
+  //         "Admin access required for status update."
+  //       );
+
+  //     if (!context.workspaceId)
+  //       throw new BadRequestException("Workspace ID is required.");
+
+  //     // این خط برای بررسی مالکیت، عالی و ضروری است
+  //     await this.service.getById(numericId, {
+  //       filters: { workspaceId: context.workspaceId },
+  //     });
+
+  //     const body = await req.json();
+
+  //     // ===== شروع اصلاحیه کلیدی =====
+  //     // ما آبجکت context را به متد سرویس پاس می‌دهیم
+  //     await this.service.updateStatus(
+  //       numericId,
+  //       body.statusId,
+  //       body.note,
+  //       body.sendSms,
+  //       {}, // metadata
+  //       context // context شامل اطلاعات کاربر تغییر دهنده است
+  //     );
+  //     // ===== پایان اصلاحیه کلیدی =====
+
+  //     return this.success("با موفقیت به روز رسانی شد", 200); // معمولا برای آپدیت از کد 200 استفاده می‌شود
+  //   });
+  // }
 
   async createReminder(
     req: NextRequest,

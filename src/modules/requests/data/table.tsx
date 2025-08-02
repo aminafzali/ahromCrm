@@ -9,12 +9,13 @@ export const columnsForAdmin: Column[] = [
     name: "customer",
     label: "مشتری",
     // مسیر دسترسی به نام مشتری اکنون از طریق workspaceUser است
-    render: (row: any) => row.workspaceUser?.user?.name || "-",
+    render: (row: any) =>
+      row.workspaceUser?.displayName || row.workspaceUser?.name || "-",
   },
   {
     name: "assignedTo",
     label: "تخصیص به",
-    render: (row: any) => row.assignedTo?.user?.name || "تخصیص نیافته",
+    render: (row: any) => row.assignedTo?.workspaceUser?.name || "تخصیص نیافته",
   },
   {
     name: "service",
@@ -156,16 +157,19 @@ export const listItemRenderUser = (row: any) => (
       </div>
 
       {/* بخش اطلاعات کارشناس */}
-      {row.assignedTo && (
+      {row.workspaceUser && (
         <div className="text-sm text-gray-800 border-t pt-2 mt-1 flex items-center">
           <DIcon
             icon="fa-user-helmet-safety"
             cdi={false}
             classCustom="ml-2 text-gray-500"
           />
-          <span>کارشناس: </span>
+          <span>مشتری: </span>
           <span className="font-medium mr-1">
-            {row.assignedTo?.user?.name || "نامشخص"}
+            {row.workspaceUser?.displayName ||
+              row.workspaceUser?.name ||
+              row.workspaceUser?.phone ||
+              "نامشخص"}
           </span>
         </div>
       )}

@@ -2,13 +2,15 @@
 
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
-import { useSession } from "next-auth/react";
+//import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { lazy, Suspense } from "react";
+import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 
 export default function DynamicDashboardPage() {
   const { slug, id } = useParams();
-  const { data: session, status } = useSession();
+  //const { data: session, status } = useSession();
+  const { activeWorkspace } = useWorkspace();
 
   const DynamicComponent = lazy(async () => {
     try {
@@ -30,7 +32,7 @@ export default function DynamicDashboardPage() {
         <DynamicComponent
           id={parseInt(id as string)}
           backUrl={`/dashboard/${slug}`}
-          isAdmin={session?.user.role === "ADMIN"}
+           isAdmin={activeWorkspace?.role?.name === "Admin"}
         />
       )}
     </Suspense>

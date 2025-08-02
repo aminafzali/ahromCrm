@@ -7,14 +7,19 @@ import {
   Request,
   Status,
   User,
+  WorkspaceUser,
 } from "@prisma/client";
+
+type WorkspaceUserProfile = WorkspaceUser & {
+  user: User;
+};
 
 /**
  * تایپ ReceivedDevice که با روابط آن به صورت دستی گسترش یافته است.
  * این تایپ دقیقا از الگوی صحیح پروژه شما پیروی می‌کند.
  */
 export type ReceivedDeviceWithRelations = ReceivedDevice & {
-  user?: User;
+  workspaceUser?: WorkspaceUserProfile;
   brand?: Brand;
   deviceType?: DeviceType;
   request?: Request & {

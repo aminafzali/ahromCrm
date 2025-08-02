@@ -20,11 +20,13 @@ export const columnsForAdmin: Column[] = [
     ),
   },
   {
-    name: "user",
-    field: "user",
+    name: "workspaceUser",
+    field: "workspaceUser",
     label: "مشتری",
     render: (row: ReceivedDeviceWithRelations) =>
-      row.user?.name || row.user?.phone,
+      row.workspaceUser?.displayName ||
+      row.workspaceUser?.name ||
+      row.workspaceUser?.phone,
   },
   {
     name: "receivedDate",
@@ -100,7 +102,10 @@ export const listItemRender = (row: ReceivedDeviceWithRelations) => {
             />
             <span className="font-medium text-gray-600">مشتری:</span>
             <span className="text-gray-800 font-semibold mr-2">
-              {row.user?.name || row.user?.phone || "نامشخص"}
+              {row.workspaceUser?.displayName ||
+                row.workspaceUser?.name ||
+                row.workspaceUser?.phone ||
+                "نا مشخص"}
             </span>
           </div>
           {row.serialNumber && (

@@ -2,14 +2,15 @@
 
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
-import { useSession } from "next-auth/react";
+//import { useSession } from "next-auth/react";
+import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 import { useParams } from "next/navigation";
 import { lazy, Suspense } from "react";
 
 export default function DynamicCreatePage() {
   const { slug } = useParams();
-  const { data: session, status } = useSession();
-
+  // const { data: session, status } = useSession();
+  const { activeWorkspace } = useWorkspace();
   const DynamicComponent = lazy(async () => {
     try {
       // Dynamically import the corresponding module's create view
@@ -27,7 +28,7 @@ export default function DynamicCreatePage() {
       {status === "loading" ? (
         <Loading />
       ) : (
-        <DynamicComponent isAdmin={session?.user.role === "ADMIN"} />
+        <DynamicComponent isAdmin={activeWorkspace?.role?.name === "Admin"} />
       )}
     </Suspense>
   );

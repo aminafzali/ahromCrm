@@ -43,7 +43,7 @@ export class BaseRepository<
   }
 
   updateStatus<S>(id: IdType, data: S): Promise<T> {
-    return this.patch<T>(`${this.slug}/${id}/status`, data);
+    return this.patch<T>(`${this.slug}/${id}/update-status`, data);
   }
 
   createReminder<R>(id: IdType, data: R): Promise<void> {

@@ -1,8 +1,10 @@
 // src/modules/received-devices/data/fetch.ts
 
 export const include = {
-  user: {
-    select: { id: true, name: true, phone: true },
+  workspaceUser: {
+    include: {
+      user: true,
+    },
   },
   brand: {
     select: { id: true, name: true },
@@ -26,4 +28,4 @@ export const include = {
 
 export const searchFileds = ["model", "serialNumber", "problemDescription"];
 export const relations = [];
-export const connect = ["user", "brand", "deviceType", "request"];
+export const connect = ["workspaceUser", "brand", "deviceType", "request"];

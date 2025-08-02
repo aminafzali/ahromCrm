@@ -1,6 +1,6 @@
 import IndexWrapper from "@/@Client/Components/wrappers/IndexWrapper/Index";
-import { columnsForSelect } from "@/modules/users/data/table";
-import { UserRepository } from "@/modules/users/repo/UserRepository";
+import { columnsForSelect } from "@/modules/workspace-users/data/table";
+import { WorkspaceUserRepository } from "@/modules/workspace-users/repo/WorkspaceUserRepository";
 import { Button, Modal } from "ndui-ahrom";
 import React, { useState } from "react";
 
@@ -37,7 +37,7 @@ const SelectUser2: React.FC<SelectRequestProps> = ({
       >
         <IndexWrapper
           columns={columnsForSelect}
-          repo={new UserRepository()}
+          repo={new WorkspaceUserRepository()}
           selectionMode="single"
           onSelect={handleSelect} // Call both onSelect and closeModal
           createUrl={false}

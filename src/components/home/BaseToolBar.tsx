@@ -19,7 +19,15 @@ export default function BaseToolBar() {
         <Button disabled>در حال بارگذاری...</Button>
       ) : session ? (
         <div className="flex items-center">
-          {session.user.role === "ADMIN" ? (
+          {
+            <Link href="/workspaces">
+              <Button variant="ghost">
+                <DIcon icon="fa-grid" />
+                <h1 className=" text-teal-800">ورود به پنل</h1>
+              </Button>
+            </Link>
+          }
+          {/* {session.user.role === "ADMIN" ? (
             <Link href="/dashboard">
               <Button variant="ghost">
                 <DIcon icon="fa-grid" />
@@ -31,7 +39,7 @@ export default function BaseToolBar() {
                 <DIcon icon="fa-user" />
               </Button>
             </Link>
-          )}
+          )} */}
 
           <Button
             className="mx-1"
@@ -39,6 +47,7 @@ export default function BaseToolBar() {
             onClick={() => signOut({ callbackUrl: "/" })}
           >
             <DIcon icon="fa-sign-out" classCustom="!text-white" />
+            <h1>خروج</h1>
           </Button>
         </div>
       ) : (

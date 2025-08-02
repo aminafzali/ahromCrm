@@ -135,7 +135,7 @@ export const listItemRender = (row: any) => (
           href={`tel:${row.user?.phone}`}
           className="text-primary text-lg flex"
         >
-          {row.phone || "نامشخص"}
+          {row.phone || row.user?.phone || "نامشخص"}
           <DIcon
             icon="fa-phone"
             cdi={false}

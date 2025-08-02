@@ -8,7 +8,7 @@ import { updateRequestStatusSchema } from "../validation/schema";
 
 interface RequestStatusFormProps {
   requestId: number;
-  currentStatus: number ;
+  currentStatus: number;
   onSuccess: () => void;
 }
 
@@ -46,22 +46,47 @@ export default function RequestStatusForm({
   const handleSubmit = async (
     data: z.infer<typeof updateRequestStatusSchema>
   ) => {
+    // ===== شروع لاگ‌های ردیابی =====
+    console.log(
+      `%c[RequestStatusForm] 1. handleSubmit triggered.`,
+      "color: #007acc; font-weight: bold;"
+    );
+    console.log(`[RequestStatusForm]    - Data received from form:`, data);
+    // =============================
+
     try {
-      console.log(
-        "Submitted statusId in RequestStatusForm",
-        data.statusId,
-        typeof data.statusId
-      );
-      console.log("data in RequestStatusForm", data);
-      await updateStatus(requestId, {
+      const payload = {
         statusId: data.statusId,
         note: data.note || "",
         sendSms: data.sendSms,
-      });
-      //TODO:T1 خط کامنت شده زیر را درست باید کرد
-       onSuccess();
+      };
+
+      // ===== لاگ ردیابی ۲: بررسی داده‌های ارسالی به هوک =====
+      console.log(
+        `%c[RequestStatusForm] 2. Calling 'updateStatus' hook with Request ID "${requestId}" and payload:`,
+        "color: #007acc; font-weight: bold;",
+        payload
+      );
+      // ====================================================
+
+      await updateStatus(requestId, payload);
+
+      // ===== لاگ ردیابی ۳: عملیات موفقیت‌آمیز =====
+      console.log(
+        `%c[RequestStatusForm] 3. ✅ 'updateStatus' call successful.`,
+        "color: #28a745; font-weight: bold;"
+      );
+      // ============================================
+
+      onSuccess();
     } catch (error) {
-      console.error("Error updating request status:", error);
+      // ===== لاگ ردیابی ۴: بروز خطا =====
+      console.error(
+        `%c[RequestStatusForm] 4. ❌ Error updating request status:`,
+        "color: #dc3545; font-weight: bold;",
+        error
+      );
+      // ================================
     }
   };
 

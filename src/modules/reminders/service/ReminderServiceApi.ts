@@ -19,7 +19,7 @@ export class ReminderApiService extends BaseService<Reminder> {
       createReminderSchema,
       createReminderSchema.partial(),
       searchFileds,
-   //   ["user"]
+      ["user"]
     );
   }
 }

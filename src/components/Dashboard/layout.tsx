@@ -2,11 +2,9 @@
 
 "use client";
 
-import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 import { dashboardBottomItems, dashboardMenuItems } from "@/lib/data";
 import { LayoutWrapper, ToastContainer, ToastProvider } from "ndui-ahrom";
 import DashboardToolBar from "./DashboardToolBar";
-import WorkspaceSwitcher from "./WorkspaceSwitcher"; // کامپوننت جدید انتخابگر
 
 const sidebarContent = (
   <div className="mb-1">
@@ -20,17 +18,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   // هوک useWorkspace را برای دسترسی به ورک‌اسپیس فعال فراخوانی می‌کنیم
-  const { activeWorkspace } = useWorkspace();
 
   // محتوای تولبار را به صورت داینامیک می‌سازیم
   const toolbarContent = (
-    <div className="w-100 d-flex justify-content-between align-items-center px-2">
-      {/* کامپوننت انتخابگر ورک‌اسپیس در اینجا قرار می‌گیرد */}
-      <div>
-        {/* این کامپوننت فقط زمانی نمایش داده می‌شود که ورک‌اسپیس فعال وجود داشته باشد */}
-        {activeWorkspace && <WorkspaceSwitcher />}
-      </div>
-      {/* بقیه اجزای تولبار شما */}
+    <div className="w-full">
       <DashboardToolBar />
     </div>
   );

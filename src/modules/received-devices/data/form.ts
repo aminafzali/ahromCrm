@@ -21,12 +21,12 @@ export const getReceivedDeviceFormConfig = (
         data: data?.get("requests") || [],
       },
       {
-        name: "user",
+        name: "WorkspaceUser",
         label: "مشتری",
         type: "dataTable",
         required: true,
         columns: userColumns,
-        data: data?.get("users") || [],
+        data: data?.get("WorkspaceUsers") || [],
       },
       {
         name: "deviceType",

@@ -1,13 +1,19 @@
+import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 import MainMenu from "./MainMenu";
 import QuickCreate from "./QuickCreate";
-
+import WorkspaceSwitcher from "./WorkspaceSwitcher"; // کامپوننت جدید انتخابگر
 // کامپوننت اصلی
 const DashboardToolBar = () => {
+  // هوک useWorkspace را برای دسترسی به ورک‌اسپیس فعال فراخوانی می‌کنیم
+  const { activeWorkspace } = useWorkspace();
   return (
-    <div className="flex gap-2 px-2 justify-between w-full ">
-      <div>پنل مدیریت</div>
-      <div className="flex">
-        {/* <label className="swap swap-rotate">
+    <div className="flex justify-around w-full ">
+      {/* این کامپوننت فقط زمانی نمایش داده می‌شود که ورک‌اسپیس فعال وجود داشته باشد */}
+      <div className="flex justify-start">
+        {activeWorkspace && <WorkspaceSwitcher />}
+      </div>
+
+      {/* <label className="swap swap-rotate">
         <input type="checkbox" />
 
         <div className="swap-on btn btn-ghost">
@@ -26,7 +32,7 @@ const DashboardToolBar = () => {
           />
         </div>
       </label> */}
-        {/* 
+      {/* 
       <div className="dropdown dropdown-end">
         <div tabIndex={0} role="button" className="btn btn-ghost rounded-field">
           <DIcon
@@ -47,7 +53,9 @@ const DashboardToolBar = () => {
           </li>
         </ul>
       </div> */}
-        <QuickCreate />
+
+      <QuickCreate />
+      <div className="flex justify-start">
         <MainMenu />
       </div>
     </div>

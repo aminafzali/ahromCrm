@@ -5,6 +5,7 @@ import {
   Invoice,
   Note,
   Notification,
+  ActualServiceOnRequest as PrismaActualServiceOnRequest,
   Request,
   Role,
   ServiceType,
@@ -13,37 +14,27 @@ import {
   WorkspaceUser,
 } from "@prisma/client";
 
-// یک تایپ کمکی برای پروفایل ورک‌اسپیسی کاربر با تمام روابطش
+// یک تایپ کمکی برای پروفایل ورک‌اسپیسی کاربر با تمام روابط ضروری
 type WorkspaceUserProfile = WorkspaceUser & {
   user: User;
-  role: Role;
+  role?: Role; // نقش ممکن است همیشه include نشود
 };
 
-// اینترفیس برای جدول واسط خدمات، بدون تغییر باقی می‌ماند
-export interface ActualServiceOnRequest {
-  id: number;
-  quantity: number;
-  price: number;
-  requestId: number;
-  actualServiceId: number;
+// اینترفیس جدول واسط را برای شامل شدن خود خدمت واقعی، گسترش می‌دهیم
+export type ActualServiceOnRequest = PrismaActualServiceOnRequest & {
   actualService?: ActualService;
-}
+};
 
 // تایپ نهایی برای یک درخواست با تمام روابط مورد نیاز بر اساس معماری جدید
 export type RequestWithRelations = Request & {
-  status: Status;
+  status?: Status;
   serviceType?: ServiceType;
-  // مشتری اکنون یک پروفایل ورک‌اسپیسی کامل است
   workspaceUser?: WorkspaceUserProfile;
-  // کارشناس تخصیص‌یافته نیز همینطور
   assignedTo?: WorkspaceUserProfile;
-  notes: Pick<Note, "id" | "content" | "createdAt">[];
-  invoice?: Pick<Invoice, "id" | "total" | "status">;
-  notifications: Pick<
-    Notification,
-    "id" | "title" | "message" | "isRead" | "createdAt"
-  >[];
-  actualServices: ActualServiceOnRequest[];
+  notes?: Note[];
+  invoice?: Invoice[];
+  notifications?: Notification[];
+  actualServices?: ActualServiceOnRequest[];
 };
 
 // اینترفیس‌های دیگر بدون تغییر باقی می‌مانند

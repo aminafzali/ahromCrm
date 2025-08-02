@@ -29,9 +29,8 @@ export default function DetailPage({ id }: DetailsPageProps) {
 
   const fetchItem = async () => {
     try {
-        const data = await getById(id);
-     if (data != undefined) setItem(data);
-     
+      const data = await getById(id);
+      if (data != undefined) setItem(data);
     } catch (error) {
       console.error("Error fetching item details:", error);
     }
@@ -49,15 +48,17 @@ export default function DetailPage({ id }: DetailsPageProps) {
 
   // 2. تعریف یک آبجکت برای رندرهای سفارشی، دقیقا مشابه الگوی products
   const customRenderers = {
-    user: (value: any) => value?.name || value?.phone || '-',
-    brand: (value: any) => value?.name || '-',
-    deviceType: (value: any) => value?.name || '-',
-    request: (value: any) => value ? `#${value.trackingCode}` : 'ثبت بدون درخواست',
+    workspaceUser: (value: any) =>
+      value?.displayName || value?.name || value?.phone || "-",
+    brand: (value: any) => value?.name || "-",
+    deviceType: (value: any) => value?.name || "-",
+    request: (value: any) =>
+      value ? `#${value.trackingCode}` : "ثبت بدون درخواست",
     receivedDate: (value: any) => <DateDisplay date={value} />,
     // می‌توان برای status هم یک رندر سفارشی نوشت اگر نیاز باشد
     status: (value: any) => <StatusBadge status={value?.name} />,
   };
-  
+
   // 3. آماده‌سازی داده برای نمایش، با اضافه کردن فیلد status از داخل request
   const displayData = {
     ...item,
@@ -72,7 +73,15 @@ export default function DetailPage({ id }: DetailsPageProps) {
       onDelete={handleDelete}
       editUrl={`/dashboard/received-devices/${id}/update`}
       // 4. استفاده از پراپ‌های صحیح excludeFields و customRenderers
-      excludeFields={["id", "createdAt", "updatedAt", "userId", "brandId", "deviceTypeId", "requestId"]}
+      excludeFields={[
+        "id",
+        "createdAt",
+        "updatedAt",
+        "workspaceUserId",
+        "brandId",
+        "deviceTypeId",
+        "requestId",
+      ]}
       customRenderers={customRenderers}
     />
   );
