@@ -3,9 +3,11 @@
 import { NextResponse } from "next/server";
 
 export abstract class ApiResponse {
+  
   /**
    * Create a success response
    */
+
   static success<T>(data: T, status: number = 200): NextResponse {
     // ===== شروع لاگ ردیابی =====
     console.log(
@@ -18,7 +20,7 @@ export abstract class ApiResponse {
   }
 
   /**
-   * Create a created response (201)
+   * Create a created respon se (201)
    */
   static created<T>(data: T): NextResponse {
     // لاگ مربوطه در متد success ثبت خواهد شد
