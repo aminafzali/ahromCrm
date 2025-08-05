@@ -3,7 +3,7 @@
 import CreateWrapper from "@/@Client/Components/wrappers/V2/CreateWrapper";
 import { CreatePageProps } from "@/@Client/types/crud";
 import { useInvoice } from "@/modules/invoices/hooks/useInvoice";
-import { useUser } from "@/modules/users/hooks/useUser";
+import { useWorkspaceUser } from "@/modules/workspace-users/hooks/useWorkspaceUser";
 import { getPaymentFormConfig } from "../../data/form";
 import { PaymentRepository } from "../../repo/PaymentRepository";
 import { createPaymentSchema } from "../../validation/schema";
@@ -13,16 +13,18 @@ export default function CreatePaymentPage({
   defaultValues,
   after,
 }: CreatePageProps) {
-  const { getAll: getAllUsers } = useUser();
+  const { getAll: getAllWorkspaceUsers } = useWorkspaceUser();
   const { getAll: getAllInvoices } = useInvoice();
 
   return (
     <CreateWrapper
       fetchers={[
         {
-          key: "users",
+          key: "workspaceUsers",
           fetcher: () =>
-            getAllUsers({ page: 1, limit: 50 }).then((res) => res.data),
+            getAllWorkspaceUsers({ page: 1, limit: 50 }).then(
+              (res) => res.data
+            ),
         },
         {
           key: "invoices",

@@ -19,7 +19,7 @@ import { Button, ButtonSelectWithTable, Form, Input } from "ndui-ahrom";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import InvoiceItems from "./InvoiceItems";
-import SelectRequest from "./SelectRequest";
+import SelectRequest2 from "./SelectRequest2";
 import SelectUser2 from "./SelectUser2";
 
 const invoiceSchema = z.object({
@@ -380,7 +380,7 @@ export default function InvoiceForm({
         </div>
       )}
 
-      <div className="p-2 flex flex-col gap-4">
+      {/* <div className="p-2 flex flex-col gap-4">
         <div className="flex gap-2">
           <SelectRequest onSelect={onSetRequest} />
 
@@ -411,6 +411,37 @@ export default function InvoiceForm({
           )}
         </div>
 
+        {user && listItemRender(user)}
+      </div> */}
+      <div className="p-2 flex flex-col gap-4">
+        <div className="flex gap-2">
+          {!req && <SelectRequest2 onSelect={onSetRequest} />}
+          {req && (
+            <Button
+              className="w-fit text-error"
+              variant="ghost"
+              onClick={() => setReq(null)}
+            >
+              حذف درخواست
+            </Button>
+          )}
+        </div>
+        {req && listItemRenderUser(req)}
+      </div>
+      <div className="p-2 flex flex-col gap-4">
+        <div className="flex gap-2">
+          {!req && !user && <SelectUser2 onSelect={onSetUser} />}
+
+          {user && !req && (
+            <Button
+              className="w-fit text-error "
+              variant="ghost"
+              onClick={() => setUser(null)}
+            >
+              حذف کاربر
+            </Button>
+          )}
+        </div>
         {user && listItemRender(user)}
       </div>
 

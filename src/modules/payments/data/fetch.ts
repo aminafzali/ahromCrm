@@ -1,9 +1,14 @@
 export const include = {
-  user: {
-    select: {
-      id: true,
-      name: true,
-      phone: true,
+  // user: {
+  //   select: {
+  //     id: true,
+  //     name: true,
+  //     phone: true,
+  //   },
+  // },
+  workspaceUser: {
+    include: {
+      user: true,
     },
   },
   invoice: {
@@ -23,4 +28,4 @@ export const include = {
 
 export const searchFileds = ["reference", "method", "status"];
 export const relations = [];
-export const connects = ["user" , "invoice"];
+export const connects = ["workspaceUser", "invoice"];

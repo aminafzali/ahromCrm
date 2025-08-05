@@ -1,7 +1,7 @@
-import { Invoice, Payment, User } from "@prisma/client";
+import { WorkspaceUser,Invoice, Payment } from "@prisma/client";
 
 export type PaymentWithRelations = Payment & {
-  user: Pick<User, "id" | "name" | "phone">;
+  workspaceUser: Pick<WorkspaceUser, "id" | "displayName" | "phone">;
   invoice?: Invoice;
 };
 

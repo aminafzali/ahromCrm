@@ -16,7 +16,7 @@ export const getPaymentFormConfig = (data?: Map<string, any>): FormConfig => {
         name: "method",
         label: "روش پرداخت",
         type: "select",
-        defaultValue:"CARD",
+        defaultValue: "CARD",
         options: [
           { value: "CASH", label: "نقدی" },
           { value: "CARD", label: "کارتخوان" },
@@ -58,12 +58,12 @@ export const getPaymentFormConfig = (data?: Map<string, any>): FormConfig => {
         col: 2,
       },
       {
-        name: "user",
+        name: "workspaceUser",
         label: "کاربر",
         type: "dataTable",
-        data: data?.get("users") || [],
+        data: data?.get("workspaceUsers") || [],
         columns: [
-          { name: "name", field: "name", label: "نام" },
+          { name: "displayName", field: "displayName", label: "نام" },
           { name: "phone", field: "phone", label: "شماره تماس" },
         ],
         col: 2,
@@ -83,7 +83,7 @@ export const getPaymentFormConfig = (data?: Map<string, any>): FormConfig => {
         name: "description",
         label: "توضیحات",
         type: "textarea",
-        className:"w-full",
+        className: "w-full",
         col: 4,
       },
     ],
