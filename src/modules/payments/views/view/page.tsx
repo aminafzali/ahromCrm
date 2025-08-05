@@ -35,7 +35,7 @@ export default function DetailPage({ id, isAdmin }: PaymentDetailsViewProps) {
   const fetchPaymentDetails = async () => {
     try {
       const data = await getById(id);
-     if (data != undefined)  setPayment(data);
+      if (data != undefined) setPayment(data);
     } catch (error) {
       console.error("Error fetching payment details:", error);
     }
