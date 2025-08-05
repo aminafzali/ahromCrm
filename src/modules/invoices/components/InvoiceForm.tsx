@@ -20,7 +20,7 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import InvoiceItems from "./InvoiceItems";
 import SelectRequest from "./SelectRequest";
-import SelectUser from "./SelectUser";
+import SelectUser2 from "./SelectUser2";
 
 const invoiceSchema = z.object({
   items: z
@@ -35,7 +35,7 @@ const invoiceSchema = z.object({
   total: z.number(),
   type: z.string(),
   requestId: z.number().optional(),
-  userId: z.number(),
+  workspaceUserId: z.number(),
 });
 
 const itemSchema = z.object({
@@ -274,7 +274,7 @@ export default function InvoiceForm({
         type: "SALES", // Default type
       };
       if (req) data["requestId"] = req.id;
-      if (user) data["userId"] = user.id;
+      if (user) data["workspaceUserId"] = user.id;
 
       const validation = invoiceSchema.safeParse(data);
       if (!validation.success) {
@@ -398,7 +398,7 @@ export default function InvoiceForm({
       </div>
       <div className="p-2 flex flex-col gap-4">
         <div className="flex gap-2">
-          <SelectUser onSelect={onSetUser} />
+          <SelectUser2 onSelect={onSetUser} />
 
           {req && (
             <Button

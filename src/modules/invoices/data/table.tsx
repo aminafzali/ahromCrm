@@ -8,9 +8,12 @@ import Link from "next/link";
 export const columnsForAdmin: Column[] = [
   {
     name: "customer",
-    field: "request.user.name",
+    field: "workspaceUser.name",
     label: "نام مشتری",
-    render: (row) => row.request?.user.name || row.user.name || "نامشخص",
+    render: (row) =>
+      row.request?.workspaceUser.displayName ||
+      row.workspaceUser.displayName ||
+      "نامشخص",
   },
   {
     name: "service",
@@ -55,9 +58,10 @@ export const columnsForAdmin: Column[] = [
 export const columnsForUser: Column[] = [
   {
     name: "customer",
-    field: "request.user.name",
+    field: "workspaceUser.name",
     label: "نام مشتری",
-    render: (row) => row.user.name || "نامشخص",
+    render: (row) =>
+      row.workspaceUser.user.name || row.workspaceUser.user.phone || "نامشخص",
   },
   {
     name: "service",
@@ -101,7 +105,7 @@ export const listItemRender = (row: any) => (
   <div className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
     <div className="flex justify-between items-start mb-3">
       <div>
-        <h3 className="font-semibold">{row.user.name || "نامشخص"}</h3>
+        <h3 className="font-semibold">{row.workspaceUser.name || "نامشخص"}</h3>
         <p className="text-gray-600">{row.request.serviceType.name}</p>
       </div>
       <div className="text-right">

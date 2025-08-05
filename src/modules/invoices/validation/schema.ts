@@ -9,7 +9,11 @@ export const invoiceItemSchema = z.object({
 
 export const createInvoiceSchema = z.object({
   requestId: z.number().min(1, "شناسه درخواست الزامی است").optional(),
-  userId: z.number().min(1, "شناسه درخواست الزامی است"),
+  // userId: z.number().min(1, "شناسه درخواست الزامی است"),
+  workspaceUser: z.object(
+    { id: z.number() },
+    { required_error: "انتخاب مشتری الزامی است." }
+  ),
   items: z.array(invoiceItemSchema).min(1, "حداقل یک آیتم الزامی است"),
   tax: z.number().min(0, "مالیات نمی‌تواند منفی باشد"),
   discount: z.number().min(0, "تخفیف نمی‌تواند منفی باشد").optional(),

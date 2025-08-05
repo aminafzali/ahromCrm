@@ -1,19 +1,30 @@
-import { Invoice, InvoiceItem, Request, ServiceType, User } from "@prisma/client";
+import {
+  Invoice,
+  InvoiceItem,
+  Request,
+  ServiceType,
+  User,
+  WorkspaceUser,
+} from "@prisma/client";
 
 /**
  * Invoice with related data
  */
 export type InvoiceWithRelations = Invoice & {
-  request: RequestWithUser;
+  request: RequestWithRelation;
   items: InvoiceItem[];
 };
 
 /**
  * Request with user data
  */
-export type RequestWithUser = Request & {
-  user: User;
+export type RequestWithRelation = Request & {
+  workspaceUser: WorkspaceUserProfile;
   serviceType: ServiceType;
+};
+
+type WorkspaceUserProfile = WorkspaceUser & {
+  user: User;
 };
 
 /**
