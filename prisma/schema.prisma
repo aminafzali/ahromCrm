@@ -820,6 +820,7 @@ enum PaymentType {
 enum InvoiceItemType {
   SERVICE
   PRODUCT
+  ACTUALSERVICE
   CUSTOM
 }
 

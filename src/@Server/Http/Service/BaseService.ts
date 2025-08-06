@@ -70,10 +70,6 @@ export abstract class BaseService<T> {
     }
   }
 
-  /**
-   * Create a new record with validation and hooks
-   */
-
   async create(data: any, context: AuthContext): Promise<T> {
     // ===== لاگ ردیابی ۱: داده‌های خام ورودی از کنترلر =====
     console.log(
@@ -116,7 +112,14 @@ export abstract class BaseService<T> {
     );
     // ===================================================================
 
-    const processedData = await this.processDynamicFields(finalData);
+    // ===== شروع اصلاحیه کلیدی =====
+    // ما context را به processDynamicFields پاس می‌دهیم
+    const processedData = await this.processDynamicFields(
+      finalData,
+      false,
+      context
+    );
+    // ===== پایان اصلاحیه کلیدی =====
 
     // ===== لاگ ردیابی ۴: داده‌ها پس از پردازش فیلدهای داینامیک =====
     console.log(
@@ -161,7 +164,7 @@ export abstract class BaseService<T> {
     const entity = await this.repository.create(dataToCreate);
 
     if (this.afterCreate) {
-      await this.afterCreate(entity, dataToCreate);
+      await this.afterCreate(entity, data); // به هوک afterCreate داده‌های اصلی و اعتبارسنجی شده را پاس می‌دهیم
     }
 
     // ===== لاگ ردیابی ۷: موجودیت ساخته شده در دیتابیس =====
@@ -174,6 +177,112 @@ export abstract class BaseService<T> {
 
     return entity;
   }
+
+  // /**
+  //  * Create a new record with validation and hooks
+  //  */
+
+  // async create(data: any, context: AuthContext): Promise<T> {
+  //   // ===== لاگ ردیابی ۱: داده‌های خام ورودی از کنترلر =====
+  //   console.log(
+  //     `%c[BaseService - create] 1. Initial data received from controller:`,
+  //     "color: #6f42c1; font-weight: bold;",
+  //     JSON.parse(JSON.stringify(data))
+  //   );
+  //   // =======================================================
+
+  //   if (this.createSchema) {
+  //     data = this.validate(this.createSchema, data);
+  //     // ===== لاگ ردیابی ۲: داده‌ها پس از اعتبارسنجی Zod =====
+  //     console.log(
+  //       `%c[BaseService - create] 2. Data after Zod validation:`,
+  //       "color: #6f42c1;",
+  //       JSON.parse(JSON.stringify(data))
+  //     );
+  //     // ====================================================
+  //   }
+
+  //   const finalData = { ...data };
+  //   if (this.connect && this.connect.length > 0) {
+  //     for (const field of this.connect) {
+  //       if (
+  //         finalData[field] &&
+  //         typeof finalData[field] === "object" &&
+  //         "id" in finalData[field]
+  //       ) {
+  //         finalData[`${field}Id`] = finalData[field].id;
+  //         delete finalData[field];
+  //       }
+  //     }
+  //   }
+
+  //   // ===== لاگ ردیابی ۳: داده‌ها پس از تبدیل آبجکت به شناسه (connect) =====
+  //   console.log(
+  //     `%c[BaseService - create] 3. Data after 'connect' transformation:`,
+  //     "color: #6f42c1;",
+  //     JSON.parse(JSON.stringify(finalData))
+  //   );
+  //   // ===================================================================
+
+  //   const processedData = await this.processDynamicFields(finalData);
+
+  //   // ===== لاگ ردیابی ۴: داده‌ها پس از پردازش فیلدهای داینامیک =====
+  //   console.log(
+  //     `%c[BaseService - create] 4. Data after 'processDynamicFields':`,
+  //     "color: #6f42c1;",
+  //     JSON.parse(JSON.stringify(processedData))
+  //   );
+  //   // ===============================================================
+
+  //   if (context.workspaceId) {
+  //     processedData.workspaceId = context.workspaceId;
+  //   }
+
+  //   if (
+  //     context.user &&
+  //     this.createSchema instanceof z.ZodObject &&
+  //     "userId" in this.createSchema.shape
+  //   ) {
+  //     processedData.userId = context.user.id;
+  //   }
+
+  //   let dataToCreate = processedData;
+  //   if (this.beforeCreate) {
+  //     dataToCreate = await this.beforeCreate(processedData, context);
+  //     // ===== لاگ ردیابی ۵: داده‌ها پس از اجرای هوک beforeCreate =====
+  //     console.log(
+  //       `%c[BaseService - create] 5. Data after 'beforeCreate' hook:`,
+  //       "color: #6f42c1;",
+  //       JSON.parse(JSON.stringify(dataToCreate))
+  //     );
+  //     // ===========================================================
+  //   }
+
+  //   // ===== لاگ ردیابی ۶: داده‌های نهایی قبل از ارسال به دیتابیس =====
+  //   console.log(
+  //     `%c[BaseService - create] 6. Final data being sent to repository.create:`,
+  //     "color: #dc3545; font-weight: bold;",
+  //     JSON.parse(JSON.stringify(dataToCreate))
+  //   );
+  //   // ===============================================================
+
+  //   const entity = await this.repository.create(dataToCreate);
+
+  //   if (this.afterCreate) {
+  //     await this.afterCreate(entity, dataToCreate);
+  //   }
+
+  //   // ===== لاگ ردیابی ۷: موجودیت ساخته شده در دیتابیس =====
+  //   console.log(
+  //     `%c[BaseService - create] 7. ✅ Entity successfully created:`,
+  //     "color: #28a745; font-weight: bold;",
+  //     entity
+  //   );
+  //   // =======================================================
+
+  //   return entity;
+  // }
+
   // async create(data: any, context: AuthContext): Promise<T> {
   //   if (this.createSchema) {
   //     data = this.validate(this.createSchema, data);
@@ -933,46 +1042,89 @@ export abstract class BaseService<T> {
 
   protected async processDynamicFields(
     data: any,
-    update: boolean = false
+    update: boolean = false,
+    context?: AuthContext // ۱. context را به عنوان پارامتر جدید دریافت می‌کنیم
   ): Promise<any> {
     if (this.relations && this.relations.length > 0) {
       for (const field of this.relations) {
         if (data[field] && Array.isArray(data[field])) {
           data[field] = {
-            create: data[field].map((item: any) => ({ ...item })),
+            create: data[field].map((item: any) => ({
+              ...item,
+              // ===== شروع اصلاحیه کلیدی =====
+              // اگر context وجود داشت، شناسه ورک‌اسپیس را به هر آیتم تو در تو اضافه می‌کنیم
+              ...(context?.workspaceId && { workspaceId: context.workspaceId }),
+              // ===== پایان اصلاحیه کلیدی =====
+            })),
           };
         } else if (data[field] && typeof data[field] === "object") {
-          data[field] = { create: data[field] };
+          data[field] = {
+            create: {
+              ...data[field],
+              ...(context?.workspaceId && { workspaceId: context.workspaceId }),
+            },
+          };
         }
       }
     }
+    // منطق connects شما بدون تغییر باقی می‌ماند
     if (this.connect && this.connect.length > 0) {
       for (const field of this.connect) {
-        if (data[field] && Array.isArray(data[field])) {
-          if (update) {
-            data[field] = {
-              set: data[field].map((item: any) => ({
-                id: parseInt(item.id.toString()),
-              })),
-            };
-          } else {
-            data[field] = {
-              connect: data[field].map((item: any) => ({
-                id: parseInt(item.id.toString()),
-              })),
-            };
-          }
-        } else if (
+        if (
           data[field] &&
           typeof data[field] === "object" &&
           "id" in data[field]
         ) {
-          data[field] = {
-            connect: { id: parseInt(data[field].id.toString()) },
-          };
+          data[`${field}Id`] = data[field].id;
+          delete data[field];
         }
       }
     }
     return data;
   }
+
+  // protected async processDynamicFields(
+  //   data: any,
+  //   update: boolean = false
+  // ): Promise<any> {
+  //   if (this.relations && this.relations.length > 0) {
+  //     for (const field of this.relations) {
+  //       if (data[field] && Array.isArray(data[field])) {
+  //         data[field] = {
+  //           create: data[field].map((item: any) => ({ ...item })),
+  //         };
+  //       } else if (data[field] && typeof data[field] === "object") {
+  //         data[field] = { create: data[field] };
+  //       }
+  //     }
+  //   }
+  //   if (this.connect && this.connect.length > 0) {
+  //     for (const field of this.connect) {
+  //       if (data[field] && Array.isArray(data[field])) {
+  //         if (update) {
+  //           data[field] = {
+  //             set: data[field].map((item: any) => ({
+  //               id: parseInt(item.id.toString()),
+  //             })),
+  //           };
+  //         } else {
+  //           data[field] = {
+  //             connect: data[field].map((item: any) => ({
+  //               id: parseInt(item.id.toString()),
+  //             })),
+  //           };
+  //         }
+  //       } else if (
+  //         data[field] &&
+  //         typeof data[field] === "object" &&
+  //         "id" in data[field]
+  //       ) {
+  //         data[field] = {
+  //           connect: { id: parseInt(data[field].id.toString()) },
+  //         };
+  //       }
+  //     }
+  //   }
+  //   return data;
+  // }
 }
