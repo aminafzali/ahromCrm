@@ -89,18 +89,20 @@ export default function InvoiceForm({
   defaultValues = {},
   loading = false,
 }: InvoiceFormProps) {
-  const [items, setItems] = useState<any[]>(defaultValues.items || []);
-  const [req, setReq] = useState<any | null>(defaultValues.request || null);
+  const [items, setItems] = useState<any[]>(defaultValues?.items || []);
+  const [req, setReq] = useState<any | null>(defaultValues?.request || null);
   // TODO: خط زیر نیاز به بررسی دارد
-  const [user, setUser] = useState<any | null>(defaultValues.request || null);
-  const [tax, setTax] = useState<number>(defaultValues.tax || 0);
+  const [user, setUser] = useState<any | null>(defaultValues?.request || null);
+  const [tax, setTax] = useState<number>(defaultValues?.tax || 0);
   const [taxPercent, setTaxPercent] = useState<number>(
-    defaultValues.taxPercent || 0
+    defaultValues?.taxPercent || 0
   );
   const [itemPrice, setItemPrice] = useState<number>(0);
-  const [discount, setDiscount] = useState<number>(defaultValues.discount || 0);
+  const [discount, setDiscount] = useState<number>(
+    defaultValues?.discount || 0
+  );
   const [discountPercent, setDiscountPercent] = useState<number>(
-    defaultValues.discountPercent || 0
+    defaultValues?.discountPercent || 0
   );
   const [error, setError] = useState<string | null>(null);
   const [itemType, setItemType] = useState<
@@ -239,7 +241,7 @@ export default function InvoiceForm({
 
       newItem = {
         ...newItem,
-        serviceTypeId: parseInt(data.serviceTypeId),
+        serviceTypeId: parseInt(data.serviceType.id),
         description: service.name,
         price: service.basePrice,
       };
@@ -251,7 +253,7 @@ export default function InvoiceForm({
 
       newItem = {
         ...newItem,
-        actualServiceId: parseInt(data.actualServiceId),
+        actualServiceId: parseInt(data.actualService.id),
         description: actualService.name,
         price: actualService.price,
       };

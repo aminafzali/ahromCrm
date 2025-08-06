@@ -2,6 +2,7 @@ import { ButtonSelectWithTable, DropdownV2, Input, Select } from "ndui-ahrom";
 import { FormWrapper } from ".";
 import { FormConfig, FormField } from "../../types/form";
 import DIcon from "../common/DIcon";
+//import Select from "../ui/Select";
 import Switch from "../ui/Switch";
 
 interface DynamicFormWrapperProps {
@@ -89,7 +90,7 @@ const DynamicFormWrapper: React.FC<DynamicFormWrapperProps> = ({
             key={field.name}
             name={field.name}
             label={field.label}
-            value={field.defaultValue}
+            //  value={field.defaultValue}
             options={field?.options ? field?.options : []}
             placeholder={field.placeholder}
             className={field.className}

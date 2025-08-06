@@ -28,7 +28,7 @@ export default function PrintInvoicePage({ id }: PrintInvoicePageProps) {
   const fetchInvoiceDetails = async () => {
     try {
       const data = await getById(id);
-     if (data != undefined)  setInvoice(data);
+      if (data != undefined) setInvoice(data);
     } catch (error) {
       console.error("Error fetching invoice details:", error);
     }
@@ -133,15 +133,19 @@ export default function PrintInvoicePage({ id }: PrintInvoicePageProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p>
-                  <strong>نام:</strong> {invoice.request?.user.name || "نامشخص"}
+                  <strong>نام:</strong>{" "}
+                  {invoice.workspaceUser?.displayName ||
+                    invoice.workspaceUser?.user.name ||
+                    "نامشخص"}
                 </p>
                 <p>
-                  <strong>تلفن:</strong> {invoice.request?.user.phone}
+                  <strong>تلفن:</strong> {invoice.workspaceUser?.user.phone}
                 </p>
               </div>
               <div>
                 <p>
-                  <strong>آدرس:</strong> {invoice.request?.user.address || "-"}
+                  <strong>آدرس:</strong>{" "}
+                  {invoice.workspaceUser?.user.address || "-"}
                 </p>
                 <p>
                   <strong>نوع خدمات:</strong>{" "}

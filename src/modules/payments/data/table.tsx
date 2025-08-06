@@ -8,7 +8,7 @@ import Link from "next/link";
 export const columnsForAdmin: Column[] = [
   {
     name: "customer",
-    field: "workspaceUser.displayName",
+    field: "workspaceUser",
     label: "نام مشتری",
     render: (row) =>
       row.workspaceUser ? row.workspaceUser.displayName : "نامشخص",

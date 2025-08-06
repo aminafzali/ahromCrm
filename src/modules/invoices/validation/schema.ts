@@ -21,7 +21,7 @@ export const createInvoiceSchema = z.object({
   // status: z.enum(["PENDING", "PAID", "CANCELLED"]).default("PENDING"),
   // paymentDate: z.date().optional(),
   items: z
-    .array(z.any())
+    .array(invoiceItemSchema)
     .min(1, "حداقل یک آیتم باید وجود داشته باشد")
     .optional(),
   tax: z.number().min(0, "مالیات نمی‌تواند منفی باشد"),
