@@ -14,7 +14,7 @@ import { ServiceType } from "@/modules/service-types/types";
 //TODO:T2d برای خدمات واقعی باید در اینجا موارد مهم را ایمپورت کنیم
 import { useActualService } from "@/modules/actual-services/hooks/useActualService";
 import { ActualService } from "@/modules/actual-services/types";
-import { listItemRender } from "@/modules/users/data/table";
+import { listItemRender } from "@/modules/workspace-users/data/table";
 import { Button, ButtonSelectWithTable, Form, Input } from "ndui-ahrom";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -35,7 +35,10 @@ const invoiceSchema = z.object({
   total: z.number(),
   type: z.string(),
   requestId: z.number().optional(),
-  workspaceUserId: z.number(),
+  workspaceUser: z.object(
+    { id: z.number() },
+    { required_error: "انتخاب مشتری الزامی است." }
+  ),
 });
 
 const itemSchema = z.object({
@@ -166,7 +169,7 @@ export default function InvoiceForm({
     console.log("درخواست انتخاب شده (selectedItem):", selectedItem);
 
     setReq(selectedItem);
-    setUser(selectedItem.user);
+    setUser(selectedItem.workspaceUser);
 
     // بررسی می‌کنیم که آرایه actualServices در آبجکت درخواست وجود داشته باشد
     if (
@@ -264,6 +267,7 @@ export default function InvoiceForm({
   const handleSubmit = () => {
     try {
       const data = {
+        workspaceUser: user,
         items: items,
         tax,
         taxPercent,
@@ -274,7 +278,7 @@ export default function InvoiceForm({
         type: "SALES", // Default type
       };
       if (req) data["requestId"] = req.id;
-      if (user) data["workspaceUserId"] = user.id;
+      //  if (user) data["workspaceUser"] = user;
 
       const validation = invoiceSchema.safeParse(data);
       if (!validation.success) {
@@ -380,39 +384,6 @@ export default function InvoiceForm({
         </div>
       )}
 
-      {/* <div className="p-2 flex flex-col gap-4">
-        <div className="flex gap-2">
-          <SelectRequest onSelect={onSetRequest} />
-
-          {req && (
-            <Button
-              className="w-fit text-error "
-              variant="ghost"
-              onClick={() => setReq(null)}
-            >
-              حذف درخواست
-            </Button>
-          )}
-        </div>
-        {req && listItemRenderUser(req)}
-      </div>
-      <div className="p-2 flex flex-col gap-4">
-        <div className="flex gap-2">
-          <SelectUser2 onSelect={onSetUser} />
-
-          {req && (
-            <Button
-              className="w-fit text-error "
-              variant="ghost"
-              onClick={() => setUser(null)}
-            >
-              حذف کاربر
-            </Button>
-          )}
-        </div>
-
-        {user && listItemRender(user)}
-      </div> */}
       <div className="p-2 flex flex-col gap-4">
         <div className="flex gap-2">
           {!req && <SelectRequest2 onSelect={onSetRequest} />}

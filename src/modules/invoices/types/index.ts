@@ -13,13 +13,13 @@ import {
 export type InvoiceWithRelations = Invoice & {
   request: RequestWithRelation;
   items: InvoiceItem[];
+  workspaceUser?: WorkspaceUserProfile;
 };
 
 /**
  * Request with user data
  */
 export type RequestWithRelation = Request & {
-  workspaceUser: WorkspaceUserProfile;
   serviceType: ServiceType;
 };
 

@@ -113,7 +113,37 @@ export default function ReceivedDevice2Form({
         </div>
       )}
 
-     
+      <div className="p-2 flex flex-col gap-4">
+        <div className="flex gap-2">
+          {!req && <SelectRequest2 onSelect={onSetRequest} />}
+          {req && (
+            <Button
+              className="w-fit text-error"
+              variant="ghost"
+              onClick={() => setReq(null)}
+            >
+              حذف درخواست
+            </Button>
+          )}
+        </div>
+        {req && listItemRenderUser(req)}
+      </div>
+      <div className="p-2 flex flex-col gap-4">
+        <div className="flex gap-2">
+          {!req && !user && <SelectUser2 onSelect={onSetUser} />}
+
+          {user && !req && (
+            <Button
+              className="w-fit text-error "
+              variant="ghost"
+              onClick={() => setUser(null)}
+            >
+              حذف کاربر
+            </Button>
+          )}
+        </div>
+        {user && listItemRender(user)}
+      </div>
 
       <Form schema={createReceivedDeviceSchema} onSubmit={handleSubmit}>
         <div className="bg-white rounded-lg p-4 border">

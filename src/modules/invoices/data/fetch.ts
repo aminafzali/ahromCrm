@@ -13,7 +13,7 @@ export const include = {
       //     address: true,
       //   },
       //},
-      workspaceUserId: true,
+      //user:true
     },
   },
   items: {
@@ -34,7 +34,6 @@ export const include = {
       createdAt: true,
     },
   },
-  //user:true
   workspaceUser: {
     include: {
       user: true,
@@ -42,10 +41,6 @@ export const include = {
   },
 };
 
-export const searchFileds = [
-  "status",
-  "request.workspaceUser.displayName",
-  "request.workspaceUser.phone",
-];
+export const searchFileds = ["status"];
 export const relations = ["items"];
 export const connect = ["workspaceUser"];

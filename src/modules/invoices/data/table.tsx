@@ -8,16 +8,14 @@ import Link from "next/link";
 export const columnsForAdmin: Column[] = [
   {
     name: "customer",
-    field: "workspaceUser.name",
+    field: "workspaceUser",
     label: "نام مشتری",
     render: (row) =>
-      row.request?.workspaceUser.displayName ||
-      row.workspaceUser.displayName ||
-      "نامشخص",
+      row.workspaceUser.displayName || row.workspaceUser.name || "نامشخص",
   },
   {
     name: "service",
-    field: "request.serviceType.name",
+    field: "request",
     label: "نوع خدمات",
     render: (row) =>
       row.request?.serviceType.name || "خدمتی به این فاکتور نسبت داده نشده است",
@@ -58,14 +56,14 @@ export const columnsForAdmin: Column[] = [
 export const columnsForUser: Column[] = [
   {
     name: "customer",
-    field: "workspaceUser.name",
+    field: "workspaceUser",
     label: "نام مشتری",
     render: (row) =>
       row.workspaceUser.user.name || row.workspaceUser.user.phone || "نامشخص",
   },
   {
-    name: "service",
-    field: "request.serviceType.name",
+    name: "request",
+    field: "request",
     label: "نوع خدمات",
     render: (row) => row.request.serviceType.name,
   },

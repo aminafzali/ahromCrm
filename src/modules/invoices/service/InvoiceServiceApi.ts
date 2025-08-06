@@ -1,7 +1,6 @@
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
-import { NotificationServiceApi } from "@/modules/notifications/service/NotificationServiceApi";
-import { relations, searchFileds } from "../data/fetch";
+import { connect, relations, searchFileds } from "../data/fetch";
 import { createInvoiceSchema } from "../validation/schema";
 
 class Repository extends BaseRepository<any> {
@@ -11,7 +10,7 @@ class Repository extends BaseRepository<any> {
 }
 
 export class InvoiceServiceApi extends BaseService<any> {
-  protected notifRepo: NotificationServiceApi;
+  //protected notifRepo: NotificationServiceApi;
 
   constructor() {
     super(
@@ -21,11 +20,12 @@ export class InvoiceServiceApi extends BaseService<any> {
       searchFileds,
       relations
     );
+    this.connect = connect;
     this.repository = new Repository();
-    this.notifRepo = new NotificationServiceApi();
+    // this.notifRepo = new NotificationServiceApi();
 
     // Initialize hooks
-    this.afterCreate = this.handleAfterCreate;
+    // this.afterCreate = this.handleAfterCreate;
     // this.afterStatusChange = this.handleAfterStatusChange;
   }
 

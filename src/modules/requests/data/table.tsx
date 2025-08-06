@@ -169,6 +169,7 @@ export const listItemRenderUser = (row: any) => (
             {row.workspaceUser?.displayName ||
               row.workspaceUser?.name ||
               row.workspaceUser?.phone ||
+              row.workspaceUser?.user?.name ||
               "نامشخص"}
           </span>
         </div>

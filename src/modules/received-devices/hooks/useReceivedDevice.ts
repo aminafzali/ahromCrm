@@ -6,10 +6,7 @@ import { useCrud } from "@/@Client/hooks/useCrud";
 import { z } from "zod";
 import { ReceivedDeviceRepository } from "../repo/ReceivedDeviceRepository";
 import { ReceivedDeviceWithRelations } from "../types";
-import {
-  createReceivedDeviceSchema,
-  updateReceivedDeviceSchema,
-} from "../validation/schema";
+import { createReceivedDeviceSchema } from "../validation/schema";
 
 export function useReceivedDevice() {
   const repo = new ReceivedDeviceRepository();
