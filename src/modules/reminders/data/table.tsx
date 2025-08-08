@@ -27,10 +27,11 @@ const renderEntityLink = (row: ReminderWithDetails) => {
 export const columns: Column[] = [
   { name: "title", field: "title", label: "عنوان" },
   {
-    name: "user",
-    field: "user.name",
+    name: "workspaceUser",
+    field: "workspaceUser.name",
     label: "کاربر",
-    render: (row) => row.user?.name || row.user?.phone || "نامشخص",
+    render: (row) =>
+      row.workspaceUser?.displayName || row.workspaceUser?.phone || "نامشخص",
   },
   {
     name: "relatedTo",

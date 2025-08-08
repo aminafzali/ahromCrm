@@ -1,11 +1,11 @@
 // src/modules/reminders/types/index.ts
 
-import { Reminder, User } from "@prisma/client";
+import { Reminder, WorkspaceUser } from "@prisma/client";
 
 // تایپ اصلی ماژول که به صورت دستی و دقیق ساخته شده است
 export type ReminderWithDetails = Reminder & {
   // مشخص می‌کنیم که فیلد user شامل چه اطلاعاتی از مدل User است
-  user: Pick<User, "id" | "name" | "phone">;
+  user: Pick<WorkspaceUser, "id" | "displayName" | "phone">;
 };
 
 // تایپ برای پاسخ‌های صفحه‌بندی شده

@@ -12,16 +12,16 @@
  * این آبجکت مشخص می‌کند کدام روابط باید به صورت خودکار بارگذاری شوند.
  */
 export const include = {
-  user: {
+  workspaceUser: {
     select: {
       id: true,
-      name: true,
+      displayName: true,
       phone: true,
     },
   },
 };
 
-export const relations = ["user"];
+export const relations = ["workspaceUser"];
 
 // فیلدهایی که در جستجوی متنی استفاده می‌شوند
 export const searchFileds = ["title", "description"];

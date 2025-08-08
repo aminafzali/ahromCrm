@@ -7,7 +7,7 @@ import { columnsForAdmin as invoiceColumns } from "@/modules/invoices/data/table
 import { InvoiceRepository } from "@/modules/invoices/repo/InvoiceRepository";
 import { columnsForAdmin as requestColumns } from "@/modules/requests/data/table";
 import { RequestRepository } from "@/modules/requests/repo/RequestRepository";
-import { UserWithRelations } from "@/modules/users/types";
+import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal } from "ndui-ahrom";
 import { useRouter } from "next/navigation";
@@ -25,9 +25,8 @@ export default function ReminderForm() {
   const [modalContent, setModalContent] = useState<{
     type: "requests" | "invoices";
   } | null>(null);
-  const [selectedUser, setSelectedUser] = useState<UserWithRelations | null>(
-    null
-  );
+  const [selectedUser, setSelectedUser] =
+    useState<WorkspaceUserWithRelations | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<{
     type: string;
     id: number;
@@ -44,9 +43,9 @@ export default function ReminderForm() {
     resolver: zodResolver(createReminderSchema),
   });
 
-  const handleUserSelect = (user: UserWithRelations) => {
+  const handleUserSelect = (user: WorkspaceUserWithRelations) => {
     setSelectedUser(user);
-    setValue("userId", user.id, { shouldValidate: true });
+    setValue("workspaceUserId", user.id, { shouldValidate: true });
   };
 
   const openEntitySelector = (type: "requests" | "invoices") => {
@@ -116,11 +115,13 @@ export default function ReminderForm() {
               </label>
               <SelectUserForReminder
                 onSelect={handleUserSelect}
-                selectedUserName={selectedUser?.name || selectedUser?.phone}
+                selectedUserName={
+                  selectedUser?.displayName || selectedUser?.phone
+                }
               />
-              {errors.userId && (
+              {errors.workspaceUserId && (
                 <p className="text-danger mt-1 small">
-                  {errors.userId.message}
+                  {errors.workspaceUserId?.message}
                 </p>
               )}
             </div>

@@ -2,13 +2,13 @@
 "use client";
 import IndexWrapper from "@/@Client/Components/wrappers/IndexWrapper/Index";
 import { columnsForSelect } from "@/modules/users/data/table";
-import { UserRepository } from "@/modules/users/repo/UserRepository";
-import { UserWithRelations } from "@/modules/users/types";
+import { WorkspaceUserRepository } from "@/modules/workspace-users/repo/WorkspaceUserRepository";
+import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
 import { Button, Modal } from "ndui-ahrom";
 import { useState } from "react";
 
 interface SelectUserForReminderProps {
-  onSelect: (selectedUser: UserWithRelations) => void;
+  onSelect: (selectedUser: WorkspaceUserWithRelations) => void;
   selectedUserName?: string | null;
 }
 export default function SelectUserForReminder({
@@ -48,7 +48,7 @@ export default function SelectUserForReminder({
       >
         <IndexWrapper
           columns={columnsForSelect}
-          repo={new UserRepository()}
+          repo={new WorkspaceUserRepository()}
           selectionMode="single"
           onSelect={handleSelect}
           createUrl={false}
