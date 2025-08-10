@@ -50,49 +50,70 @@ export class QueryBuilder {
       }
       this.where[field][operator] = value;
     }
-    console.log(`[QueryBuilder - LOG] Added condition: ${field} ${operator} ${value}`);
+    console.log(
+      `[QueryBuilder - LOG] Added condition: ${field} ${operator} ${value}`
+    );
     return this;
   }
 
   /**
    * Add a search condition
    */
+
   search(fields: string[], value: string): QueryBuilder {
     if (!value) {
       return this;
     }
 
-    console.log(`[QueryBuilder - LOG] Applying search term "${value}" on fields:`, fields);
+    const searchConditions = fields.map((field) => ({
+      [field]: { contains: value },
+    }));
 
-    // ===== شروع اصلاحیه کلیدی =====
-    // این منطق جدید، فیلدهای تو در تو (مانند 'user.name') را به ساختار صحیح Prisma تبدیل می‌کند
-    const searchConditions = fields.map((field) => {
-      const parts = field.split(".");
-      if (parts.length > 1) {
-        // ساختن آبجکت تو در تو برای فیلدهای مرتبط
-        // "user.name" => { user: { name: { contains: value } } }
-        return parts.reduceRight((acc, part) => ({ [part]: acc }), {
-          contains: value,
-          mode: "insensitive",
-        } as any);
-      }
-      // برای فیلدهای ساده
-      return { [field]: { contains: value, mode: "insensitive" } };
-    });
-    // ===== پایان اصلاحیه کلیدی =====
-    
     if (!this.where.OR) {
-      this.where.OR = [];
+      this.where.OR = searchConditions;
+    } else {
+      this.where.OR = [...this.where.OR, ...searchConditions];
     }
-    if (!Array.isArray(this.where.OR)) {
-        this.where.OR = [this.where.OR];
-    }
-    
-    this.where.OR.push(...searchConditions);
-    console.log(`[QueryBuilder - LOG] Added search conditions to 'OR' clause.`);
 
     return this;
   }
+
+  // search(fields: string[], value: string): QueryBuilder {
+  //   if (!value) {
+  //     return this;
+  //   }
+
+  //   console.log(`[QueryBuilder - LOG] Applying search term "${value}" on fields:`, fields);
+
+  //   // ===== شروع اصلاحیه کلیدی =====
+  //   // این منطق جدید، فیلدهای تو در تو (مانند 'user.name') را به ساختار صحیح Prisma تبدیل می‌کند
+  //   const searchConditions = fields.map((field) => {
+  //     const parts = field.split(".");
+  //     if (parts.length > 1) {
+  //       // ساختن آبجکت تو در تو برای فیلدهای مرتبط
+  //       // "user.name" => { user: { name: { contains: value } } }
+  //       return parts.reduceRight((acc, part) => ({ [part]: acc }), {
+  //         contains: value,
+  //         mode: "insensitive",
+  //       } as any);
+  //     }
+  //     // برای فیلدهای ساده
+  //     return { [field]: { contains: value, mode: "insensitive" } };
+  //   });
+  //   // ===== پایان اصلاحیه کلیدی =====
+
+  //   if (!this.where.OR) {
+  //     this.where.OR = [];
+  //   }
+  //   if (!Array.isArray(this.where.OR)) {
+  //       this.where.OR = [this.where.OR];
+  //   }
+
+  //   this.where.OR.push(...searchConditions);
+  //   console.log(`[QueryBuilder - LOG] Added search conditions to 'OR' clause.`);
+
+  //   return this;
+  // }
 
   /**
    * Add a date range condition
@@ -140,7 +161,9 @@ export class QueryBuilder {
     if (max !== undefined) {
       this.where[field].lte = max;
     }
-    console.log(`[QueryBuilder - LOG] Applied numeric range on field "${field}".`);
+    console.log(
+      `[QueryBuilder - LOG] Applied numeric range on field "${field}".`
+    );
     return this;
   }
 
@@ -182,7 +205,9 @@ export class QueryBuilder {
    * Set pagination parameters
    */
   setPagination(page: number, limit: number): QueryBuilder {
-    console.log(`[QueryBuilder - LOG] Setting pagination: page=${page}, limit=${limit}`);
+    console.log(
+      `[QueryBuilder - LOG] Setting pagination: page=${page}, limit=${limit}`
+    );
     this.page = page;
     this.limit = limit;
     return this;
@@ -205,9 +230,12 @@ export class QueryBuilder {
       skip: (this.page - 1) * this.limit,
       take: this.limit,
     };
-    
-    console.log(`[QueryBuilder - LOG] Final query built:`, JSON.stringify(finalQuery, null, 2));
-    
+
+    console.log(
+      `[QueryBuilder - LOG] Final query built:`,
+      JSON.stringify(finalQuery, null, 2)
+    );
+
     return finalQuery;
   }
 }

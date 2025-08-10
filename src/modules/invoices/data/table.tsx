@@ -6,6 +6,12 @@ import { Column } from "ndui-ahrom/dist/components/Table/Table";
 import Link from "next/link";
 
 export const columnsForAdmin: Column[] = [
+  // {
+  //   name: "name",
+  //   field: "name",
+  //   label: "نام فاکتور",
+  //   render: (row) => row.name || "نامشخص",
+  // },
   {
     name: "customer",
     field: "workspaceUser",
@@ -17,8 +23,7 @@ export const columnsForAdmin: Column[] = [
     name: "service",
     field: "request",
     label: "نوع خدمات",
-    render: (row) =>
-      row.request?.serviceType.name || "خدمتی به این فاکتور نسبت داده نشده است",
+    render: (row) => row.request?.serviceType.name || "بدون خدمت",
   },
   {
     name: "total",

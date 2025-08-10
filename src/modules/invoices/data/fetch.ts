@@ -41,6 +41,6 @@ export const include = {
   },
 };
 
-export const searchFileds = ["status"];
+export const searchFileds = ["name"];
 export const relations = ["items"];
 export const connect = ["workspaceUser"];

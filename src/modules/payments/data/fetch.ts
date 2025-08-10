@@ -7,8 +7,9 @@ export const include = {
   //   },
   // },
   workspaceUser: {
-    include: {
-      user: true,
+    select: {
+      id: true,
+      displayName: true,
     },
   },
   invoice: {
@@ -26,6 +27,6 @@ export const include = {
   },
 };
 
-export const searchFileds = ["reference", "method", "status"];
+export const searchFileds = [];
 export const relations = [];
 export const connects = ["workspaceUser", "invoice"];

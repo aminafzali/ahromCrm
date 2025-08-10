@@ -31,6 +31,7 @@ export const createInvoiceSchema = z.object({
   subtotal: z.number(),
   total: z.number(),
   type: z.string(),
+  name: z.string().optional(),
   requestId: z.number().optional(),
   workspaceUser: z.object(
     { id: z.number().optional() },

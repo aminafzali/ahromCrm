@@ -65,6 +65,22 @@ export default function IndexPage({ isAdmin = true, title = "پرداخت‌ها
             />
           ),
         },
+        {
+          id: "all",
+          label: "همه",
+          content: (
+            <IndexWrapper
+              key="all" // اضافه کردن کلید یکتا
+              columns={columnsForAdmin}
+              listItemRender={listItemRender}
+              filterOptions={filters}
+              repo={new PaymentRepository()}
+              createUrl={true}
+              title="همه"
+              defaultViewMode="table"
+            />
+          ),
+        },
       ]}
     />
   );

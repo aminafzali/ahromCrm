@@ -214,6 +214,7 @@ model Invoice {
   requestId   Int?
   request     Request?  @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
+  name            String?
   workspaceUserId Int
   workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 

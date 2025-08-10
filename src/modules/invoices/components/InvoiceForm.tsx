@@ -34,6 +34,7 @@ const invoiceSchema = z.object({
   subtotal: z.number(),
   total: z.number(),
   type: z.string(),
+  name: z.string().optional(),
   requestId: z.number().optional(),
   workspaceUser: z.object(
     { id: z.number() },
@@ -279,7 +280,39 @@ export default function InvoiceForm({
         total: calculateTotal(),
         type: "SALES", // Default type
       };
-      if (req) data["requestId"] = req.id;
+      if (req) {
+        data["requestId"] = req.id;
+        data["name"] =
+          "فاکتور " +
+          "فروش" +
+          " " +
+          user.displayName +
+          " " +
+          calculateTotal() +
+          " " +
+          req.id;
+        console.log(
+          "name by req in invoice",
+          "فاکتور " +
+            "فروش " +
+            " " +
+            user.displayName +
+            " " +
+            calculateTotal() +
+            " " +
+            req.id
+        );
+        console.log("log data in invoice by req", data["name"]);
+      } else {
+        data["name"] =
+          "فاکتور " + "فروش " + " " + user.displayName + " " + calculateTotal();
+        console.log(
+          "name in invoice ",
+          "فاکتور " + "فروش " + " " + user.displayName + " " + calculateTotal()
+        );
+        console.log("log data in invoice", data["name"]);
+      }
+
       //  if (user) data["workspaceUser"] = user;
 
       const validation = invoiceSchema.safeParse(data);

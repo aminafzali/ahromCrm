@@ -152,10 +152,10 @@ export abstract class BaseController<T> {
         `%c[SERVER - BaseController] 🟢 1. Received GET request for: ${req.nextUrl.pathname}`,
         "color: #28a745; font-weight: bold;"
       );
-      console.log(
-        "[SERVER - BaseController]    Incoming Headers:",
-        Object.fromEntries(req.headers)
-      );
+      // console.log(
+      //   "[SERVER - BaseController]    Incoming Headers:",
+      //   Object.fromEntries(req.headers)
+      // );
       // ===============================================
 
       // ۲. ابتدا context را با AuthProvider دریافت می‌کنیم تا workspaceId از هدر خوانده شود
@@ -165,11 +165,11 @@ export abstract class BaseController<T> {
       );
 
       // ===== لاگ ردیابی ۲: بررسی خروجی AuthProvider =====
-      console.log(
-        `%c[SERVER - BaseController] 🟢 2. AuthProvider Context Result:`,
-        "color: #28a745; font-weight: bold;",
-        context
-      );
+      // console.log(
+      //   `%c[SERVER - BaseController] 🟢 2. AuthProvider Context Result:`,
+      //   "color: #28a745; font-weight: bold;",
+      //   context
+      // );
       // ===============================================
 
       if (this.mustLoggedIn && !context.workspaceId) {
