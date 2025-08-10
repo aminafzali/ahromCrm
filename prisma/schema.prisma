@@ -58,6 +58,7 @@ model Workspace {
   requestCancellations    RequestCancellation[]
   requestAttachments      RequestAttachment[]
   actualServicesOnRequest ActualServiceOnRequest[]
+  paymentCategories       PaymentCategory[] // رابطه متقابل برای دسته‌بندی پرداخت‌ها
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -321,9 +322,39 @@ model Payment {
   method      PaymentMethod @default(CARD)
   paidAt      DateTime?
   description String?       @db.Text
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+
+  // ===== شروع اصلاحیه =====
+  paymentCategoryId Int?
+  paymentCategory   PaymentCategory? @relation(fields: [paymentCategoryId], references: [id], onDelete: Restrict)
+  // ===== پایان اصلاحیه =====
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
+
+// ===== شروع مدل جدید =====
+model PaymentCategory {
+  id          Int                 @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  type        PaymentCategoryType // نوع دسته‌بندی: درآمد، هزینه یا انتقال
+  parentId    Int?
+  lft         Int                 @default(0)
+  rgt         Int                 @default(0)
+  depth       Int                 @default(0)
+  parent      PaymentCategory?    @relation("PaymentCategoryToPaymentCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children    PaymentCategory[]   @relation("PaymentCategoryToPaymentCategory")
+  payments    Payment[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([slug, workspaceId])
+}
+
+// ===== پایان مدل جدید =====
 
 model Review {
   id              Int           @id @default(autoincrement())
@@ -771,6 +802,15 @@ model ActualServiceOnRequest {
 }
 
 // >>>>>>>>>>>>> ENUMS <<<<<<<<<<<<<<
+
+// ===== شروع Enum جدید =====
+enum PaymentCategoryType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+// ===== پایان Enum جدید =====
 
 enum ReminderStatus {
   PENDING
