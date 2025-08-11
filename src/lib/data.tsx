@@ -138,6 +138,12 @@ export const dashboardMenuItems = [
     href: "/dashboard/invoices",
   },
   {
+    id: "payment-categories",
+    label: "دسته بندی تراکنش ها",
+    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+    href: "/dashboard/payment-categories",
+  },
+  {
     id: "receive",
     label: "دریافتی و پرداخت ",
     icon: <DIcon icon="fa-inbox-in" cdi={false}></DIcon>,
