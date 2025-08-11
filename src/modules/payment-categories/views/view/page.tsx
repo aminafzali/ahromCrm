@@ -13,8 +13,11 @@ import { PaymentCategoryWithRelations } from "../../types";
 export default function DetailPage() {
   const params = useParams();
   const id = parseInt(params.id as string);
-  const { getById, loading, error, success, statusCode, remove } = usePaymentCategory();
-  const [category, setCategory] = useState<PaymentCategoryWithRelations | null>(null);
+  const { getById, loading, error, success, statusCode, remove } =
+    usePaymentCategory();
+  const [category, setCategory] = useState<PaymentCategoryWithRelations | null>(
+    null
+  );
   const router = useRouter();
 
   useEffect(() => {
@@ -32,9 +35,9 @@ export default function DetailPage() {
   }, [id, getById]);
 
   const handleDelete = async (row: any) => {
-    if(row._count?.payments > 0 || row._count?.children > 0) {
-        alert("این دسته‌بندی به دلیل داشتن پرداخت یا زیرمجموعه، قابل حذف نیست.");
-        return;
+    if (row._count?.payments > 0 || row._count?.children > 0) {
+      alert("این دسته‌بندی به دلیل داشتن پرداخت یا زیرمجموعه، قابل حذف نیست.");
+      return;
     }
     try {
       await remove(row.id);
@@ -44,15 +47,17 @@ export default function DetailPage() {
     }
   };
 
-  const displayData = category ? {
-    "نام": category.name,
-    "اسلاگ": category.slug,
-    "نوع": category.type,
-    "والد": category.parent?.name || "ندارد",
-    "تعداد پرداخت‌ها": category._count?.payments,
-    "تعداد زیرمجموعه‌ها": category._count?.children,
-    "توضیحات": category.description || "-",
-  } : {};
+  const displayData = category
+    ? {
+        نام: category.name,
+        اسلاگ: category.slug,
+        نوع: category.type,
+        والد: category.parent?.name || "ندارد",
+        "تعداد پرداخت‌ها": category._count?.payments,
+        "تعداد زیرمجموعه‌ها": category._count?.children,
+        توضیحات: category.description || "-",
+      }
+    : {};
 
   if (loading) return <Loading />;
   if (statusCode === 404) return <NotFound />;

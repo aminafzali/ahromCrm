@@ -1,52 +1,88 @@
-// مسیر فایل: src/modules/payment-categories/views/page.tsx
-
-"use client";
-
+import ButtonDelete from "@/@Client/Components/common/ButtonDelete";
 import DIcon from "@/@Client/Components/common/DIcon";
-import Loading from "@/@Client/Components/common/Loading";
-import { Button } from "ndui-ahrom";
-import Link from "next/link";
+import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper";
+import ButtonCreate from "@/components/ButtonCreate/ButtonCreate";
 import { useEffect, useState } from "react";
-import PaymentCategoryTree from "../components/PaymentCategoryTree";
+import Tree from "../components/Tree";
+import { columnsForAdmin } from "../data/table";
 import { usePaymentCategory } from "../hooks/usePaymentCategory";
 import { usePaymentCategoryTree } from "../hooks/usePaymentCategoryTree";
 import { PaymentCategoryWithRelations } from "../types";
+import CreateCategoryPage from "./create/page";
 
-export default function IndexPage() {
-  const { getAll, loading, error } = usePaymentCategory();
+export default function IndexPage({ isAdmin = true, title = "دسته‌بندی‌ها" }) {
+  const { getAll, loading, error, remove } = usePaymentCategory();
   const [categories, setCategories] = useState<PaymentCategoryWithRelations[]>([]);
   const { treeData } = usePaymentCategoryTree(categories);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await getAll({ page: 1, limit: 1000 });
-        if (res?.data) {
-          setCategories(res.data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch categories", err);
-      }
-    };
-    fetchData();
-  }, [getAll]);
+    fetchCategories();
+  }, []);
 
-  if (loading) return <Loading />;
-  if (error) return <div>خطا در بارگذاری داده‌ها</div>;
+  const fetchCategories = async () => {
+    try {
+      const result = await getAll({ page: 1, limit: 100 });
+      setCategories(result.data);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
+  const handleDelete = async (row: any) => {
+    try {
+      await remove(row.id);
+      fetchCategories();
+    } catch (error) {
+      console.error("Error deleting category:", error);
+    }
+  };
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">مدیریت دسته‌بندی‌های پرداخت</h1>
-        <Link href="/dashboard/payment-categories/create">
-          <Button>
-            <DIcon icon="fa-plus" classCustom="ml-2" />
-            ایجاد دسته‌بندی جدید
-          </Button>
-        </Link>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="">
+        <h2 className="text-lg font-semibold mb-4">ساختار دسته‌بندی</h2>
+        <Tree
+          data={treeData}
+          addNode={(node) => (
+            <ButtonCreate
+              size="sm"
+              variant="ghost"
+              icon={
+                <DIcon icon="fa-plus" cdi={false} classCustom="!mx-0 text-xl" />
+              }
+              modalContent={(closeModal) => (
+                <CreateCategoryPage
+                  back={false}
+                  defaultValues={{ parent: node }}
+                  after={() => {
+                    fetchCategories();
+                    closeModal(); // بستن مودال بعد از ثبت دسته‌بندی
+                  }}
+                />
+              )}
+            />
+          )}
+          removeNode={(node) => (
+            <ButtonDelete
+              showLabel={false}
+              size="sm"
+              row={node}
+              onDelete={handleDelete}
+            />
+          )}
+        />
       </div>
-      <div className="space-y-2 p-4 bg-gray-50 rounded-lg">
-        <PaymentCategoryTree categories={treeData} />
+
+      <div className="lg:col-span-2">
+        <DataTableWrapper<PaymentCategoryWithRelations>
+          columns={columnsForAdmin}
+          createUrl="/dashboard/categories/create"
+          loading={loading}
+          error={error}
+          title={title}
+          fetcher={getAll}
+       //   listItemRender={listItemRender}
+          listClassName="grid grid-cols-1 gap-2"
+        />
       </div>
     </div>
   );
