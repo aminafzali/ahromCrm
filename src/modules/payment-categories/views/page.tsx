@@ -12,7 +12,9 @@ import CreateCategoryPage from "./create/page";
 
 export default function IndexPage({ isAdmin = true, title = "دسته‌بندی‌ها" }) {
   const { getAll, loading, error, remove } = usePaymentCategory();
-  const [categories, setCategories] = useState<PaymentCategoryWithRelations[]>([]);
+  const [categories, setCategories] = useState<PaymentCategoryWithRelations[]>(
+    []
+  );
   const { treeData } = usePaymentCategoryTree(categories);
 
   useEffect(() => {
@@ -75,12 +77,12 @@ export default function IndexPage({ isAdmin = true, title = "دسته‌بندی
       <div className="lg:col-span-2">
         <DataTableWrapper<PaymentCategoryWithRelations>
           columns={columnsForAdmin}
-          createUrl="/dashboard/categories/create"
+          createUrl="/dashboard/payment-categories/create"
           loading={loading}
           error={error}
           title={title}
           fetcher={getAll}
-       //   listItemRender={listItemRender}
+          //   listItemRender={listItemRender}
           listClassName="grid grid-cols-1 gap-2"
         />
       </div>

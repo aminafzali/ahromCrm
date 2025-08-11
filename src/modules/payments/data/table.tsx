@@ -14,6 +14,13 @@ export const columnsForAdmin: Column[] = [
       row.workspaceUser ? row.workspaceUser.displayName : "نامشخص",
   },
   {
+    name: "paymentCategory",
+    field: "paymentCategory",
+    label: "دسته بندی",
+    render: (row) =>
+      row.paymentCategory ? row.paymentCategory.name : "نامشخص",
+  },
+  {
     name: "amount",
     field: "amount",
     label: "مبلغ (تومان)",

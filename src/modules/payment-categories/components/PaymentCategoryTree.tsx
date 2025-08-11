@@ -1,29 +1,30 @@
-import React from 'react';
-import DIcon from '@/@Client/Components/common/DIcon';
-import Link from 'next/link';
+// src/modules/payment-categories/components/PaymentCategoryTree.tsx
+import DIcon from "@/@Client/Components/common/DIcon";
+import Link from "next/link";
+import React from "react";
 
-interface CategoryNode {
-  id: number;
+interface PaymentCategoryNode {
+  id: string; // در پریزما این فیلد از نوع رشته (String) است
   name: string;
-  children?: CategoryNode[];
+  children?: PaymentCategoryNode[];
   _count?: {
-    products: number;
+    payments: number; // رابطه از products به payments تغییر کرد
     children: number;
   };
 }
 
-interface CategoryTreeProps {
-  categories: CategoryNode[];
-  onSelect?: (category: CategoryNode) => void;
-  selectedId?: number;
+interface PaymentCategoryTreeProps {
+  paymentCategories: PaymentCategoryNode[];
+  onSelect?: (category: PaymentCategoryNode) => void;
+  selectedId?: string; // در پریزما این فیلد از نوع رشته (String) است
 }
 
-const CategoryTree: React.FC<CategoryTreeProps> = ({
-  categories,
+const PaymentCategoryTree: React.FC<PaymentCategoryTreeProps> = ({
+  paymentCategories,
   onSelect,
   selectedId,
 }) => {
-  const renderCategory = (category: CategoryNode, level: number = 0) => {
+  const renderCategory = (category: PaymentCategoryNode, level: number = 0) => {
     const isSelected = category.id === selectedId;
     const hasChildren = category.children && category.children.length > 0;
 
@@ -32,13 +33,17 @@ const CategoryTree: React.FC<CategoryTreeProps> = ({
         <div
           className={`
             flex items-center justify-between p-2 my-1 rounded-lg cursor-pointer
-            ${isSelected ? 'bg-primary text-white' : 'hover:bg-gray-100'}
+            ${
+              isSelected
+                ? "bg-primary text-white"
+                : "hover:bg-gray-100 dark:hover:bg-gray-700"
+            }
           `}
           onClick={() => onSelect?.(category)}
         >
           <div className="flex items-center">
             <DIcon
-              icon={hasChildren ? 'fa-folder' : 'fa-folder-open'}
+              icon={hasChildren ? "fa-folder" : "fa-folder-open"}
               cdi={false}
               classCustom="ml-2"
             />
@@ -47,9 +52,7 @@ const CategoryTree: React.FC<CategoryTreeProps> = ({
           <div className="flex items-center text-sm">
             {category._count && (
               <>
-                <span className="mx-2">
-                  {category._count.products} محصول
-                </span>
+                <span className="mx-2">{category._count.payments} پرداخت</span>
                 {hasChildren && (
                   <span className="mx-2">
                     {category._count.children} زیردسته
@@ -59,8 +62,8 @@ const CategoryTree: React.FC<CategoryTreeProps> = ({
             )}
             {onSelect && (
               <Link
-                href={`/dashboard/categories/${category.id}`}
-                className={isSelected ? 'text-white' : 'text-primary'}
+                href={`/dashboard/payment-categories/${category.id}`} // مسیر لینک اصلاح شد
+                className={isSelected ? "text-white" : "text-primary"}
                 onClick={(e) => e.stopPropagation()}
               >
                 <DIcon icon="fa-eye" cdi={false} classCustom="mx-2" />
@@ -74,7 +77,11 @@ const CategoryTree: React.FC<CategoryTreeProps> = ({
     );
   };
 
-  return <div className="space-y-2">{categories.map((cat) => renderCategory(cat))}</div>;
+  return (
+    <div className="space-y-2">
+      {paymentCategories.map((cat) => renderCategory(cat))}
+    </div>
+  );
 };
 
-export default CategoryTree;
+export default PaymentCategoryTree;

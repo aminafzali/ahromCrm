@@ -25,8 +25,9 @@ export const include = {
       },
     },
   },
+  paymentCategory: true,
 };
 
 export const searchFileds = [];
 export const relations = [];
-export const connects = ["workspaceUser", "invoice"];
+export const connects = ["workspaceUser", "invoice", "paymentCategory"];

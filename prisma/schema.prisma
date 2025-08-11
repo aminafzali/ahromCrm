@@ -334,22 +334,22 @@ model Payment {
 
 // ===== شروع مدل جدید =====
 model PaymentCategory {
-  id          Int                 @id @default(autoincrement())
+  id          Int                  @id @default(autoincrement())
   workspaceId Int
-  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   slug        String
   description String?
-  type        PaymentCategoryType // نوع دسته‌بندی: درآمد، هزینه یا انتقال
+  type        PaymentCategoryType? // نوع دسته‌بندی: درآمد، هزینه یا انتقال
   parentId    Int?
-  lft         Int                 @default(0)
-  rgt         Int                 @default(0)
-  depth       Int                 @default(0)
-  parent      PaymentCategory?    @relation("PaymentCategoryToPaymentCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  children    PaymentCategory[]   @relation("PaymentCategoryToPaymentCategory")
+  lft         Int                  @default(0)
+  rgt         Int                  @default(0)
+  depth       Int                  @default(0)
+  parent      PaymentCategory?     @relation("PaymentCategoryToPaymentCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children    PaymentCategory[]    @relation("PaymentCategoryToPaymentCategory")
   payments    Payment[]
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 
   @@unique([slug, workspaceId])
 }
