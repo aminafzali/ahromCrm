@@ -10,12 +10,69 @@ export class QueryBuilder {
   /**
    * Set the where clause
    */
+  // setWhere(where: any): QueryBuilder {
+  //   console.log(`[QueryBuilder - LOG] Setting initial 'where' clause:`, where);
+  //   this.where = { ...this.where, ...where };
+  //   return this;
+  // }
   setWhere(where: any): QueryBuilder {
     console.log(`[QueryBuilder - LOG] Setting initial 'where' clause:`, where);
-    this.where = { ...this.where, ...where };
+
+    if (!where) {
+      return this;
+    }
+
+    // ===== شروع اصلاحیه کلیدی =====
+    // این حلقه، کلیدهای ورودی را برای شناسایی اپراتورهای خاص (مانند _in) پردازش می‌کند
+    for (const key in where) {
+      const value = where[key];
+
+      if (
+        value === undefined ||
+        value === null ||
+        value === "all" ||
+        value === ""
+      ) {
+        continue; // Skip empty or 'all' filters
+      }
+
+      // --- Handle '_in' operator ---
+      if (key.endsWith("_in")) {
+        const fieldName = key.replace("_in", "");
+
+        // Convert value to an array of numbers, handling both single values and comma-separated strings
+        const valuesAsArray = Array.isArray(value)
+          ? value.map(Number)
+          : String(value).split(",").map(Number);
+
+        // Remove any NaN values that might result from conversion
+        const validNumbers = valuesAsArray.filter((v) => !isNaN(v));
+
+        if (validNumbers.length > 0) {
+          if (!this.where[fieldName]) {
+            this.where[fieldName] = {};
+          }
+          this.where[fieldName].in = validNumbers;
+          console.log(
+            `[QueryBuilder - LOG] Applied 'in' condition: ${fieldName} in [${validNumbers.join(
+              ", "
+            )}]`
+          );
+        }
+      }
+
+      // --- Handle other operators like '_gt', '_lt', etc. (can be extended here) ---
+      // Example: else if (key.endsWith("_gt")) { ... }
+
+      // --- Handle simple equality ---
+      else {
+        this.where[key] = value;
+      }
+    }
+    // ===== پایان اصلاحیه کلیدی =====
+
     return this;
   }
-
   /**
    * Add a where condition
    */

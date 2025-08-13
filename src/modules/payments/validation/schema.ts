@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 export const createPaymentSchema = z.object({
-  workspaceUser: z.any(),
+  workspaceUser: z.object(
+    { id: z.number() },
+    { required_error: "انتخاب کاربر الزامی است." }
+  ),
   invoiceId: z.any().optional(),
   amount: z.number().min(1000, "مبلغ باید حداقل 1000 تومان باشد"),
   method: z.string(),

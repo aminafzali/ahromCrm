@@ -26,7 +26,7 @@ const TreeNode: React.FC<{
   return (
     <div className="pr-2">
       <div
-        className={`flex justify-between mt-1 border p-1 bg-white rounded-lg border items-center cursor-pointer  transition ${
+        className={`flex justify-between mt-1 border p-1 bg-white rounded-lg items-center cursor-pointer  transition ${
           selected === node.id && "border-primary border-2"
         }`}
         onClick={handleClick}

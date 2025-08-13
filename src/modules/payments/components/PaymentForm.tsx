@@ -155,6 +155,28 @@ export default function PaymentForm({
       {/* بخش اصلی فرم پرداخت */}
       <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border dark:border-slate-700">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* <PaymentCategorySelect2
+            label="دسته‌بندی پرداخت (اختیاری)"
+            value={paymentCategoryId}
+            // پارامتر ورودی 'selectedValue' دیگر یک رویداد نیست،
+            // بلکه خود مقدار نهایی است
+            onChange={(selectedValue) => {
+              setPaymentCategoryId(selectedValue);
+            }}
+          /> */}
+          <div className="md:col-span-1">
+            <PaymentCategorySelect2
+              name="paymentCategoryId"
+              label="دسته‌بندی پرداخت (اختیاری)"
+              value={paymentCategoryId}
+              onChange={(e) => {
+                const valueAsNumber = Number(e.target.value);
+                setPaymentCategoryId(
+                  isNaN(valueAsNumber) ? undefined : valueAsNumber
+                );
+              }}
+            />
+          </div>
           <Input
             name="amount"
             label="مبلغ (تومان)"
@@ -162,17 +184,6 @@ export default function PaymentForm({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-          />
-          <PaymentCategorySelect2
-            name="paymentCategoryId"
-            label="دسته‌بندی پرداخت (اختیاری)"
-            value={paymentCategoryId}
-            onChange={(e) => {
-              const valueAsNumber = Number(e.target.value);
-              setPaymentCategoryId(
-                isNaN(valueAsNumber) ? undefined : valueAsNumber
-              );
-            }}
           />
           <Select22
             name="method"
