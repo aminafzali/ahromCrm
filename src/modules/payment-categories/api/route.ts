@@ -9,7 +9,7 @@ const service = new PaymentCategoryServiceApi();
 
 class PaymentCategoryController extends BaseController<any> {
   constructor() {
-    super(service, include, false);
+    super(service, include);
   }
 }
 

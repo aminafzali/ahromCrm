@@ -49,11 +49,11 @@ export default function WorkspacesHubPage() {
               >
                 <div className="flex-grow">
                   {/* آیکون ساختمان برای زیبایی بیشتر */}
-                  <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-lg w-fit mb-4">
+                  <div className="p-3 bg-teal-100 dark:bg-teal-900/50 rounded-lg w-fit mb-4">
                     <DIcon
                       icon="fa-building"
                       cdi={false}
-                      classCustom="text-2xl text-blue-600 dark:text-blue-400"
+                      classCustom="text-2xl text-teal-600 dark:text-teal-400"
                     />
                   </div>
                   <h3 className="font-bold text-lg text-slate-800 dark:text-white">
@@ -66,7 +66,7 @@ export default function WorkspacesHubPage() {
                     </span>
                   </p>
                 </div>
-                <div className="mt-6 flex items-center justify-end text-blue-600 dark:text-blue-400 font-semibold">
+                <div className="mt-6 flex items-center justify-end text-teal-600 dark:text-teal-400 font-semibold">
                   <span>ورود به فضای کاری</span>
                   <DIcon
                     icon="fa-arrow-left"

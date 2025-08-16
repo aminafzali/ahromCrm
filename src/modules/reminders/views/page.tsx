@@ -3,8 +3,8 @@
 import Loading from "@/@Client/Components/common/Loading";
 import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper";
 import { FilterOption } from "@/@Client/types";
-import { useUser } from "@/modules/users/hooks/useUser";
-import { UserWithRelations } from "@/modules/users/types";
+import { useWorkspaceUser } from "@/modules/workspace-users/hooks/useWorkspaceUser";
+import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
 import { ReminderStatus } from "@prisma/client";
 import { useEffect, useState } from "react";
 import { columns } from "../data/table";
@@ -18,8 +18,8 @@ export default function RemindersModuleView() {
     loading,
     error,
   } = useReminder();
-  const { getAll: fetchUsers, loading: loadingUsers } = useUser();
-  const [users, setUsers] = useState<UserWithRelations[]>([]);
+  const { getAll: fetchUsers, loading: loadingUsers } = useWorkspaceUser();
+  const [users, setUsers] = useState<WorkspaceUserWithRelations[]>([]);
 
   useEffect(() => {
     const getFilterData = async () => {
@@ -39,10 +39,10 @@ export default function RemindersModuleView() {
   if (users.length > 0) {
     const userOptions = users.map((user) => ({
       value: user.id,
-      label: user.name || user.phone || `کاربر ${user.id}`,
+      label: user.displayName || user.phone || `کاربر ${user.id}`,
     }));
     filters.push({
-      name: "userId",
+      name: "workspaceUserId",
       label: "کاربر",
       options: [{ value: "all", label: "همه کاربران" }, ...userOptions],
     });

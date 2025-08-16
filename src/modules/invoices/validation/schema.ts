@@ -37,6 +37,9 @@ export const createInvoiceSchema = z.object({
     { id: z.number().optional() },
     { required_error: "انتخاب مشتری الزامی است." }
   ),
+ // فیلدهای تاریخ را برای اعتبارسنجی اضافه می‌کنیم
+  issueDate: z.string().optional().nullable(),
+  dueDate: z.string().optional().nullable(),
 });
 
 export const updateInvoiceStatusSchema = z.object({

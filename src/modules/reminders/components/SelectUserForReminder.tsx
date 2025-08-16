@@ -1,7 +1,7 @@
 // مسیر فایل: src/modules/reminders/components/SelectUserForReminder.tsx
 "use client";
 import IndexWrapper from "@/@Client/Components/wrappers/IndexWrapper/Index";
-import { columnsForSelect } from "@/modules/users/data/table";
+import { columnsForSelect } from "@/modules/workspace-users/data/table";
 import { WorkspaceUserRepository } from "@/modules/workspace-users/repo/WorkspaceUserRepository";
 import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
 import { Button, Modal } from "ndui-ahrom";

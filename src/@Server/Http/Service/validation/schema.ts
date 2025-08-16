@@ -11,7 +11,7 @@ export const createReminderSchema = z.object({
     required_error: "لطفاً تاریخ و زمان یادآوری را انتخاب کنید.",
     invalid_type_error: "فرمت تاریخ و زمان نامعتبر است.",
   }),
-  userId: z.coerce.number({
+  workspaceUserId: z.coerce.number({
     required_error: "انتخاب کاربر الزامی است.",
     invalid_type_error: "شناسه کاربر نامعتبر است.",
   }),

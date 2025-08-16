@@ -6,6 +6,7 @@ import {
 } from "@/@Server/Exceptions/BaseException";
 import prisma from "@/lib/prisma";
 import { Workspace } from "@prisma/client";
+import { cache } from "react";
 import { z } from "zod";
 
 export const workspaceSchema = z.object({
@@ -64,3 +65,55 @@ export class WorkspaceApiService {
     }
   }
 }
+
+/**
+ * تمام ورک‌اسپیس‌های فعال را برای نمایش در لندینگ پیج واکشی می‌کند.
+ */
+export async function getAllPublicWorkspaces() {
+  try {
+    const workspaces = await prisma.workspace.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        //     description: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    return workspaces;
+  } catch (error) {
+    console.error("خطا در واکشی لیست ورک‌اسپیس‌ها:", error);
+    return [];
+  }
+}
+
+/**
+ * اطلاعات یک ورک‌اسپیس را بر اساس slug برای صفحات عمومی واکشی می‌کند.
+ * از cache برای جلوگیری از کوئری‌های تکراری در یک درخواست استفاده شده است.
+ */
+export const getWorkspaceDataBySlug = cache(async (slug: string) => {
+  try {
+    const workspace = await prisma.workspace.findUnique({
+      where: { slug },
+      include: {
+        products: {
+          where: { isActive: true },
+          take: 8,
+          orderBy: { createdAt: "desc" },
+          include: { images: true, brand: true, category: true },
+        },
+        serviceTypes: {
+          where: { isActive: true },
+          take: 6,
+          orderBy: { name: "asc" },
+        },
+      },
+    });
+    return workspace;
+  } catch (error) {
+    console.error("خطا در واکشی اطلاعات ورک‌اسپیس:", error);
+    return null;
+  }
+});

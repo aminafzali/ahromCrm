@@ -3,6 +3,7 @@ import { FormWrapper } from ".";
 import { FormConfig, FormField } from "../../types/form";
 import DIcon from "../common/DIcon";
 //import Select from "../ui/Select";
+import CustomDatePicker from "../ui/DatePicker";
 import Switch from "../ui/Switch";
 
 interface DynamicFormWrapperProps {
@@ -120,7 +121,18 @@ const DynamicFormWrapper: React.FC<DynamicFormWrapperProps> = ({
           />
         );
       // ===== پایان اصلاحیه =====
-
+      // ===== شروع اصلاحیه =====
+      case "date":
+        return (
+          <CustomDatePicker
+            key={field.name}
+            name={field.name}
+            label={field.label}
+            placeholder={field.placeholder}
+            className={field.className}
+          />
+        );
+      // ===== پایان اصلاحیه =====
       default:
         return (
           <Input

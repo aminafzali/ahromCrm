@@ -1,7 +1,11 @@
 // مسیر فایل: src/modules/payment-categories/types/index.ts
 
-import { Payment, PaymentCategory } from "@prisma/client";
+import {
+  Payment,
+  PaymentCategory as PrismaPaymentCategory,
+} from "@prisma/client";
 
+export type PaymentCategory = PrismaPaymentCategory;
 // این تایپ، یک دسته‌بندی را به همراه روابطش تعریف می‌کند
 export type PaymentCategoryWithRelations = PaymentCategory & {
   parent?: PaymentCategory;

@@ -14,11 +14,12 @@ datasource db {
 // >>>>>>>>>>>>> WORKSPACE & RBAC (Role-Based Access Control) MODELS <<<<<<<<<<<<<<
 
 model Workspace {
-  id      Int    @id @default(autoincrement())
-  name    String
-  slug    String @unique
-  ownerId Int
-  owner   User   @relation("OwnedWorkspaces", fields: [ownerId], references: [id], onDelete: Cascade)
+  id          Int    @id @default(autoincrement())
+  name        String
+  description String @default("")
+  slug        String @unique
+  ownerId     Int
+  owner       User   @relation("OwnedWorkspaces", fields: [ownerId], references: [id], onDelete: Cascade)
 
   // --- Back-relations for ALL workspace-specific data ---
   roles       Role[]
@@ -229,11 +230,13 @@ model Invoice {
   total           Float
   status          InvoiceStatus @default(PENDING)
   dueDate         DateTime?
+  issueDate       DateTime?
   description     String?       @db.Text
   paymentDate     DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  payments        Payment[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  payments  Payment[]
 }
 
 model ReceivedDevice {

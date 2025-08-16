@@ -28,7 +28,7 @@ export const columns: Column[] = [
   { name: "title", field: "title", label: "عنوان" },
   {
     name: "workspaceUser",
-    field: "workspaceUser.name",
+    field: "workspaceUser.displayName",
     label: "کاربر",
     render: (row) =>
       row.workspaceUser?.displayName || row.workspaceUser?.phone || "نامشخص",
@@ -53,6 +53,13 @@ export const columns: Column[] = [
   {
     name: "actions",
     label: "عملیات",
-    render: (row) => <ActionsTable actions={["delete"]} row={row} />,
+    render: (row) => (
+      <ActionsTable
+        actions={["view", "delete"]}
+        row={row}
+        onView={`/dashboard/reminders/${row.id}`}
+        showLabels
+      />
+    ),
   },
 ];

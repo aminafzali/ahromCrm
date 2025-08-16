@@ -13,7 +13,7 @@ const service = new PaymentCategoryServiceApi();
 class PaymentCategoryController extends BaseController<any> {
   constructor() {
     // پارامتر سوم (own) را false قرار می‌دهیم چون این موجودیت متعلق به کاربر خاصی نیست
-    super(service, include, false);
+    super(service, include);
   }
 }
 

@@ -63,15 +63,11 @@ export default function WorkspaceSwitcher() {
                   // ===== پایان اصلاحیه ۲ =====
                 }
               }}
-              className="cursor-pointer"
+              className="focus:text-white cursor-pointer"
             >
               <span className="flex-grow-1">{ws.workspace.name}</span>
               {ws.workspaceId === activeWorkspace.workspaceId && (
-                <DIcon
-                  icon="fa-check"
-                  cdi={false}
-                  classCustom="text-success ms-2"
-                />
+                <DIcon icon="fa-check" cdi={false} classCustom="  ms-2" />
               )}
             </DropdownMenuItem>
           ))}

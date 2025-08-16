@@ -6,12 +6,12 @@ import { Column } from "ndui-ahrom/dist/components/Table/Table";
 import Link from "next/link";
 
 export const columnsForAdmin: Column[] = [
-  // {
-  //   name: "name",
-  //   field: "name",
-  //   label: "نام فاکتور",
-  //   render: (row) => row.name || "نامشخص",
-  // },
+  {
+    name: "name",
+    field: "name",
+    label: "نام فاکتور",
+    render: (row) => row.name || "نامشخص",
+  },
   {
     name: "customer",
     field: "workspaceUser",
@@ -19,12 +19,12 @@ export const columnsForAdmin: Column[] = [
     render: (row) =>
       row.workspaceUser.displayName || row.workspaceUser.name || "نامشخص",
   },
-  {
-    name: "service",
-    field: "request",
-    label: "نوع خدمات",
-    render: (row) => row.request?.serviceType.name || "بدون خدمت",
-  },
+  // {
+  //   name: "service",
+  //   field: "request",
+  //   label: "نوع خدمات",
+  //   render: (row) => row.request?.serviceType.name || "بدون خدمت",
+  // },
   {
     name: "total",
     field: "total",
@@ -38,11 +38,23 @@ export const columnsForAdmin: Column[] = [
     render: (row) => <StatusBadge status={row.status} />,
   },
   {
-    name: "date",
-    field: "createdAt",
-    label: "تاریخ",
-    render: (row) => <DateDisplay date={row.createdAt} />,
+    name: "issueDate",
+    field: "issueDate",
+    label: "تاریخ فاکتور",
+    render: (row) => <DateDisplay date={row.issueDate} />,
   },
+  {
+    name: "dueDate",
+    field: "dueDate",
+    label: "تاریخ سر رسید ",
+    render: (row) => <DateDisplay date={row.dueDate} />,
+  },
+  // {
+  //   name: "createdAt",
+  //   field: "createdAt",
+  //   label: "تاریخ ایجاد",
+  //   render: (row) => <DateDisplay date={row.createdAt} />,
+  // },
   {
     name: "actions",
     label: "عملیات",
