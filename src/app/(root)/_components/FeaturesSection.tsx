@@ -40,7 +40,7 @@ export default function FeaturesSection() {
         {features.map((feature) => (
           <div
             key={feature.title}
-            className="card bg-base-100 border hover:shadow-xl transition-shadow"
+            className="card bg-white border hover:shadow-xl transition-shadow"
           >
             <div className="card-body items-center text-center">
               <div className="p-4 bg-primary/10 rounded-full mb-4">

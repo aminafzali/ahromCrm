@@ -76,7 +76,7 @@ export async function getAllPublicWorkspaces() {
         id: true,
         name: true,
         slug: true,
-        //     description: true,
+        description: true,
       },
       orderBy: {
         createdAt: "desc",

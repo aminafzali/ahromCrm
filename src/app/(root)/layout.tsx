@@ -7,8 +7,6 @@ export default function RootLayout({
 }) {
   return (
     <div className="flex flex-col min-h-screen bg-base-100">
-      {/* <BaseToolBar />  */}
-
       <main
       // className="flex-grow container mx-auto px-2"
       >

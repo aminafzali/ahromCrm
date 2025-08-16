@@ -44,14 +44,13 @@ type Props = {
   params: { slug: string };
 };
 
-export async function generateMetadata({
-  params: { slug },
-}: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
   const workspace = await prisma.workspace.findUnique({
     where: { slug }, // استفاده مستقیم از slug
     select: {
       name: true,
-      //     description: true
+      description: true,
     },
   });
 
@@ -63,9 +62,8 @@ export async function generateMetadata({
 
   const pageTitle = `${workspace.name} | اهرم`;
   const pageDescription =
-    // workspace.description ||
-    `خدمات و محصولات ${workspace.name}`;
-  const pageUrl = `https://aaa.com/${slug}`; // آدرس دامنه خود را جایگزین کنید
+    workspace.description || `خدمات و محصولات ${workspace.name}`;
+  const pageUrl = `http://localhost:4010/${slug}`; // آدرس دامنه خود را جایگزین کنید
 
   return {
     title: pageTitle,
@@ -91,7 +89,8 @@ export async function generateMetadata({
 // ===== پایان بخش سئو ۱ =====
 
 export default async function WorkspacePage({ params }: Props) {
-  const workspace = await getWorkspaceBySlug(params.slug);
+  const { slug } = await params;
+  const workspace = await getWorkspaceBySlug(slug);
 
   if (!workspace) {
     notFound();
@@ -107,11 +106,9 @@ export default async function WorkspacePage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": "Organization", // یا "LocalBusiness" اگر کسب‌وکار محلی است
     name: workspace.name,
-    url: `https://aaa.com/${params.slug}`, // آدرس دامنه خود را جایگزین کنید
+    url: `http://localhost:4010/${slug}`, // آدرس دامنه خود را جایگزین کنید
     // "logo": workspace.logoUrl, // آدرس لوگوی ورک‌اسپیس
-    description:
-      // workspace.description ||
-      "",
+    description: workspace.description || "",
   };
   // ===== پایان بخش سئو ۲ =====
 
