@@ -135,7 +135,6 @@ export default async function WorkspacePage({ params }: Props) {
             <div className="flex flex-wrap justify-center gap-4">
               <Link
                 href={
-                  // `/${params.slug}/request`
                   `/request?workspaceId=${workspace.id}`
                 }
                 className=""
