@@ -1,38 +1,58 @@
-// مسیر فایل: src/app/(root)/request/page.tsx
+// مسیر فایل: src/app/(root)/[slug]/request/page.tsx
 
 import NotFound from "@/@Client/Components/common/NotFound";
 import { prisma } from "@/lib/prisma";
-import PublicRequestForm from "@/modules/requests/components/PublicRequestForm";
+import PublicRequestForm4 from "@/modules/requests/components/PublicRequestForm4";
 
-// این صفحه یک Server Component است و می‌تواند مستقیم با دیتابیس کار کند
-export default async function RequestPage() {
-  // ۱. دریافت لیست انواع خدمات از دیتابیس
-  const serviceTypes = await prisma.serviceType.findMany();
+interface PublicRequestPageProps {
+  params: {
+    slug: string;
+  };
+}
 
-  // ۲. دریافت وضعیت اولیه برای درخواست‌ها از دیتابیس
-  // فرض می‌کنیم اولین وضعیت، وضعیت پیش‌فرض برای درخواست‌های جدید است
+export default async function PublicRequestPageBySlug({
+  params,
+}: PublicRequestPageProps) {
+  const { slug } = await params;
+
+  const workspace = await prisma.workspace.findUnique({ where: { slug } });
+
+  if (!workspace) {
+    return <NotFound />;
+  }
+
+  const serviceTypes = await prisma.serviceType.findMany({
+    where: {
+      workspaceId: workspace.id,
+    },
+  });
+
   const initialStatus = await prisma.status.findFirst({
+    where: {
+      workspaceId: workspace.id,
+    },
     orderBy: {
       id: "asc",
     },
   });
 
-  // اگر هیچ وضعیتی در دیتابیس تعریف نشده بود، صفحه را نمایش نده
   if (!initialStatus) {
-    return (
-      <NotFound
-      //  message="هیچ وضعیت اولیه‌ای برای درخواست‌ها تعریف نشده است."
-      />
-    );
+    return <NotFound />;
   }
 
   return (
-    <div className="container py-8">
-      {/* ۳. پاس دادن داده‌های دریافت شده به عنوان props به کامپوننت کلاینت
-       */}
-      <PublicRequestForm
-        // serviceTypes={serviceTypes}
+    <div className="container py-12">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold">
+          ثبت درخواست جدید برای {workspace.name}
+        </h1>
+      </div>
+
+      <PublicRequestForm4
+        workspaceId={workspace.id}
+        serviceTypes={serviceTypes}
         initialStatusId={initialStatus.id}
+        slug={slug} 
       />
     </div>
   );

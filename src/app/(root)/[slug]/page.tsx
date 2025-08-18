@@ -133,12 +133,7 @@ export default async function WorkspacePage({ params }: Props) {
                 `به ${workspace.name} خوش آمدید!`}
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link
-                href={
-                  `/request?workspaceId=${workspace.id}`
-                }
-                className=""
-              >
+              <Link href={`/${slug}/request`} className="">
                 <Button
                   size="lg"
                   icon={

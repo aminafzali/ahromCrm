@@ -44,14 +44,27 @@ const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
   undefined
 );
 
-export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
+export const WorkspaceProvider = ({
+  children,
+}: // initialWorkspace,
+{
+  children: ReactNode;
+  //initialWorkspace?: Workspace;
+}) => {
   const { status } = useSession();
   const [workspaces, setWorkspaces] = useState<UserWorkspace[]>([]);
   const [activeWorkspace, setActiveWorkspaceState] =
     useState<UserWorkspace | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  //useState<Workspace | null>(initialWorkspace || null); // مقدار اولیه از پراپ گرفته می‌شود
+  //const [loading, setLoading] = useState<boolean>(!initialWorkspace); // اگر ورک‌اسپیس اولیه داشتیم، لودینگ false است
 
   const fetchWorkspaces = useCallback(async () => {
+    // اگر در صفحه عمومی بودیم و ورک‌اسپیس اولیه داشتیم، دیگر واکشی نکن
+    // if (initialWorkspace) {
+    //   return;
+    // }
+
     if (status === "authenticated") {
       setIsLoading(true);
       try {
@@ -85,7 +98,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     if (status === "unauthenticated") {
       setIsLoading(false);
     }
-  }, [status]);
+  }, [
+    status,
+   //  initialWorkspace
+    ]);
 
   useEffect(() => {
     fetchWorkspaces();

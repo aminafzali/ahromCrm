@@ -1,5 +1,3 @@
-// // مسیر فایل: src/modules/requests/service/RequestServiceApi.ts
-
 // مسیر فایل: src/modules/requests/service/RequestServiceApi.ts
 
 import { NotFoundException } from "@/@Server/Exceptions/BaseException";
@@ -60,6 +58,7 @@ export class RequestServiceApi extends BaseService<any> {
           userId: userId,
           workspaceId: currentWorkspaceId,
           // نکته: این ID باید با شناسه نقش "مشتری" در دیتابیس شما مطابقت داشته باشد
+          // todo:t4 todo:t5 مورد زیر حتما باید مشکلش برطرفش شود که رول آیدی درست را بگیرد
           roleId: 2, // <-- آیدی نقش "مشتری" را اینجا قرار دهید
         },
       });
@@ -152,6 +151,102 @@ export class RequestServiceApi extends BaseService<any> {
     delete data.actualServices;
     return data;
   }
+
+  /**
+   * این متد، منطق ثبت درخواست برای کاربران مهمان را مدیریت می‌کند.
+   * تمام کارها در یک تراکنش امن انجام می‌شود.
+   */
+  /**
+   * این متد، منطق ثبت درخواست برای کاربران مهمان را مدیریت می‌کند.
+   */
+  // توجه شود از این فعلا استفاده نمیشود و باید بررسی بیشتری شود
+  // ===== شروع اصلاحیه کلیدی =====
+  /**
+   * این متد اکنون هر دو سناریوی کاربر مهمان و لاگین کرده را مدیریت می‌کند.
+   */
+  /**
+   * این متد اکنون تمام سناریوها را به درستی مدیریت می‌کند:
+   * ۱. کاربر مهمان (کاملاً جدید)
+   * ۲. کاربر لاگین کرده ولی عضو ورک‌اسپیس نیست
+   * ۳. کاربر لاگین کرده و از قبل عضو ورک‌اسپیس است (مثل ادمین)
+   */
+  async createPublicRequest(data: any): Promise<any> {
+    const { workspaceId, customerPhone, customerName, userId, ...restOfData } =
+      data;
+
+    if (!workspaceId) {
+      throw new Error("شناسه ورک‌اسپیس الزامی است.");
+    }
+
+    return prisma.$transaction(async (tx) => {
+      let finalUserId: number;
+
+      // مرحله ۱: شناسایی هویت کاربر
+      if (userId) {
+        // اگر کاربر لاگین کرده بود، از شناسه او استفاده می‌کنیم
+        finalUserId = userId;
+      } else {
+        // اگر مهمان بود، او را پیدا یا ایجاد می‌کنیم
+        if (!customerPhone || !customerName) {
+          throw new Error("اطلاعات ضروری برای ثبت درخواست ناقص است.");
+        }
+        const user = await tx.user.upsert({
+          where: { phone: customerPhone },
+          update: {},
+          create: { phone: customerPhone, name: customerName },
+        });
+        finalUserId = user.id;
+      }
+
+      // ===== شروع اصلاحیه کلیدی =====
+
+      // مرحله ۲: بررسی پروفایل کاربری در ورک‌اسپیس
+      // ابتدا جستجو می‌کنیم تا ببینیم آیا کاربر از قبل در این ورک‌اسپیس پروفایل دارد یا نه
+      let workspaceUser = await tx.workspaceUser.findFirst({
+        where: {
+          userId: finalUserId,
+          workspaceId: workspaceId,
+        },
+      });
+
+      // فقط و فقط اگر کاربر عضو این ورک‌اسپیس نبود، برای او پروفایل جدید می‌سازیم
+      if (!workspaceUser) {
+        const defaultRole = await tx.role.findFirst({
+          where: { workspaceId: workspaceId, name: "User" },
+        });
+
+        if (!defaultRole) {
+          throw new Error(
+            `هیچ نقش پیش‌فرضی برای کاربران جدید در این ورک‌اسپیس تعریف نشده است.`
+          );
+        }
+
+        workspaceUser = await tx.workspaceUser.create({
+          data: {
+            userId: finalUserId,
+            workspaceId: workspaceId,
+            roleId: defaultRole.id,
+          },
+        });
+      }
+
+      // ===== پایان اصلاحیه کلیدی =====
+
+      // مرحله ۳: ثبت درخواست با پروفایل کاربری صحیح
+      const newRequest = await tx.request.create({
+        data: {
+          ...restOfData,
+          workspaceId: workspaceId,
+          workspaceUserId: workspaceUser.id, // از شناسه پروفایل تضمین‌شده استفاده می‌کنیم
+        },
+        include: include,
+      });
+
+      //   await this.handleAfterCreate(newRequest, data);
+      return newRequest;
+    });
+  }
+  // ===== پایان اصلاحیه کلیدی =====
 
   // private async handleAfterChangeStatus(entity: any, data: any): Promise<void> {
   //   const customer = entity.workspaceUser;

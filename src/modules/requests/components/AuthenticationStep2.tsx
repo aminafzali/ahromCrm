@@ -22,7 +22,7 @@ interface AuthenticationStepProps {
   onSuccess: (authData: { phone: string }) => void; // دیگر userId برنمی‌گرداند
 }
 
-export default function AuthenticationStep({
+export default function AuthenticationStep2({
   onSuccess,
 }: AuthenticationStepProps) {
   const [step, setStep] = useState<"phone" | "otp">("phone");
@@ -108,7 +108,7 @@ export default function AuthenticationStep({
               className="bg-white"
               name="phone"
               label="شماره تماس"
-              placeholder="09123456789"
+              placeholder=""
               type="tel"
             />
 

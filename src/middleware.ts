@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const publicApiRoutes = ["/api/auth", "/api/cron"];
+  const publicApiRoutes = ["/api/auth", "/api/cron", "/api/public/requests"];
 
   if (publicApiRoutes.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
@@ -38,6 +38,7 @@ export const config = {
     "/panel/:path*",
     // ++ اصلاحیه: اضافه کردن مسیرهای جدید به بخش محافظت‌شده ++
     "/workspaces/:path*",
+    "/api/:path*",
     "/api/((?!auth|cron).*)",
   ],
 };
