@@ -52,7 +52,7 @@ export default async function PublicRequestPageBySlug({
         workspaceId={workspace.id}
         serviceTypes={serviceTypes}
         initialStatusId={initialStatus.id}
-        slug={slug} 
+        slug={slug}
       />
     </div>
   );

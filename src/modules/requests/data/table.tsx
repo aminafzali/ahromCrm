@@ -10,7 +10,10 @@ export const columnsForAdmin: Column[] = [
     label: "مشتری",
     // مسیر دسترسی به نام مشتری اکنون از طریق workspaceUser است
     render: (row: any) =>
-      row.workspaceUser?.displayName || row.workspaceUser?.name || "-",
+      row.workspaceUser?.displayName ||
+      row.workspaceUser?.name ||
+      row.workspaceUser?.user.name ||
+      "-",
   },
   {
     name: "assignedTo",
@@ -100,7 +103,9 @@ export const listItemRender = (row: any) => (
     <div className="flex justify-between py-2 mt-2 rounded-lg border-[1px] border-primary text-primary px-2">
       {/* مسیر دسترسی به نام و تلفن مشتری اصلاح شد */}
       <p className="text-gray-900">
-        {row.workspaceUser?.user?.name || "نامشخص"}
+        {row.workspaceUser?.displayName ||
+          row.workspaceUser?.user?.name ||
+          "نامشخص"}
       </p>
       <a
         href={`tel:${row.workspaceUser?.user?.phone}`}

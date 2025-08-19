@@ -226,7 +226,12 @@ export default function PublicRequestForm4({
         );
       case 4:
         // این کامپوننت خودش شماره را می‌گیرد و فقط نتیجه را برمی‌گرداند
-        return <AuthenticationStep2 onSuccess={handleAuthenticationSuccess} />;
+        return (
+          <AuthenticationStep2
+            onSuccess={handleAuthenticationSuccess}
+            onBack={() => setCurrentStep(3)}
+          />
+        );
       default:
         return null;
     }

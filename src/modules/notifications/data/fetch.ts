@@ -22,7 +22,7 @@ export const include = {
 };
 
 // ۲. تعریف فیلدهای قابل جستجو با مسیر صحیح
-export const searchFileds = ["title", "message", "workspaceUser.user.name"];
+export const searchFileds = ["title", "message"];
 
 // ۳. این آرایه طبق الگوی شما خالی است
 export const relations = ["workspaceUser"];

@@ -11,7 +11,14 @@ export const columnsForAdmin: Column[] = [
     field: "user.name",
     label: "نام عضو",
     // رندر نیز باید از مسیر صحیح تو در تو داده را بخواند
-    render: (row: any) => row.displayName || row.user?.name || "-",
+    render: (row: any) => row.user?.name || "-",
+  },
+  {
+    name: "displayName",
+    field: "displayName",
+    label: "نام نمایشی",
+    // رندر نیز باید از مسیر صحیح تو در تو داده را بخواند
+    render: (row: any) => row.name || row.displayName || "-",
   },
   {
     name: "phone",
