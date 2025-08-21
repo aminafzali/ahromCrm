@@ -114,6 +114,18 @@ export default function InvoiceForm({
     "SERVICE" | "PRODUCT" | "ACTUALSERVICE" | "CUSTOM"
   >("CUSTOM");
 
+  const invoiceTypeMap: Record<string, string> = {
+    SALES: "فروش",
+    PURCHASE: "خرید",
+    PROFORMA: "پیش‌فاکتور",
+    RETURN_SALES: "مرجوعی فروش",
+    RETURN_PURCHASE: "مرجوعی خرید",
+  };
+
+  const [invoiceType, setInvoiceType] = useState<string>(
+    defaultValues?.type || "SALES"
+  );
+
   const [issueDate, setIssueDate] = useState<string | null>(
     defaultValues?.issueDate || null
   );
@@ -275,7 +287,7 @@ export default function InvoiceForm({
         discountPercent,
         subtotal: calculateSubtotal(),
         total: calculateTotal(),
-        type: "SALES",
+        type: invoiceType,
         issueDate: issueDate, // <<-- فیلد تاریخ صدور اضافه شد
         dueDate: dueDate, // <<-- فیلد تاریخ سررسید اضافه شد
       };
@@ -283,11 +295,13 @@ export default function InvoiceForm({
 
       if (req) {
         data["requestId"] = req.id;
-        data["name"] = `فاکتور فروش ${user.displayName} ${calculateTotal()} ${
-          req.id
-        }`;
+        data["name"] = `فاکتور ${invoiceTypeMap[invoiceType]} ${
+          user.displayName
+        } به قیمت ${calculateTotal()} شماره درخواست ${req.id}`;
       } else {
-        data["name"] = `فاکتور فروش ${user.displayName} ${calculateTotal()}`;
+        data["name"] = `فاکتور ${invoiceTypeMap[invoiceType]} ${
+          user.displayName
+        } به قیمت ${calculateTotal()}`;
       }
 
       const validation = invoiceSchema.safeParse(data);
@@ -398,61 +412,76 @@ export default function InvoiceForm({
           <span>{error}</span>
         </div>
       )}
-      {/* بخش اطلاعات کلی فاکتور (کد زیباتر شده از قبل) */}
       <div className="card bg-gray-100 shadow-md border">
         <div className="card-body">
           <h3 className="card-title text-lg font-semibold">
             اطلاعات کلی فاکتور
           </h3>
           <p className="text-sm text-base-content/60 -mt-2 mb-4">
-            مشتری و تاریخ‌های مهم فاکتور را در این بخش مشخص کنید.
+            تاریخ‌ها و مشتری/تأمین‌کننده را در این بخش مشخص کنید.
           </p>
 
           <div className="space-y-6">
-            {/* بخش انتخاب مشتری */}
+            {/* بخش انتخاب نوع فاکتور - بالاتر قرار گرفت */}
             <div>
               <label className="label">
-                <span className="label-text font-medium">مشتری</span>
+                <span className="label-text font-medium">نوع فاکتور</span>
+              </label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {Object.entries(invoiceTypeMap).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`px-4 py-2 rounded-lg border ${
+                      invoiceType === key
+                        ? "bg-primary text-white border-primary"
+                        : "bg-base-200 text-base-content border-gray-300"
+                    }`}
+                    onClick={() => setInvoiceType(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* بخش انتخاب مشتری/تأمین‌کننده */}
+            <div>
+              <label className="label">
+                <span className="label-text font-medium">
+                  {invoiceType === "PURCHASE" ||
+                  invoiceType === "RETURN_PURCHASE"
+                    ? "تأمین‌کننده"
+                    : "مشتری"}
+                </span>
               </label>
               <div className="p-3 border rounded-lg bg-base-200/50 min-h-[70px] flex items-center">
                 {req ? (
                   <div className="w-full flex justify-between items-center">
                     <div>{listItemRenderUser(req)}</div>
-                    {/* --- شروع اصلاحیه --- */}
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="btn-circle" // کلاس برای دایره‌ای کردن دکمه
+                      className="btn-circle"
                       onClick={() => {
                         setReq(null);
                         setUser(null);
                       }}
                     >
-                      <DIcon
-                        icon="fa-times"
-                        //    className="text-error"
-                        cdi={false}
-                      />
+                      <DIcon icon="fa-times" cdi={false} />
                     </Button>
-                    {/* --- پایان اصلاحیه --- */}
                   </div>
                 ) : user ? (
                   <div className="w-full flex justify-between items-center">
                     <div>{listItemRender(user)}</div>
-                    {/* --- شروع اصلاحیه --- */}
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="btn-circle" // کلاس برای دایره‌ای کردن دکمه
+                      className="btn-circle"
                       onClick={() => setUser(null)}
                     >
-                      <DIcon
-                        icon="fa-times"
-                        //    className="text-error"
-                        cdi={false}
-                      />
+                      <DIcon icon="fa-times" cdi={false} />
                     </Button>
-                    {/* --- پایان اصلاحیه --- */}
                   </div>
                 ) : (
                   <div className="flex items-center gap-4">
@@ -463,6 +492,7 @@ export default function InvoiceForm({
                 )}
               </div>
             </div>
+
             {/* بخش انتخاب تاریخ‌ها */}
             <div>
               <label className="label">
@@ -488,6 +518,119 @@ export default function InvoiceForm({
           </div>
         </div>
       </div>
+
+      {/* بخش اطلاعات کلی فاکتور (کد زیباتر شده از قبل)
+      <div className="card bg-gray-100 shadow-md border">
+        <div className="card-body">
+          <h3 className="card-title text-lg font-semibold">
+            اطلاعات کلی فاکتور
+          </h3>
+          <p className="text-sm text-base-content/60 -mt-2 mb-4">
+            مشتری و تاریخ‌های مهم فاکتور را در این بخش مشخص کنید.
+          </p>
+
+          <div className="space-y-6">
+          
+            <div>
+              <label className="label">
+                <span className="label-text font-medium">مشتری</span>
+              </label>
+              <div className="p-3 border rounded-lg bg-base-200/50 min-h-[70px] flex items-center">
+                {req ? (
+                  <div className="w-full flex justify-between items-center">
+                    <div>{listItemRenderUser(req)}</div>
+                 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="btn-circle" // کلاس برای دایره‌ای کردن دکمه
+                      onClick={() => {
+                        setReq(null);
+                        setUser(null);
+                      }}
+                    >
+                      <DIcon
+                        icon="fa-times"
+                        //    className="text-error"
+                        cdi={false}
+                      />
+                    </Button>
+             
+                  </div>
+                ) : user ? (
+                  <div className="w-full flex justify-between items-center">
+                    <div>{listItemRender(user)}</div>
+              
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="btn-circle" // کلاس برای دایره‌ای کردن دکمه
+                      onClick={() => setUser(null)}
+                    >
+                      <DIcon
+                        icon="fa-times"
+                        //    className="text-error"
+                        cdi={false}
+                      />
+                    </Button>
+           
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <SelectRequest2 onSelect={onSetRequest} />
+                    <span className="text-base-content/50">یا</span>
+                    <SelectUser2 onSelect={onSetUser} />
+                  </div>
+                )}
+              </div>
+            </div>
+        
+            <div>
+              <label className="label">
+                <span className="label-text font-medium">تاریخ‌ها</span>
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 border rounded-lg bg-base-200/50">
+                <StandaloneDatePicker
+                  name="issueDate"
+                  label="تاریخ صدور"
+                  value={issueDate}
+                  onChange={(payload) => handleDateChange(payload, "issueDate")}
+                  placeholder="انتخاب کنید"
+                />
+                <StandaloneDatePicker
+                  name="dueDate"
+                  label="تاریخ سررسید"
+                  value={dueDate}
+                  onChange={(payload) => handleDateChange(payload, "dueDate")}
+                  placeholder="انتخاب کنید"
+                />
+              </div>
+            </div>
+      
+            <div>
+              <label className="label">
+                <span className="label-text font-medium">نوع فاکتور</span>
+              </label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {Object.entries(invoiceTypeMap).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`px-4 py-2 rounded-lg border ${
+                      invoiceType === key
+                        ? "bg-primary text-white border-primary"
+                        : "bg-base-200 text-base-content border-gray-300"
+                    }`}
+                    onClick={() => setInvoiceType(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> */}
 
       {/* بخش افزودن آیتم */}
       <div className="card bg-base-100 shadow-md border">

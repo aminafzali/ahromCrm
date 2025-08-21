@@ -120,5 +120,6 @@
   "model":"مدل",
   "receivedDate":"تاریخ دریافت",
   "problemDescription":"توضیح مشکل",
-  "initialCondition":"شرح وضعیت ظاهری "
+  "initialCondition":"شرح وضعیت ظاهری ",
+  "SALES":"فروش"
 }

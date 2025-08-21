@@ -11,7 +11,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// >>>>>>>>>>>>> WORKSPACE & RBAC (Role-Based Access Control) MODELS <<<<<<<<<<<<<<
+// >>>>>>>>>>>>> CORE MODELS  <<<<<<<<<<<<<<
 
 model Workspace {
   id          Int    @id @default(autoincrement())
@@ -37,13 +37,13 @@ model Workspace {
   forms                   Form[]
   labels                  Label[]
   userGroups              UserGroup[]
-  attributes              Attribute[]
+  //attributes              Attribute[]
   warranties              Warranty[]
   fields                  Field[]
   formSubmissions         FormSubmission[]
   productImages           ProductImage[]
-  productAttributes       ProductAttribute[]
-  productVariants         ProductVariant[]
+  //productAttributes       ProductAttribute[]
+  //productVariants         ProductVariant[]
   expertReviews           ExpertReview[]
   notes                   Note[]
   invoiceItems            InvoiceItem[]
@@ -60,9 +60,42 @@ model Workspace {
   requestAttachments      RequestAttachment[]
   actualServicesOnRequest ActualServiceOnRequest[]
   paymentCategories       PaymentCategory[] // رابطه متقابل برای دسته‌بندی پرداخت‌ها
+  Cheque                  Cheque[]
+
+  // روابط مرتبط با حسابداری (اختیاری تا زمانی که فعالش نکنی)
+  JournalEntry JournalEntry[] // اسناد حسابداری مربوط به این workspace
+  Account      Account[] // حساب‌های دفتر کل این workspace
+  FiscalYear   FiscalYear[] // سال‌های مالی این workspace
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  InventoryItem InventoryItem[]
+
+  Warehouse Warehouse[]
+
+  PriceList     PriceList[]
+  StockMovement StockMovement[]
+  Cart          Cart[]
+  Order         Order[]
+}
+
+model User {
+  id        Int      @id @unique @default(autoincrement())
+  name      String?
+  email     String?  @unique
+  phone     String   @unique
+  password  String?
+  address   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  otp        String?
+  otpExpires DateTime?
+
+  // روابط سراسری کاربر (گذرنامه)
+  ownedWorkspaces Workspace[]     @relation("OwnedWorkspaces")
+  workspaces      WorkspaceUser[]
 }
 
 model WorkspaceUser {
@@ -74,8 +107,6 @@ model WorkspaceUser {
   displayName String?
   phone       String?
   name        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -98,7 +129,42 @@ model WorkspaceUser {
   labels     Label[]     @relation("WorkspaceUserLabels")
   userGroups UserGroup[] @relation("WorkspaceUserGroups")
 
+  JournalEntry JournalEntry[] // اسنادی که این کاربر پست/ثبت می‌کند (اگر استفاده شود)
+
+  Cart    Cart[]
+  Order   Order[]
+  Address Address[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([workspaceId, userId])
+}
+
+model Label {
+  id             Int             @id @default(autoincrement())
+  workspaceId    Int
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  color          String          @default("primary")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  workspaceUsers WorkspaceUser[] @relation("WorkspaceUserLabels")
+
+  @@unique([name, workspaceId])
+}
+
+model UserGroup {
+  id             Int             @id @default(autoincrement())
+  workspaceId    Int
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  workspaceUsers WorkspaceUser[] @relation("WorkspaceUserGroups")
+
+  @@unique([name, workspaceId])
 }
 
 model Role {
@@ -148,24 +214,58 @@ model RolePermission {
   @@unique([roleId, permissionId])
 }
 
-// >>>>>>>>>>>>> CORE MODELS (Refactored for Workspace) <<<<<<<<<<<<<<
+// >>>>>>>>>>>>> مدلهای مربوط به خدمات و درخواست ها  <<<<<<<<<<<<<<
 
-model User {
-  id        Int      @id @unique @default(autoincrement())
-  name      String?
-  email     String?  @unique
-  phone     String   @unique
-  password  String?
-  address   String   @default("")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model ServiceType {
+  id             Int             @id @unique @default(autoincrement())
+  workspaceId    Int
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?         @db.Text
+  // !!! اصلاح: Float به Decimal برای دقت مالی
+  basePrice      Decimal         @default(0) @db.Decimal(20, 2)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  requests       Request[]
+  actualServices ActualService[]
 
-  otp        String?
-  otpExpires DateTime?
+  @@unique([name, workspaceId])
+}
 
-  // روابط سراسری کاربر (گذرنامه)
-  ownedWorkspaces Workspace[]     @relation("OwnedWorkspaces")
-  workspaces      WorkspaceUser[]
+model ActualService {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  // !!! اصلاح: Float به Decimal
+  price       Decimal   @db.Decimal(20, 2)
+
+  description   String?                  @db.Text
+  serviceTypeId Int
+  serviceType   ServiceType              @relation(fields: [serviceTypeId], references: [id])
+  requests      ActualServiceOnRequest[]
+  invoiceItems  InvoiceItem[]
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+}
+
+model ActualServiceOnRequest {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  quantity    Int       @default(1)
+  // !!! اصلاح: Float به Decimal
+  price       Decimal   @db.Decimal(20, 2)
+
+  requestId       Int
+  request         Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actualServiceId Int
+  actualService   ActualService @relation(fields: [actualServiceId], references: [id], onDelete: Restrict)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([requestId, actualServiceId])
 }
 
 model Request {
@@ -179,20 +279,20 @@ model Request {
   assignedToId Int?
   assignedTo   WorkspaceUser? @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
 
-  description      String          @db.Text
-  serviceTypeId    Int?
-  serviceType      ServiceType?    @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
-  address          String?
-  preferredDate    DateTime?
-  preferredTime    DateTime?
-  note             String?
-  statusId         Int?
-  status           Status?         @relation(fields: [statusId], references: [id], onDelete: SetNull)
-  priority         String          @default("متوسط")
-  estimatedPrice   Float?
-  actualPrice      Float?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  description    String       @db.Text
+  serviceTypeId  Int?
+  serviceType    ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  address        String?
+  preferredDate  DateTime?
+  preferredTime  DateTime?
+  note           String?
+  statusId       Int?
+  status         Status?      @relation(fields: [statusId], references: [id], onDelete: SetNull)
+  priority       String       @default("متوسط")
+  // !!! اصلاح: Float به Decimal
+  estimatedPrice Decimal?     @db.Decimal(20, 2)
+  actualPrice    Decimal?     @db.Decimal(20, 2)
+
   completedAt      DateTime?
   trackingCode     String?
   formSubmissionid Int?
@@ -207,169 +307,7 @@ model Request {
   reviews        RequestReview[]
   cancellations  RequestCancellation[]
   actualServices ActualServiceOnRequest[]
-}
 
-model Invoice {
-  id          Int       @id @unique @default(autoincrement())
-  workspaceId Int
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  requestId   Int?
-  request     Request?  @relation(fields: [requestId], references: [id], onDelete: Cascade)
-
-  name            String?
-  workspaceUserId Int
-  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
-
-  items           InvoiceItem[]
-  type            InvoiceType   @default(SALES)
-  subtotal        Float         @default(0)
-  tax             Float         @default(0)
-  taxPercent      Float         @default(0)
-  discount        Float         @default(0)
-  discountPercent Float         @default(0)
-  total           Float
-  status          InvoiceStatus @default(PENDING)
-  dueDate         DateTime?
-  issueDate       DateTime?
-  description     String?       @db.Text
-  paymentDate     DateTime?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  payments  Payment[]
-}
-
-model ReceivedDevice {
-  id              Int           @id @default(autoincrement())
-  workspaceId     Int
-  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserId Int
-  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
-
-  model              String?
-  serialNumber       String?
-  receivedDate       DateTime   @default(now())
-  problemDescription String     @db.Text
-  initialCondition   String     @db.Text
-  notes              String?    @db.Text
-  isDelivered        Boolean    @default(false)
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  deviceTypeId       Int
-  deviceType         DeviceType @relation(fields: [deviceTypeId], references: [id])
-  brandId            Int
-  brand              Brand      @relation(fields: [brandId], references: [id])
-  requestId          Int?       @unique
-  request            Request?   @relation(fields: [requestId], references: [id], onDelete: Cascade)
-}
-
-model Reminder {
-  id              Int           @id @default(autoincrement())
-  workspaceId     Int
-  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserId Int
-  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
-
-  title                String
-  description          String?             @db.Text
-  dueDate              DateTime
-  status               ReminderStatus      @default(PENDING)
-  type                 String
-  entityId             Int?
-  entityType           String?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  notified             Boolean             @default(false)
-  lastNotified         DateTime?
-  repeatInterval       String?
-  notificationChannels NotificationChannel @default(ALL)
-  timezone             String              @default("UTC")
-  retryCount           Int?                @default(0)
-  lastRetry            DateTime?
-}
-
-model Notification {
-  id          Int       @id @unique @default(autoincrement())
-  workspaceId Int
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-
-  workspaceUserId Int
-  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
-
-  requestId Int?
-  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
-
-  title     String
-  note      String?
-  message   String   @db.Text
-  isRead    Boolean  @default(false)
-  sendSms   Boolean  @default(true)
-  sendEmail Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Payment {
-  id              Int           @id @unique @default(autoincrement())
-  workspaceId     Int
-  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserId Int
-  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
-
-  invoiceId   Int?
-  invoice     Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  amount      Float
-  type        PaymentType   @default(RECEIVE)
-  reference   String?
-  status      PaymentStatus @default(PENDING)
-  method      PaymentMethod @default(CARD)
-  paidAt      DateTime?
-  description String?       @db.Text
-
-  // ===== شروع اصلاحیه =====
-  paymentCategoryId Int?
-  paymentCategory   PaymentCategory? @relation(fields: [paymentCategoryId], references: [id], onDelete: Restrict)
-  // ===== پایان اصلاحیه =====
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// ===== شروع مدل جدید =====
-model PaymentCategory {
-  id          Int                  @id @default(autoincrement())
-  workspaceId Int
-  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name        String
-  slug        String
-  description String?
-  type        PaymentCategoryType? // نوع دسته‌بندی: درآمد، هزینه یا انتقال
-  parentId    Int?
-  lft         Int                  @default(0)
-  rgt         Int                  @default(0)
-  depth       Int                  @default(0)
-  parent      PaymentCategory?     @relation("PaymentCategoryToPaymentCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  children    PaymentCategory[]    @relation("PaymentCategoryToPaymentCategory")
-  payments    Payment[]
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-
-  @@unique([slug, workspaceId])
-}
-
-// ===== پایان مدل جدید =====
-
-model Review {
-  id              Int           @id @default(autoincrement())
-  workspaceId     Int
-  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  workspaceUserId Int
-  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
-
-  productId Int
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  rating    Float
-  comment   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -426,92 +364,16 @@ model RequestCancellation {
   updatedAt DateTime @updatedAt
 }
 
-model Label {
-  id             Int             @id @default(autoincrement())
-  workspaceId    Int
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name           String
-  color          String          @default("primary")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  workspaceUsers WorkspaceUser[] @relation("WorkspaceUserLabels")
-
-  @@unique([name, workspaceId])
-}
-
-model UserGroup {
-  id             Int             @id @default(autoincrement())
-  workspaceId    Int
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name           String
-  description    String?         @db.Text
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  workspaceUsers WorkspaceUser[] @relation("WorkspaceUserGroups")
-
-  @@unique([name, workspaceId])
-}
-
-model Product {
-  id            Int                @id @default(autoincrement())
-  workspaceId   Int
-  workspace     Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name          String
-  price         Float
-  description   String?
-  blog          Json?
-  stock         Int                @default(0)
-  warrantyId    Int?
-  isActive      Boolean            @default(false)
-  warranty      Warranty?          @relation(fields: [warrantyId], references: [id], onDelete: SetNull)
-  categoryId    Int?
-  category      Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  brandId       Int?
-  brand         Brand?             @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  attributes    ProductAttribute[]
-  variants      ProductVariant[]
-  reviews       Review[]
-  expertReviews ExpertReview[]
-  images        ProductImage[]
-  InvoiceItem   InvoiceItem[]
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-}
-
-model Brand {
-  id              Int              @id @default(autoincrement())
-  workspaceId     Int
-  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name            String
-  logoUrl         String?
-  website         String?
-  description     String?
-  products        Product[]
-  receivedDevices ReceivedDevice[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  @@unique([name, workspaceId])
-}
-
-model Category {
-  id          Int        @id @default(autoincrement())
+model RequestAttachment {
+  id          Int       @id @unique @default(autoincrement())
   workspaceId Int
-  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name        String
-  slug        String
-  description String?
-  parentId    Int?
-  lft         Int        @default(0)
-  rgt         Int        @default(0)
-  depth       Int        @default(0)
-  parent      Category?  @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  children    Category[] @relation("CategoryToCategory")
-  products    Product[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  @@unique([slug, workspaceId])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  requestId   Int
+  request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fileUrl     String
+  fileType    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Status {
@@ -543,37 +405,835 @@ model DeviceType {
   @@unique([name, workspaceId])
 }
 
-model ServiceType {
-  id             Int             @id @unique @default(autoincrement())
-  workspaceId    Int
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name           String
-  description    String?         @db.Text
-  basePrice      Float           @default(0)
-  isActive       Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  requests       Request[]
-  actualServices ActualService[]
+model ReceivedDevice {
+  id              Int           @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  model              String?
+  serialNumber       String?
+  receivedDate       DateTime   @default(now())
+  problemDescription String     @db.Text
+  initialCondition   String     @db.Text
+  notes              String?    @db.Text
+  isDelivered        Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  deviceTypeId       Int
+  deviceType         DeviceType @relation(fields: [deviceTypeId], references: [id])
+  brandId            Int
+  brand              Brand      @relation(fields: [brandId], references: [id])
+  requestId          Int?       @unique
+  request            Request?   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+// >>>>>>>>>>>>> مدلهای مالی   <<<<<<<<<<<<<<
+
+model Invoice {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  requestId Int?
+  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  orderId Int?
+  order   Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  name String?
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Restrict)
+
+  referenceInvoiceId Int? // رفرنس به فاکتور مرجع (مثلاً برای ریفرنس‌ها)
+  referenceInvoice   Invoice? @relation("InvoiceReference", fields: [referenceInvoiceId], references: [id])
+
+  items InvoiceItem[]
+  type  InvoiceType   @default(SALES)
+
+  subtotal        Decimal @default(0) @db.Decimal(20, 2)
+  tax             Decimal @default(0) @db.Decimal(20, 2)
+  taxPercent      Float   @default(0) // Can remain Float as it's not a currency value
+  discount        Decimal @default(0) @db.Decimal(20, 2)
+  discountPercent Float   @default(0) // Can remain Float as it's not a currency value
+  total           Decimal @db.Decimal(20, 2)
+
+  status InvoiceStatus @default(PENDING)
+
+  dueDate     DateTime?
+  issueDate   DateTime?
+  description String?   @db.Text
+  paymentDate DateTime?
+  payments    Payment[]
+
+  // برای رابطه معکوس اگر نیاز باشد:
+  referencedBy Invoice[] @relation("InvoiceReference")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InvoiceItem {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  invoiceId Int
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  actualServiceId Int?
+  actualService   ActualService? @relation(fields: [actualServiceId], references: [id], onDelete: SetNull)
+
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // --- لینک به آیتم قابل فروش یا خدمت انجام شده ---
+  inventoryItemId Int?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  itemType    InvoiceItemType @default(SERVICE)
+  itemName    String // نام کالا/خدمت در لحظه فروش
+  sku         String? // کد کالا یا شناسه انبار
+  unit        String? // واحد شمارش (مثلا: عدد، ساعت، کیلوگرم)
+  description String?
+
+  quantity        Int
+  unitPrice       Decimal @db.Decimal(20, 2)
+  //price           Float
+  discount        Decimal @default(0) @db.Decimal(20, 2)
+  discountPercent Float   @default(0)
+  tax             Decimal @default(0) @db.Decimal(20, 2)
+  taxPercent      Float   @default(0)
+  total           Decimal @db.Decimal(20, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Payment {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  invoiceId Int?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  cheques Cheque[]
+
+  // !!! اصلاح: Float به Decimal
+  amount      Decimal       @db.Decimal(20, 2)
+  type        PaymentType   @default(RECEIVE)
+  reference   String? // شماره مرجع یا شناسه تراکنش
+  status      PaymentStatus @default(PENDING)
+  method      PaymentMethod @default(CARD)
+  paidAt      DateTime? // زمان واقعی انجام پرداخت
+  description String?       @db.Text
+
+  // ===== شروع اصلاحیه =====
+  paymentCategoryId Int?
+  paymentCategory   PaymentCategory? @relation(fields: [paymentCategoryId], references: [id], onDelete: Restrict)
+  // ===== پایان اصلاحیه =====
+
+  createdAt DateTime @default(now())
+}
+
+model PaymentCategory {
+  id          Int                  @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  type        PaymentCategoryType? // نوع دسته‌بندی: درآمد، هزینه یا انتقال
+  parentId    Int?
+  lft         Int                  @default(0)
+  rgt         Int                  @default(0)
+  depth       Int                  @default(0)
+  parent      PaymentCategory?     @relation("PaymentCategoryToPaymentCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children    PaymentCategory[]    @relation("PaymentCategoryToPaymentCategory")
+  payments    Payment[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@unique([slug, workspaceId])
+}
+
+model Cheque {
+  id Int @id @default(autoincrement()) // شناسه یکتا چک
+
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  number     String // شماره چک
+  bankName   String // نام بانک صادرکننده
+  branchName String? // نام شعبه بانک (اختیاری)
+  amount     Decimal      @db.Decimal(20, 2) // مبلغ چک
+  currency   String // واحد پول (مثلاً IRR, USD)
+  issueDate  DateTime // تاریخ صدور چک
+  dueDate    DateTime // تاریخ سررسید چک
+  status     ChequeStatus // وضعیت چک (مثلاً pending, cleared, bounced)
+  ownerName  String? // نام صاحب چک (اختیاری)
+
+  paymentId Int?
+  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  // تاریخ پاس شدن یا آخرین به‌روزرسانی وضعیت
+  clearedAt      DateTime?
+  // در صورت برگشت: دلیل یا کد خطا از بانک
+  failedReason   String?
+  // تصویر یا آدرس فایل اسکن چک
+  scannedFileUrl String?
+  // مرجع بانک هنگام پاس شدن (اگر بانک مرجع می‌دهد)
+  bankReference  String?
+
+  createdAt DateTime @default(now()) // تاریخ ایجاد رکورد
+  updatedAt DateTime @updatedAt // تاریخ آخرین بروزرسانی
+
+  // یکتا بودن چک در workspace بر اساس شماره و بانک
+  @@unique([workspaceId, number, bankName])
+}
+
+// ================== DOUBLE-ENTRY ACCOUNTING MODELS ==================
+
+// ===== حساب‌ها (Ledger / Chart of Accounts) =====
+model Account {
+  id          Int       @id @default(autoincrement()) // شناسه یکتا حساب
+  workspaceId Int // شناسه Workspace برای چند شرکتی بودن حساب‌ها
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  code           String // کد حساب (Ledger code) برای ترتیب و گزارش
+  name           String // نام حساب
+  description    String? // توضیحات اختیاری درباره حساب
+  type           AccountType // نوع حساب: دارایی، بدهی، سرمایه، درآمد، هزینه
+  parentId       Int? // برای ساختار سلسله مراتبی حساب‌ها
+  parent         Account?    @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children       Account[]   @relation("AccountHierarchy")
+  // مقدار مانده افتتاحیه (برای شروع دوره) — Decimal برای دقت
+  openingBalance Decimal?    @db.Decimal(20, 2)
+  // ارجحیت مانده: معمولاً asset/expense = DEBIT normal, liability/equity/income = CREDIT normal
+  normalBalance  String? // اختیاری؛ مثال: "DEBIT" / "CREDIT" (برای تفسیر گزارشات)
+
+  journalItems JournalItem[] // ردیف‌های سند مرتبط با این حساب
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, code]) // هر کد حساب در یک Workspace یکتا باشد
+}
+
+// ===== افزودن مدل سال مالی و دوره مالی =====
+model FiscalYear {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name      String // مثلا "FY2025" یا "1403"
+  startDate DateTime
+  endDate   DateTime
+  isClosed  Boolean  @default(false)
+
+  periods   FiscalPeriod[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([workspaceId, name])
+}
+
+model FiscalPeriod {
+  id           Int        @id @default(autoincrement())
+  fiscalYearId Int
+  fiscalYear   FiscalYear @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+
+  name      String // مثلا "2025-01" یا "فروردین 1403"
+  startDate DateTime
+  endDate   DateTime
+  isClosed  Boolean  @default(false)
+
+  journalEntries JournalEntry[] // لینک ژورنال‌های مربوط به این دوره
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([fiscalYearId, name])
+}
+
+// ===== سند حسابداری (Journal Entry) =====
+model JournalEntry {
+  id          Int       @id @default(autoincrement()) // شناسه سند
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  referenceId   Int? // شناسه اختیاری مرتبط به فاکتور یا پرداخت
+  referenceType String? // نوع سند مرتبط (Invoice, Payment, Cheque)
+
+  //  // لینک اختیاری به منابع (Invoice/Payment) — میتونی نگه داری
+  //   invoiceId     Int?
+  //   invoice       Invoice?    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  //   paymentId     Int?
+  //   payment       Payment?    @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  // لینک به دورهٔ مالی
+  fiscalPeriodId Int?
+  fiscalPeriod   FiscalPeriod? @relation(fields: [fiscalPeriodId], references: [id], onDelete: SetNull)
+
+  // مجموع‌ها برای بررسی سریع (باید قبل از POST محاسبه شوند)
+  totalDebit  Decimal @default("0.00") @db.Decimal(20, 2)
+  totalCredit Decimal @default("0.00") @db.Decimal(20, 2)
+
+  number      String // شماره سند حسابداری
+  date        DateTime // تاریخ سند
+  description String? // توضیحات کلی سند
+  items       JournalItem[] // ردیف‌های بدهکار/بستانکار سند\
+
+  postedAt   DateTime?
+  postedById Int? // نگهداری آیدی کاربری که پست کرده (از WorkspaceUser)
+  postedBy   WorkspaceUser? @relation(fields: [postedById], references: [id], onDelete: SetNull)
+
+  // اگر این سند معکوس سند دیگری است:
+  reversedOfId Int?
+  reversedOf   JournalEntry?  @relation("ReversalRelation", fields: [reversedOfId], references: [id], onDelete: SetNull)
+  // اگر این سند، یک سند را معکوس کرده باشد، رابطهٔ معکوس:
+  reversedBy   JournalEntry[] @relation("ReversalRelation")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, number])
+  @@index([workspaceId, date])
+}
+
+// ===== ردیف سند حسابداری (Journal Item) =====
+model JournalItem {
+  id             Int          @id @default(autoincrement()) // شناسه یکتا ردیف
+  journalEntryId Int
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+
+  accountId Int
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  // اگر multi-currency لازم باشه: مبلغ در ارز ژورنال و معادل baseAmount
+  currency   String? // اختیاری: 'IRR','USD'...
+  baseAmount Decimal? @db.Decimal(20, 2) // معادل در ارز پایه (اگر لازم)
+
+  type   EntryType // Debit یا Credit
+  amount Decimal   @db.Decimal(20, 2) // مبلغ ردیف (Decimal برای دقت مالی)
+  note   String? // توضیحات اختیاری برای ردیف
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([journalEntryId])
+  @@index([accountId])
+}
+
+// ۳ — نکات عملیاتی و قوانین که باید حتماً پیاده‌سازی شوند
+// توازن (balancing): قبل از POST یک JournalEntry، اپ باید sum(items where type=DEBIT).amount == sum(items where type=CREDIT).amount را چک کند. این را در لایهٔ سرویس/ترنزاکشن انجام بده و سپس totalDebit/totalCredit را پر کن.
+// غیرقابل ویرایش پس از پست: پس از status = POSTED اجازهٔ تغییر items یا مقدار totalDebit/totalCredit را نده؛ اصلاح باید با ساختن یک REVERSED entry انجام شود که لینک reversedOfId را دارد.
+// نرخ تبدیل: اگر چندارزی داری، ثبت نرخ تبدیل در زمان پست مهم است (تا بعداً مجدداً محاسبه‌پذیر باشه).
+// افتتاحیهٔ حساب (opening balance): هنگام باز کردن سال مالی جدید مقدار openingBalance باید به عنوان اولین JournalEntry (یا snapshot) ثبت شود تا گزارشات درست شود.
+// کنترل دورهٔ مالی: قبل از پست، بررسی کن که journalEntry.date داخل یک FiscalPeriod باز باشد؛ اگر period بسته شده بود، پست نکن یا خطای مناسب برگردان.
+// Audit log: برای هر پست/ریورس فیلدهای postedBy, postedAt, reversedBy, reversedAt یا لاگ جداگانه ثبت کن.
+// Indexes & performance: اندیس روی (workspaceId, date), (workspaceId, number), و accountId برای JournalItem ضروریه.
+// Precision: اگر ممکنه از Decimal type در تمام فیلدهای مالی (Invoice.total, Payment.amount, Cheque.amount, InvoiceItem.price/total) استفاده کن تا یکپارچگی دیتا داشته باشی. (این توصیهٔ مهمیه ولی چون گفتی فقط روی حسابداری تمرکز کنم، من فقط در مدل‌های مالی حسابداری مثال زدم؛ تغییر بقیه هم منطقیه.)
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// >>>>>>>>>>>>> مدلهای مربوط به فروشگاه  <<<<<<<<<<<<<<
+
+model Product {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  warrantyId  Int?
+  warranty    Warranty? @relation(fields: [warrantyId], references: [id], onDelete: SetNull)
+  categoryId  Int?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brandId     Int?
+  brand       Brand?    @relation(fields: [brandId], references: [id], onDelete: SetNull)
+
+  // !!! اصلاح ۱: price و stock از اینجا حذف شدند.
+  // این اطلاعات در InventoryItem و PriceListItem مدیریت می‌شوند.
+
+  name        String
+  //price       Float
+  description String?
+  slug        String
+  blog        Json?
+  // stock Int    @default(0)
+
+  isActive Boolean @default(false)
+
+  // attributes    ProductAttribute[]
+  // variants      ProductVariant[]
+
+  // --- تعریف گزینه‌ها و مشخصات ---
+  options        Option[] // گزینه‌های قابل انتخاب برای این محصول (مثل رنگ، سایز)
+  specifications ProductSpecification[] // مشخصات فنی ثابت این محصول (مثل جنس، وزن)
+  reviews        Review[]
+  expertReviews  ExpertReview[]
+  images         ProductImage[]
+  InvoiceItem    InvoiceItem[]
+  inventoryItems InventoryItem[] // یک محصول می‌تواند چندین آیتم قابل فروش در انبار داشته باشد
+
+  // --- این فیلد را برای انعطاف‌پذیری بیشتر اضافه کنید ---
+  metadata Json?
+  // مثال داده برای metadata:
+  // {
+  //   "release_year": 2025,
+  //   "video_review_url": "https://...",
+  //   "dimensions": { "width_cm": 10, "height_cm": 20 },
+  //   "care_instructions": "شستشو با آب سرد"
+  // }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, slug])
+}
+
+model Brand {
+  id              Int              @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name            String
+  logoUrl         String?
+  website         String?
+  description     String?
+  products        Product[]
+  receivedDevices ReceivedDevice[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@unique([name, workspaceId])
 }
 
-model ActualService {
-  id            Int                      @id @default(autoincrement())
-  workspaceId   Int
-  workspace     Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name          String
-  price         Float
-  description   String?                  @db.Text
-  serviceTypeId Int
-  serviceType   ServiceType              @relation(fields: [serviceTypeId], references: [id])
-  requests      ActualServiceOnRequest[]
-  invoiceItems  InvoiceItem[]
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
+model Category {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+
+  parentId Int?
+  lft      Int        @default(0)
+  rgt      Int        @default(0)
+  depth    Int        @default(0)
+  // ... روابط مربوط به ساختار درختی ...
+  parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children Category[] @relation("CategoryToCategory")
+
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // !!! اصلاح: slug باید در هر workspace یکتا باشد.
+  @@unique([workspaceId, slug])
 }
 
+model Warranty {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  duration    Int
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ProductImage {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productId   Int?
+  product     Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url         String
+  alt         String?
+  isPrimary   Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// گزینه‌های اصلی یک محصول را تعریف می‌کند (جایگزین Attribute برای تنوع‌ها)
+model Option {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  name   String // مثال: "رنگ"، "سایز"، "حافظه"
+  values OptionValue[]
+
+  @@unique([productId, name])
+}
+
+// مقادیر قابل انتخاب برای هر گزینه را تعریف می‌کند
+model OptionValue {
+  id       Int    @id @default(autoincrement())
+  optionId Int
+  option   Option @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  value String // مثال: "قرمز"، "آبی"، "M"، "L"، "256GB"
+
+  inventoryVariants InventoryItemVariant[]
+
+  @@unique([optionId, value])
+}
+
+// جدول مشخصات فنی محصول (برای داده‌های ثابت و غیرقابل انتخاب)
+model ProductSpecification {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  name  String // مثال: "جنس"
+  value String // مثال: "نخ پنبه"
+
+  @@unique([productId, name])
+}
+
+// ====================================================
+//        بخش ۲: مدل‌های انبارداری (Inventory)
+// ====================================================
+// این مدل‌ها "موجودی قابل فروش" را مدیریت می‌کنند.
+
+model Warehouse {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String // نام انبار (مثلا: "انبار اصلی"، "فروشگاه مرکزی")
+  location    String?
+
+  inventoryItems InventoryItem[]
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  StockMovement StockMovement[]
+
+  @@unique([workspaceId, name])
+}
+
+model InventoryItem {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  warehouseId Int
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+
+  sku   String @unique // کد انبارداری منحصر به فرد، حیاتی!
+  stock Int    @default(0) // موجودی این آیتم خاص
+
+  costPrice Decimal? @db.Decimal(20, 2) // قیمت خرید برای محاسبه سود
+
+  // تنوع این آیتم توسط جدول واسط زیر تعریف می‌شود
+  variant InventoryItemVariant[]
+
+  priceListItems PriceListItem[]
+
+  StockMovement StockMovement[]
+  CartItem      CartItem[]
+  OrderItem     OrderItem[]
+  InvoiceItem   InvoiceItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// جدول واسط: هر آیتم انبار را به مقادیر گزینه‌هایی که آن را تعریف می‌کنند، متصل می‌کند
+model InventoryItemVariant {
+  id              Int           @id @default(autoincrement())
+  inventoryItemId Int
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  optionValueId Int
+  optionValue   OptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([inventoryItemId, optionValueId])
+}
+
+// ====================================================
+//         بخش ۳: مدل‌های قیمت‌گذاری (Pricing)
+// ====================================================
+// این مدل‌ها "قیمت" هر آیتم قابل فروش را مشخص می‌کنند.
+
+model PriceList {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name     String // مثال: "لیست قیمت فروش عادی" یا "لیست قیمت همکاران"
+  currency String  @default("IRR")
+  isActive Boolean @default(true)
+
+  items PriceListItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  //Order     Order[]
+
+  @@unique([workspaceId, name])
+}
+
+model PriceListItem {
+  id Int @id @default(autoincrement())
+
+  priceListId Int
+  priceList   PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+
+  inventoryItemId Int
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  // مهم: تغییر از Float به Decimal برای دقت مالی
+  price Decimal @db.Decimal(20, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([priceListId, inventoryItemId])
+}
+
+//  انبار داری که همان رسید و حواله است که در یک جدول زیر قرار داده شده است
+
+// ====================================================
+//    بخش ۴: مدل‌های گردش انبار (Inventory Movement)
+// ====================================================
+
+model StockMovement {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  inventoryItemId Int
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  warehouseId Int
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+
+  quantity Int // تعداد کالای جابجا شده (همیشه یک عدد مثبت)
+
+  type StockMovementType // نوع حرکت: IN (ورود/رسید) یا OUT (خروج/حواله)
+
+  reason String? // دلیل حرکت (مثلا: "فروش آنلاین"، "خرید از تامین‌کننده الف")
+
+  // لینک به سندی که باعث این حرکت شده (سفارش فروش، فاکتور خرید و...)
+  referenceId   String?
+  referenceType String? // مثال: "Order", "PurchaseInvoice"
+
+  notes         String?
+  movedAt       DateTime @default(now()) // تاریخ دقیق جابجایی
+  movedByUserId Int? // کاربری که این حرکت را ثبت کرده
+}
+
+enum StockMovementType {
+  IN // ورود به انبار (رسید)
+  OUT // خروج از انبار (حواله)
+}
+
+// ====================================================
+//    بخش ۵: مدل‌های سبد خرید (Shopping Cart)
+// ====================================================
+// موقتی است و تا قبل از نهایی شدن سفارش وجود دارد
+
+model Cart {
+  id          String    @id @default(cuid()) // استفاده از CUID برای شناسایی سبدهای خرید مهمان
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  workspaceUserId Int? // برای کاربران عضو
+  workspaceUser   WorkspaceUser? @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, workspaceUserId]) // هر کاربر عضو فقط یک سبد خرید دارد
+}
+
+model CartItem {
+  id     Int    @id @default(autoincrement())
+  cartId String
+  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  inventoryItemId Int // مهم: کاربر یک آیتم انبار (SKU) مشخص را به سبد اضافه می‌کند
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  quantity Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([cartId, inventoryItemId])
+}
+
+// ====================================================
+//      بخش ۶: مدل‌های سفارش (Order)
+// ====================================================
+// سوابق دائمی خریدهای انجام شده
+
+// --- فرآیند سفارش محصول ---
+model Order {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  orderNumber String @unique // شماره سفارش خوانا
+
+  // --- اطلاعات مشتری ---
+  // !!! اصلاح: workspaceUserId اختیاری شد تا از سفارش مهمان پشتیبانی شود
+  workspaceUserId Int?
+  workspaceUser   WorkspaceUser? @relation(fields: [workspaceUserId], references: [id], onDelete: SetNull)
+
+  customerName  String
+  customerEmail String?
+  customerPhone String?
+
+  // --- وضعیت و جزئیات سفارش ---
+  status OrderStatus @default(PENDING)
+  items  OrderItem[]
+
+  // !!! اصلاح: فیلدهای مالی و لینک به Payment و PriceList از Order حذف شدند.
+  // این مدل یک سند کاری است، نه مالی.
+
+  // --- اطلاعات حمل و نقل ---
+  shipments         Shipment[]
+  shippingAddressId Int?
+  shippingAddress   Address?   @relation("ShippingAddress", fields: [shippingAddressId], references: [id], onDelete: Restrict)
+  billingAddressId  Int?
+  billingAddress    Address?   @relation("BillingAddress", fields: [billingAddressId], references: [id], onDelete: Restrict)
+
+  notes String?
+
+  // هر سفارش می‌تواند منجر به صدور یک یا چند فاکتور شود
+  invoices Invoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// OrderItem بدون تغییر باقی می‌ماند چون ساختار درستی داشت.
+model OrderItem {
+  id              Int           @id @default(autoincrement())
+  orderId         Int
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  inventoryItemId Int
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  sku       String
+  itemName  String
+  quantity  Int
+  unitPrice Decimal @db.Decimal(20, 2)
+  total     Decimal @db.Decimal(20, 2)
+}
+
+enum OrderStatus {
+  PENDING // در انتظار پرداخت
+  PAID // پرداخت شده
+  PROCESSING // در حال پردازش در انبار
+  SHIPPED // ارسال شده
+  DELIVERED // تحویل داده شده
+  CANCELLED // لغو شده
+  RETURNED // مرجوع شده
+}
+
+// ====================================================
+//   بخش ۷: مدل‌های آدرس و حمل و نقل (Address & Shipping)
+// ====================================================
+
+model Address {
+  id              Int            @id @default(autoincrement())
+  workspaceUserId Int? // آدرس‌های ذخیره شده در دفترچه آدرس کاربر
+  workspaceUser   WorkspaceUser? @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  fullName   String
+  street     String
+  city       String
+  state      String // استان
+  postalCode String
+  country    String
+  phone      String
+
+  // روابط معکوس برای استفاده در سفارش‌ها
+  shippingOrders Order[] @relation("ShippingAddress")
+  billingOrders  Order[] @relation("BillingAddress")
+}
+
+model Shipment {
+  id      Int   @id @default(autoincrement())
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  trackingNumber String?
+  carrier        String? // شرکت حمل و نقل (مثلا: "پست"، "تیپاکس")
+
+  status ShipmentStatus @default(PREPARING)
+
+  shippedAt   DateTime?
+  deliveredAt DateTime?
+}
+
+enum ShipmentStatus {
+  PREPARING // در حال آماده‌سازی
+  IN_TRANSIT // در حال حمل
+  DELIVERED // تحویل داده شده
+  FAILED // تحویل ناموفق
+}
+
+// model Attribute {
+//   id           Int                @id @default(autoincrement())
+//   workspaceId  Int
+//   workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+//   name         String
+//   type         String
+//   options      String?
+//   isComparable Boolean            @default(true)
+//   products     ProductAttribute[]
+//   createdAt    DateTime           @default(now())
+//   updatedAt    DateTime           @updatedAt
+
+//   @@unique([name, workspaceId])
+// }
+
+// model ProductAttribute {
+//   id          Int       @id @default(autoincrement())
+//   workspaceId Int
+//   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+//   productId   Int
+//   attributeId Int
+//   value       String
+//   product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+//   attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+//   createdAt   DateTime  @default(now())
+//   updatedAt   DateTime  @updatedAt
+// }
+
+// model ProductVariant {
+//   id          Int       @id @default(autoincrement())
+//   workspaceId Int
+//   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+//   productId   Int
+//   product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+//   sku         String?   @unique
+//   price       Float
+//   stock       Int       @default(0)
+//   attributes  Json
+//   createdAt   DateTime  @default(now())
+//   updatedAt   DateTime  @updatedAt
+// }
+
+// >>>>>>>>>>>>> مدلهای مربوط به فرم ساز   <<<<<<<<<<<<<<
 model Form {
   id          Int              @id @default(autoincrement())
   workspaceId Int
@@ -587,33 +1247,6 @@ model Form {
   updatedAt   DateTime         @updatedAt
 
   @@unique([name, workspaceId])
-}
-
-model Attribute {
-  id           Int                @id @default(autoincrement())
-  workspaceId  Int
-  workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name         String
-  type         String
-  options      String?
-  isComparable Boolean            @default(true)
-  products     ProductAttribute[]
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-
-  @@unique([name, workspaceId])
-}
-
-model Warranty {
-  id          Int       @id @default(autoincrement())
-  workspaceId Int
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name        String
-  duration    Int
-  description String?
-  products    Product[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
 }
 
 model Field {
@@ -686,45 +1319,78 @@ model FormSubmissionValue {
   updatedAt    DateTime       @updatedAt
 }
 
-model ProductImage {
-  id          Int       @id @default(autoincrement())
+// >>>>>>>>>>>>> دیگر مدلهای عمومی  <<<<<<<<<<<<<<
+
+model Reminder {
+  id              Int           @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  title                String
+  description          String?             @db.Text
+  dueDate              DateTime
+  status               ReminderStatus      @default(PENDING)
+  type                 String
+  entityId             Int?
+  entityType           String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  notified             Boolean             @default(false)
+  lastNotified         DateTime?
+  repeatInterval       String?
+  notificationChannels NotificationChannel @default(ALL)
+  timezone             String              @default("UTC")
+  retryCount           Int?                @default(0)
+  lastRetry            DateTime?
+}
+
+model Notification {
+  id          Int       @id @unique @default(autoincrement())
   workspaceId Int
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  productId   Int?
-  product     Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  url         String
-  alt         String?
-  isPrimary   Boolean   @default(false)
-  sortOrder   Int       @default(0)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  requestId Int?
+  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  title     String
+  note      String?
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  sendSms   Boolean  @default(true)
+  sendEmail Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Note {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  requestId   Int
+  request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  content     String    @db.Text
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
 
-model ProductAttribute {
-  id          Int       @id @default(autoincrement())
-  workspaceId Int
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  productId   Int
-  attributeId Int
-  value       String
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
+model Review {
+  id              Int           @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
-model ProductVariant {
-  id          Int       @id @default(autoincrement())
-  workspaceId Int
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  productId   Int
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sku         String?   @unique
-  price       Float
-  stock       Int       @default(0)
-  attributes  Json
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Float
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ExpertReview {
@@ -740,68 +1406,6 @@ model ExpertReview {
   content     String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-}
-
-model RequestAttachment {
-  id          Int       @id @unique @default(autoincrement())
-  workspaceId Int
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  requestId   Int
-  request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  fileUrl     String
-  fileType    String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Note {
-  id          Int       @id @unique @default(autoincrement())
-  workspaceId Int
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  requestId   Int
-  request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  content     String    @db.Text
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model InvoiceItem {
-  id              Int             @id @unique @default(autoincrement())
-  workspaceId     Int
-  workspace       Workspace       @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  invoiceId       Int
-  invoice         Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  itemType        InvoiceItemType @default(SERVICE)
-  actualServiceId Int?
-  actualService   ActualService?  @relation(fields: [actualServiceId], references: [id], onDelete: SetNull)
-  productId       Int?
-  product         Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  description     String
-  quantity        Int
-  price           Float
-  discount        Float           @default(0)
-  discountPercent Float           @default(0)
-  tax             Float           @default(0)
-  taxPercent      Float           @default(0)
-  total           Float
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-}
-
-model ActualServiceOnRequest {
-  id              Int           @id @default(autoincrement())
-  workspaceId     Int
-  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  quantity        Int           @default(1)
-  price           Float
-  requestId       Int
-  request         Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  actualServiceId Int
-  actualService   ActualService @relation(fields: [actualServiceId], references: [id], onDelete: Restrict)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  @@unique([requestId, actualServiceId])
 }
 
 // >>>>>>>>>>>>> ENUMS <<<<<<<<<<<<<<
@@ -840,6 +1444,7 @@ enum PaymentMethod {
   CASH
   CARD
   TRANSFER
+  CHEQUE // اضافه شد
 }
 
 enum InvoiceStatus {
@@ -886,4 +1491,35 @@ enum LabelColor {
   success
   neutral
   info
+}
+
+// ===== ENUMS =====
+//مالی برای آینده 
+
+// ===== enum جدید برای وضعیت ژورنال =====
+enum JournalStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+
+enum AccountType {
+  ASSET // دارایی
+  LIABILITY // بدهی
+  EQUITY // سرمایه
+  INCOME // درآمد
+  EXPENSE // هزینه
+}
+
+enum EntryType {
+  DEBIT
+  CREDIT
+}
+
+// وضعیت چک برای پیگیری و تنطیم ژورنال
+enum ChequeStatus {
+  PENDING
+  CLEARED
+  BOUNCED
+  VOIDED
 }
