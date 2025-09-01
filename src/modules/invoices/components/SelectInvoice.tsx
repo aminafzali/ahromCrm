@@ -1,16 +1,20 @@
+// src/modules/payments/components/SelectInvoice.tsx
+"use client";
+
 import Modal from "@/@Client/Components/ui/Modal";
 import IndexWrapper from "@/@Client/Components/wrappers/IndexWrapper/Index";
-import { columnsForSelect } from "@/modules/workspace-users/data/table";
-import { WorkspaceUserRepository } from "@/modules/workspace-users/repo/WorkspaceUserRepository";
+import { columnsForAdmin } from "@/modules/invoices/data/table"; // مسیر ستون‌ها اصلاح شد
+import { InvoiceRepository } from "@/modules/invoices/repo/InvoiceRepository"; // ریپازیتوری اصلاح شد
 import { Button } from "ndui-ahrom";
+
 import React, { useState } from "react";
 
-interface SelectRequestProps {
+interface SelectInvoiceProps {
   onSelect: (selectedItems: any) => void;
   buttonProps?: Omit<React.ComponentProps<typeof Button>, "onClick">;
 }
 
-const SelectUser2: React.FC<SelectRequestProps> = ({
+const SelectInvoice: React.FC<SelectInvoiceProps> = ({
   onSelect,
   buttonProps,
 }) => {
@@ -18,7 +22,7 @@ const SelectUser2: React.FC<SelectRequestProps> = ({
 
   const handleSelect = (selectedItems: any[]) => {
     onSelect(selectedItems[0]);
-    setIsModalOpen(false); // Close modal after selection
+    setIsModalOpen(false); // بستن مودال بعد از انتخاب
   };
 
   return (
@@ -28,7 +32,7 @@ const SelectUser2: React.FC<SelectRequestProps> = ({
         {...buttonProps}
         onClick={() => setIsModalOpen(true)}
       >
-        انتخاب کاربر{" "}
+        انتخاب فاکتور{" "}
       </Button>
 
       <Modal
@@ -37,10 +41,10 @@ const SelectUser2: React.FC<SelectRequestProps> = ({
         onClose={() => setIsModalOpen(false)}
       >
         <IndexWrapper
-          columns={columnsForSelect}
-          repo={new WorkspaceUserRepository()}
+          columns={columnsForAdmin}
+          repo={new InvoiceRepository()} // ریپازیتوری اصلاح شد
           selectionMode="single"
-          onSelect={handleSelect} // Call both onSelect and closeModal
+          onSelect={handleSelect}
           createUrl={false}
           showIconViews={false}
           defaultViewMode="table"
@@ -50,4 +54,4 @@ const SelectUser2: React.FC<SelectRequestProps> = ({
   );
 };
 
-export default SelectUser2;
+export default SelectInvoice;

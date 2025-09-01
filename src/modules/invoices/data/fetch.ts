@@ -4,24 +4,15 @@ export const include = {
       id: true,
       serviceType: true,
       status: true,
-      //userId: true,
-      // user: {
-      //   select: {
-      //     id: true,
-      //     name: true,
-      //     phone: true,
-      //     address: true,
-      //   },
-      //},
-      //user:true
     },
   },
   items: {
     select: {
       id: true,
+      itemName: true,
       description: true,
       quantity: true,
-      price: true,
+      unitPrice: true,
       total: true,
     },
   },

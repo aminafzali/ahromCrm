@@ -1,7 +1,8 @@
+import Modal from "@/@Client/Components/ui/Modal";
 import IndexWrapper from "@/@Client/Components/wrappers/IndexWrapper/Index";
 import { columnsForAdmin } from "@/modules/requests/data/table";
 import { RequestRepository } from "@/modules/requests/repo/RequestRepository";
-import { Button, Modal } from "ndui-ahrom";
+import { Button } from "ndui-ahrom";
 import React, { useState } from "react";
 
 interface SelectRequestProps {
@@ -18,7 +19,6 @@ const SelectRequest2: React.FC<SelectRequestProps> = ({
   const handleSelect = (selectedItems: any[]) => {
     onSelect(selectedItems[0]);
     setIsModalOpen(false); // Close modal after selection
-    
   };
 
   return (

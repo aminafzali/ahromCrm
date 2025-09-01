@@ -120,7 +120,7 @@ export default function DetailPage({ id, isAdmin }: InvoiceDetailsViewProps) {
                   <td className="py-2">{item.description}</td>
                   <td className="text-center py-2">{item.quantity}</td>
                   <td className="text-center py-2">
-                    {item.price.toLocaleString()}
+                    {item.unitPrice.toLocaleString()}
                   </td>
                   <td className="text-left py-2">
                     {item.total.toLocaleString()}

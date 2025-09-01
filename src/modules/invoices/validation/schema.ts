@@ -1,25 +1,14 @@
 import { z } from "zod";
 
 export const invoiceItemSchema = z.object({
+  itemName: z.string().min(1, "نام آیتم الزامی است"),
   description: z.string().min(1, "توضیحات آیتم الزامی است"),
   quantity: z.number().min(1, "تعداد باید حداقل 1 باشد"),
-  price: z.number().min(1000, "قیمت باید حداقل 1000 تومان باشد"),
+  unitPrice: z.number().min(1000, "قیمت باید حداقل 1000 تومان باشد"),
   total: z.number().min(1000, "مبلغ کل باید حداقل 1000 تومان باشد"),
 });
 
 export const createInvoiceSchema = z.object({
-  // requestId: z.number().min(1, "شناسه درخواست الزامی است").optional(),
-  // // userId: z.number().min(1, "شناسه درخواست الزامی است"),
-  // workspaceUser: z.object(
-  //   { id: z.number() },
-  //   { required_error: "انتخاب مشتری الزامی است." }
-  // ),
-  // items: z.array(invoiceItemSchema).min(1, "حداقل یک آیتم الزامی است"),
-  // tax: z.number().min(0, "مالیات نمی‌تواند منفی باشد"),
-  // discount: z.number().min(0, "تخفیف نمی‌تواند منفی باشد").optional(),
-  // total: z.number().min(0, "مبلغ کل نمی‌تواند منفی باشد"),
-  // status: z.enum(["PENDING", "PAID", "CANCELLED"]).default("PENDING"),
-  // paymentDate: z.date().optional(),
   items: z
     .array(invoiceItemSchema)
     .min(1, "حداقل یک آیتم باید وجود داشته باشد")
@@ -33,11 +22,12 @@ export const createInvoiceSchema = z.object({
   type: z.string(),
   name: z.string().optional(),
   requestId: z.number().optional(),
+  referenceInvoiceId: z.number().optional(),
   workspaceUser: z.object(
     { id: z.number().optional() },
     { required_error: "انتخاب مشتری الزامی است." }
   ),
- // فیلدهای تاریخ را برای اعتبارسنجی اضافه می‌کنیم
+  // فیلدهای تاریخ را برای اعتبارسنجی اضافه می‌کنیم
   issueDate: z.string().optional().nullable(),
   dueDate: z.string().optional().nullable(),
 });

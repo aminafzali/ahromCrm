@@ -1,7 +1,7 @@
 import DIcon from "@/@Client/Components/common/DIcon";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import InvoiceForm from "../../components/InvoiceForm";
+import InvoiceForm3 from "../../components/InvoiceForm3";
 import { useInvoice } from "../../hooks/useInvoice";
 
 interface CreateInvoicePageProps {
@@ -53,7 +53,7 @@ export default function CreateInvoicePage({
         </div>
       )}
 
-      <InvoiceForm onSubmit={handleSubmit} loading={submitting} />
+      <InvoiceForm3 onSubmit={handleSubmit} loading={submitting} />
     </div>
   );
 }

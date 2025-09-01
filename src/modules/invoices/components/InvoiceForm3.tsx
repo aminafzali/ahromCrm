@@ -3,16 +3,17 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import Loading from "@/@Client/Components/common/Loading";
+import Modal from "@/@Client/Components/ui/Modal";
 import { useActualService } from "@/modules/actual-services/hooks/useActualService";
 import { ActualService } from "@/modules/actual-services/types";
-import SelectInvoice from "@/modules/payments/components/SelectInvoice";
+import SelectInvoice from "@/modules/invoices/components/SelectInvoice";
 import { useProduct } from "@/modules/products/hooks/useProduct";
 import { ProductWithRelations } from "@/modules/products/types";
 import { listItemRenderUser } from "@/modules/requests/data/table";
 import { useServiceType } from "@/modules/service-types/hooks/useServiceType";
 import { ServiceType } from "@/modules/service-types/types";
 import { listItemRender } from "@/modules/workspace-users/data/table";
-import { Button, Input, Modal } from "ndui-ahrom";
+import { Button, Input } from "ndui-ahrom";
 import { useEffect, useId, useState } from "react";
 import { z } from "zod";
 import SelectRequest2 from "./SelectRequest2";
@@ -108,25 +109,19 @@ function ItemPicker({
         </div>
 
         <div className="overflow-x-auto rounded-md border">
-          <table className="min-w-full text-sm">
+          <table className="p-2 min-w-full text-sm">
             <thead>
-              <tr className="bg-base-200">
-                <th className="p-2 text-left w-12">#</th>
-                <th className="p-2 text-left">نام</th>
-                <th className="p-2 text-left w-32">قیمت</th>
-                <th className="p-2 text-left w-24">کد</th>
-                <th className="p-2 w-28">عملیات</th>
+              <tr className="p-2 bg-base-200">
+                <th className="p-2 text-right w-12">#</th>
+                <th className="p-2 w-13"> </th>
+                <th className="p-2 text-right w-40">نام</th>
+                <th className="p-2 text-right w-32">قیمت</th>
+                <th className="p-2 text-right w-24">کد</th>
               </tr>
             </thead>
             <tbody>
               {list.map((it, i) => (
-                <tr key={it.id ?? i} className="border-t hover:bg-base-100">
-                  <td className="p-2">{i + 1}</td>
-                  <td className="p-2">{it.name}</td>
-                  <td className="p-2">
-                    {Number(it.price ?? it.basePrice ?? 0).toLocaleString()}
-                  </td>
-                  <td className="p-2">{it.sku || "-"}</td>
+                <tr key={it.id ?? i} className="p-2 border-t hover:bg-base-100">
                   <td className="p-2">
                     <div className="flex gap-2">
                       <Button
@@ -136,11 +131,15 @@ function ItemPicker({
                           onClose();
                         }}
                         icon={<DIcon icon="fa-check" cdi={false} />}
-                      >
-                        انتخاب
-                      </Button>
+                      ></Button>
                     </div>
                   </td>
+                  <td className="p-2">{i + 1}</td>
+                  <td className="p-2">{it.name}</td>
+                  <td className="p-2">
+                    {Number(it.price ?? it.basePrice ?? 0).toLocaleString()}
+                  </td>
+                  <td className="p-2">{it.sku || "-"}</td>
                 </tr>
               ))}
               {list.length === 0 && (
@@ -216,6 +215,7 @@ export default function InvoiceForm({
   const [referenceInvoice, setReferenceInvoice] = useState<any | null>(
     defaultValues?.referenceInvoice || null
   );
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   const { getAll: getAllProducts, loading: loadingProduct } = useProduct();
   const { getAll: getAllServices, loading: loadingService } = useServiceType();
@@ -545,6 +545,13 @@ export default function InvoiceForm({
     }
   };
 
+  // --- Conditional Labels ---
+  const customerLabel = type.includes("PURCHASE") ? "تامین‌کننده" : "مشتری";
+  const refInvoiceLabel =
+    type === "SALES" || type === "PURCHASE"
+      ? "پیش‌فاکتور (اختیاری)"
+      : "فاکتور مرجع";
+
   /* ---------- loading guard ---------- */
   if (loadingProduct || loadingService || loadingActualService)
     return <Loading />;
@@ -553,21 +560,22 @@ export default function InvoiceForm({
   return (
     <div className="space-y-6">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center gap-3">
+          <DIcon icon="fa-exclamation-triangle" cdi={false} />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* header: type (single row), customer+ref, dates. mode toggles top-right */}
-      <div className="flex flex-col lg:flex-row gap-4 justify-between items-start">
-        <div className="flex-1 space-y-3">
+      {/* header: type (single row), customer+ref, dates. */}
+      <div className="card bg-white shadow-sm border p-4">
+        <div className="flex-1 space-y-4">
           <div>
             <label className="label">
               <span className="label-text font-medium">نوع فاکتور</span>
             </label>
             <div className="flex flex-wrap gap-2">
               <button
-                className={`px-4 py-2 rounded-md border text-sm ${
+                className={`px-4 py-2 rounded-md border text-sm transition-colors duration-200 ${
                   type === "SALES" ? "bg-primary text-white" : "bg-white"
                 }`}
                 onClick={() => setType("SALES")}
@@ -575,7 +583,7 @@ export default function InvoiceForm({
                 فروش
               </button>
               <button
-                className={`px-4 py-2 rounded-md border text-sm ${
+                className={`px-4 py-2 rounded-md border text-sm transition-colors duration-200 ${
                   type === "PURCHASE" ? "bg-primary text-white" : "bg-white"
                 }`}
                 onClick={() => setType("PURCHASE")}
@@ -583,7 +591,7 @@ export default function InvoiceForm({
                 خرید
               </button>
               <button
-                className={`px-4 py-2 rounded-md border text-sm ${
+                className={`px-4 py-2 rounded-md border text-sm transition-colors duration-200 ${
                   type === "PROFORMA" ? "bg-primary text-white" : "bg-white"
                 }`}
                 onClick={() => setType("PROFORMA")}
@@ -591,7 +599,7 @@ export default function InvoiceForm({
                 پیش‌فاکتور
               </button>
               <button
-                className={`px-4 py-2 rounded-md border text-sm ${
+                className={`px-4 py-2 rounded-md border text-sm transition-colors duration-200 ${
                   type === "RETURN_SALES" ? "bg-primary text-white" : "bg-white"
                 }`}
                 onClick={() => setType("RETURN_SALES")}
@@ -599,7 +607,7 @@ export default function InvoiceForm({
                 برگشت از فروش
               </button>
               <button
-                className={`px-4 py-2 rounded-md border text-sm ${
+                className={`px-4 py-2 rounded-md border text-sm transition-colors duration-200 ${
                   type === "RETURN_PURCHASE"
                     ? "bg-primary text-white"
                     : "bg-white"
@@ -611,10 +619,10 @@ export default function InvoiceForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">
-                <span className="label-text font-medium">مشتری</span>
+                <span className="label-text font-medium">{customerLabel}</span>
               </label>
               <div className="p-3 border rounded-lg bg-base-200/50 min-h-[70px]">
                 {req ? (
@@ -623,12 +631,13 @@ export default function InvoiceForm({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="btn-circle btn-xs"
                       onClick={() => {
                         setReq(null);
                         setUser(null);
                       }}
                     >
-                      حذف
+                      <DIcon icon="fa-times" cdi={false} />
                     </Button>
                   </div>
                 ) : user ? (
@@ -637,9 +646,10 @@ export default function InvoiceForm({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="btn-circle btn-xs"
                       onClick={() => setUser(null)}
                     >
-                      حذف
+                      <DIcon icon="fa-times" cdi={false} />
                     </Button>
                   </div>
                 ) : (
@@ -653,9 +663,11 @@ export default function InvoiceForm({
 
             <div>
               <label className="label">
-                <span className="label-text font-medium">فاکتور مرجع</span>
+                <span className="label-text font-medium">
+                  {refInvoiceLabel}
+                </span>
               </label>
-              <div className="p-3 border rounded-lg bg-base-200/50">
+              <div className="p-3 border rounded-lg bg-base-200/50 min-h-[70px]">
                 <div className="flex gap-2 items-center">
                   <SelectInvoice
                     onSelect={(inv) => onSelectReferenceInvoice(inv)}
@@ -678,134 +690,53 @@ export default function InvoiceForm({
                 )}
               </div>
             </div>
+          </div>
 
-            <div>
-              <label className="label">
-                <span className="label-text font-medium">تاریخ‌ها</span>
-              </label>
-              <div className="grid grid-cols-1 gap-2">
-                <StandaloneDatePicker
-                  name="issueDate"
-                  label="تاریخ صدور"
-                  value={issueDate}
-                  onChange={(p: any) => setIssueDate(p ? p.iso : null)}
-                />
-                <StandaloneDatePicker
-                  name="dueDate"
-                  label="تاریخ سررسید"
-                  value={dueDate}
-                  onChange={(p: any) => setDueDate(p ? p.iso : null)}
-                />
-              </div>
+          <div className="mt-4">
+            <label className="label">
+              <span className="label-text font-medium">تاریخ‌ها</span>
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <StandaloneDatePicker
+                name="issueDate"
+                label="تاریخ صدور"
+                value={issueDate}
+                onChange={(p: any) => setIssueDate(p ? p.iso : null)}
+              />
+              <StandaloneDatePicker
+                name="dueDate"
+                label="تاریخ سررسید"
+                value={dueDate}
+                onChange={(p: any) => setDueDate(p ? p.iso : null)}
+              />
             </div>
-          </div>
-        </div>
-
-        {/* mode toggles (square buttons) on the right */}
-        <div className="w-full lg:w-auto flex flex-col items-end gap-2">
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              className="w-10 h-10 flex items-center justify-center"
-              variant={mode === "table" ? "primary" : "ghost"}
-              onClick={() => setMode("table")}
-              title="نمایش جدولی"
-            >
-              <DIcon icon="fa-list" cdi={false} />
-            </Button>
-            <Button
-              size="sm"
-              className="w-10 h-10 flex items-center justify-center"
-              variant={mode === "card" ? "primary" : "ghost"}
-              onClick={() => setMode("card")}
-              title="نمایش کارتی"
-            >
-              <DIcon icon="fa-th-large" cdi={false} />
-            </Button>
-          </div>
-          <div className="text-right text-sm text-base-content/60 w-full">
-            جمع نهایی:{" "}
-            <span className="font-bold">
-              {calculateTotal().toLocaleString()} تومان
-            </span>
           </div>
         </div>
       </div>
 
       {/* items */}
-      <div className="card bg-base-100 shadow-md border rounded-lg overflow-hidden">
+      <div className="card bg-white shadow-md border rounded-lg overflow-hidden">
         <div className="card-body p-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="card-title text-lg">آیتم‌های فاکتور</h3>
-            <div className="flex gap-2 items-center">
-              {/* در حالت کارت: فقط آیکن، در حالت جدول: متن + آیکن */}
-              {mode === "card" ? (
-                <>
-                  <Button
-                    size="sm"
-                    className="w-10 h-10"
-                    onClick={() => {
-                      setPickerTargetRow(null);
-                      setPickerMode("products");
-                      setPickerOpen(true);
-                    }}
-                    icon={<DIcon icon="fa-box" cdi={false} />}
-                  />
-                  <Button
-                    size="sm"
-                    className="w-10 h-10"
-                    onClick={() => {
-                      setPickerTargetRow(null);
-                      setPickerMode("actuals");
-                      setPickerOpen(true);
-                    }}
-                    icon={<DIcon icon="fa-cogs" cdi={false} />}
-                  />
-                </>
-              ) : (
-                <>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setPickerTargetRow(null);
-                      setPickerMode("products");
-                      setPickerOpen(true);
-                    }}
-                    icon={<DIcon icon="fa-box" cdi={false} />}
-                  >
-                    افزودن محصول
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setPickerTargetRow(null);
-                      setPickerMode("actuals");
-                      setPickerOpen(true);
-                    }}
-                    icon={<DIcon icon="fa-cogs" cdi={false} />}
-                  >
-                    افزودن زیرخدمت
-                  </Button>
-                </>
-              )}
-
+            <div className="flex gap-2">
               <Button
                 size="sm"
-                onClick={() => addRow()}
-                icon={<DIcon icon="fa-plus" cdi={false} />}
+                className="w-10 h-10 flex items-center justify-center"
+                variant={mode === "table" ? "primary" : "ghost"}
+                onClick={() => setMode("table")}
+                title="نمایش جدولی"
               >
-                سطر دستی
+                <DIcon icon="fa-list" cdi={false} />
               </Button>
               <Button
                 size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setItems([]);
-                  setRowErrors({});
-                }}
-                icon={<DIcon icon="fa-trash" cdi={false} />}
+                className="w-10 h-10 flex items-center justify-center"
+                variant={mode === "card" ? "primary" : "ghost"}
+                onClick={() => setMode("card")}
+                title="نمایش کارتی"
               >
-                پاک کردن همه
+                <DIcon icon="fa-th-large" cdi={false} />
               </Button>
             </div>
           </div>
@@ -815,10 +746,10 @@ export default function InvoiceForm({
             <div className="overflow-x-auto rounded-md border">
               <table className="min-w-[920px] w-full text-sm">
                 <thead>
-                  <tr className="bg-base-200 text-left sticky top-0">
+                  <tr className="bg-base-200 text-right sticky top-0">
                     <th className="p-3 w-10">#</th>
-                    <th className="p-3 w-72">شرح</th>
-                    <th className="p-3 w-48">نام</th>
+                    <th className="p-3 w-50">شرح</th>
+                    <th className="p-3 w-40">نام</th>
                     <th className="p-3 w-32">SKU</th>
                     <th className="p-3 w-24">واحد</th>
                     <th className="p-3 w-24">تعداد</th>
@@ -826,7 +757,7 @@ export default function InvoiceForm({
                     <th className="p-3 w-24">تخفیف %</th>
                     <th className="p-3 w-24">مالیات %</th>
                     <th className="p-3 w-36">مبلغ</th>
-                    <th className="p-3 w-48">عملیات</th>
+                    <th className="p-3 w-48 text-center">عملیات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -835,13 +766,11 @@ export default function InvoiceForm({
                       key={r.id}
                       className="border-t align-top hover:bg-base-100"
                     >
-                      <td className="p-2 align-top">{i + 1}</td>
-
-                      {/* متن شرح را در سطر جداگانه قرار می‌دهیم: input شرح در یک cell و بالای آن label-like */}
+                      <td className="p-2 align-top pt-4">{i + 1}</td>
                       <td className="p-2">
                         <input
                           name={`description-${r.id}`}
-                          className="w-full p-2 border rounded-md bg-white"
+                          className="w-50 p-2 border rounded-md bg-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                           value={r.description || ""}
                           onChange={(e: any) =>
                             setRow(r.id, { description: e.target.value })
@@ -849,11 +778,10 @@ export default function InvoiceForm({
                           placeholder="شرح آیتم (الزامی)"
                         />
                       </td>
-
                       <td className="p-2">
                         <input
                           name={`itemName-${r.id}`}
-                          className="w-full p-2 border rounded-md"
+                          className="w-40 p-2 border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                           value={r.itemName || ""}
                           onChange={(e: any) =>
                             setRow(r.id, { itemName: e.target.value })
@@ -861,11 +789,10 @@ export default function InvoiceForm({
                           placeholder="نام آیتم"
                         />
                       </td>
-
                       <td className="p-2">
                         <input
                           name={`sku-${r.id}`}
-                          className="w-full p-2 border rounded-md"
+                          className="w-32 p-2 border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                           value={r.sku || ""}
                           onChange={(e: any) =>
                             setRow(r.id, { sku: e.target.value })
@@ -875,7 +802,7 @@ export default function InvoiceForm({
                       <td className="p-2">
                         <input
                           name={`unit-${r.id}`}
-                          className="w-full p-2 border rounded-md"
+                          className="w-24 p-2 border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                           value={r.unit || ""}
                           onChange={(e: any) =>
                             setRow(r.id, { unit: e.target.value })
@@ -886,7 +813,7 @@ export default function InvoiceForm({
                         <input
                           name={`quantity-${r.id}`}
                           type="number"
-                          className="w-20 p-2 border rounded-md"
+                          className="w-20 p-2 border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                           value={r.quantity}
                           onChange={(e: any) =>
                             setRow(r.id, {
@@ -899,7 +826,7 @@ export default function InvoiceForm({
                         <input
                           name={`unitPrice-${r.id}`}
                           type="number"
-                          className="w-28 p-2 border rounded-md"
+                          className="w-28 p-2 border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                           value={r.unitPrice}
                           onChange={(e: any) =>
                             setRow(r.id, {
@@ -912,7 +839,7 @@ export default function InvoiceForm({
                         <input
                           name={`discountPercent-${r.id}`}
                           type="number"
-                          className="w-20 p-2 border rounded-md"
+                          className="w-20 p-2 border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                           value={r.discountPercent || 0}
                           onChange={(e: any) =>
                             setRow(r.id, {
@@ -925,7 +852,7 @@ export default function InvoiceForm({
                         <input
                           name={`taxPercent-${r.id}`}
                           type="number"
-                          className="w-20 p-2 border rounded-md"
+                          className="w-20 p-2 border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                           value={r.taxPercent || 0}
                           onChange={(e: any) =>
                             setRow(r.id, {
@@ -934,35 +861,32 @@ export default function InvoiceForm({
                           }
                         />
                       </td>
-                      <td className="p-2 font-medium">
-                        {Number(r.total || 0).toLocaleString()} تومان
+                      <td className="p-2 font-medium pt-4">
+                        {Number(r.total || 0).toLocaleString()}
                       </td>
-                      <td className="p-2">
-                        <div className="flex gap-2 flex-wrap">
-                          <Button
-                            size="sm"
-                            //              variant="outline"
+                      <td className="p-2 font-medium pt-4">
+                        <div className="flex gap-4 justify-center items-center h-full">
+                          <button
+                            title="انتخاب محصول"
                             onClick={() => openPicker(r.id, "products")}
-                            icon={<DIcon icon="fa-box" cdi={false} />}
+                            className="text-teal-700 hover:text-teal-500 transition-colors"
                           >
-                            محصول
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
+                            <DIcon icon="fa-box" cdi={false} />
+                          </button>
+                          <button
+                            title="انتخاب زیرخدمت"
                             onClick={() => openPicker(r.id, "actuals")}
-                            icon={<DIcon icon="fa-cogs" cdi={false} />}
+                            className="text-teal-700 hover:text-teal-500 transition-colors"
                           >
-                            زیرخدمت
-                          </Button>
-                          <Button
-                            size="sm"
-                            //                 variant="destructive"
+                            <DIcon icon="fa-cogs" cdi={false} />
+                          </button>
+                          <button
+                            title="حذف سطر"
                             onClick={() => removeRow(r.id)}
-                            icon={<DIcon icon="fa-trash" cdi={false} />}
+                            className="text-red-700 hover:text-red-500 transition-colors"
                           >
-                            حذف
-                          </Button>
+                            <DIcon icon="fa-trash" cdi={false} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -973,7 +897,14 @@ export default function InvoiceForm({
                         colSpan={11}
                         className="text-center py-8 text-base-content/60"
                       >
-                        هنوز آیتمی اضافه نشده است.
+                        <div className="flex flex-col items-center gap-2">
+                          <DIcon
+                            icon="fa-folder-open"
+                            cdi={false}
+                            classCustom="text-3xl text-base-content/30"
+                          />
+                          <span>هنوز آیتمی اضافه نشده است.</span>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -985,7 +916,9 @@ export default function InvoiceForm({
               {items.map((r, idx) => (
                 <div
                   key={r.id}
-                  className="p-4 border rounded-lg shadow-sm bg-white"
+                  className={`p-4 border rounded-lg shadow-sm bg-white ${
+                    rowErrors[r.id] ? "border-red-300" : ""
+                  }`}
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div>
@@ -1007,7 +940,8 @@ export default function InvoiceForm({
                       />
                       <Button
                         size="sm"
-                        //           variant="destructive"
+                        variant="ghost"
+                        className="w-10 h-10 hover:bg-red-100 hover:text-red-600"
                         onClick={() => removeRow(r.id)}
                         icon={<DIcon icon="fa-trash" cdi={false} />}
                       />
@@ -1115,16 +1049,32 @@ export default function InvoiceForm({
               ))}
             </div>
           )}
+
+          <div className="border-t mt-4 pt-4 flex justify-between items-center">
+            <Button
+              variant="primary"
+              onClick={() => setAddModalOpen(true)}
+              icon={<DIcon icon="fa-plus" cdi={false} />}
+            >
+              افزودن سطر
+            </Button>
+            <div className="text-right text-base text-base-content/80">
+              جمع نهایی آیتم‌ها:{" "}
+              <span className="font-bold text-lg text-base-content">
+                {calculateTotal().toLocaleString()} تومان
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* calculations (درست بعد از درصدها نمایش داده شود) */}
-      <div className="card bg-base-100 shadow-md border rounded-lg">
+      {/* calculations */}
+      <div className="card bg-white shadow-md border rounded-lg">
         <div className="card-body p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
             <Input
               name="taxPercent"
-              label="درصد مالیات"
+              label="درصد مالیات کل"
               type="number"
               value={taxPercent}
               onChange={(e: any) => {
@@ -1135,7 +1085,7 @@ export default function InvoiceForm({
             />
             <Input
               name="discountPercent"
-              label="درصد تخفیف"
+              label="درصد تخفیف کل"
               type="number"
               value={discountPercent}
               onChange={(e: any) => {
@@ -1146,22 +1096,26 @@ export default function InvoiceForm({
             />
           </div>
 
-          <div className="divider my-4" />
+          <div className="divider my-4">خلاصه مالی</div>
 
           <div className="space-y-2">
             <div className="flex justify-between">
-              <span>جمع کل آیتم‌ها:</span>
+              <span className="text-base-content/70">جمع کل آیتم‌ها:</span>
               <span>{calculateSubtotal().toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span>تخفیف ({discountPercent}%):</span>
+              <span className="text-base-content/70">
+                تخفیف ({discountPercent}%):
+              </span>
               <span className="text-error">-{discount.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span>مالیات ({taxPercent}%):</span>
+              <span className="text-base-content/70">
+                مالیات ({taxPercent}%):
+              </span>
               <span className="text-success">+{tax.toLocaleString()}</span>
             </div>
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
+            <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
               <span>مبلغ نهایی:</span>
               <span>{calculateTotal().toLocaleString()} تومان</span>
             </div>
@@ -1170,9 +1124,10 @@ export default function InvoiceForm({
             </div>
           </div>
 
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-start mt-4">
             <Button
               variant="primary"
+              size="lg"
               onClick={handleSubmit}
               disabled={items.length === 0 || loading || !user}
               icon={<DIcon icon="fa-check" cdi={false} />}
@@ -1182,6 +1137,45 @@ export default function InvoiceForm({
           </div>
         </div>
       </div>
+
+      {/* Add Item Modal */}
+      <Modal isOpen={addModalOpen} onClose={() => setAddModalOpen(false)}>
+        <div className="p-4">
+          <h3 className="text-lg font-semibold mb-4">افزودن آیتم جدید</h3>
+          <div className="grid grid-cols-1 gap-3">
+            <Button
+              onClick={() => {
+                addRow();
+                setAddModalOpen(false);
+              }}
+              icon={<DIcon icon="fa-plus" cdi={false} />}
+              className="justify-start"
+            >
+              افزودن سطر دستی
+            </Button>
+            <Button
+              onClick={() => {
+                setAddModalOpen(false);
+                openPicker(null, "products");
+              }}
+              icon={<DIcon icon="fa-box" cdi={false} />}
+              className="justify-start"
+            >
+              افزودن محصول از لیست
+            </Button>
+            <Button
+              onClick={() => {
+                setAddModalOpen(false);
+                openPicker(null, "actuals");
+              }}
+              icon={<DIcon icon="fa-cogs" cdi={false} />}
+              className="justify-start"
+            >
+              افزودن زیرخدمت از لیست
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Item picker modal (products / actuals) */}
       <ItemPicker

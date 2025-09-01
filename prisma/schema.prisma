@@ -213,30 +213,82 @@ model Invoice {
   id          Int       @id @unique @default(autoincrement())
   workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  requestId   Int?
-  request     Request?  @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
-  name            String?
+  requestId Int?
+  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  // orderId Int?
+  // order   Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  name String?
+
   workspaceUserId Int
-  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Restrict)
 
-  items           InvoiceItem[]
-  type            InvoiceType   @default(SALES)
-  subtotal        Float         @default(0)
-  tax             Float         @default(0)
-  taxPercent      Float         @default(0)
-  discount        Float         @default(0)
-  discountPercent Float         @default(0)
+  referenceInvoiceId Int? // رفرنس به فاکتور مرجع (مثلاً برای ریفرنس‌ها)
+  referenceInvoice   Invoice? @relation("InvoiceReference", fields: [referenceInvoiceId], references: [id])
+
+  items InvoiceItem[]
+  type  InvoiceType   @default(SALES)
+
+  subtotal        Float @default(0)
+  tax             Float @default(0)
+  taxPercent      Float @default(0) // Can remain Float as it's not a currency value
+  discount        Float @default(0)
+  discountPercent Float @default(0) // Can remain Float as it's not a currency value
   total           Float
-  status          InvoiceStatus @default(PENDING)
-  dueDate         DateTime?
-  issueDate       DateTime?
-  description     String?       @db.Text
-  paymentDate     DateTime?
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  payments  Payment[]
+  status InvoiceStatus @default(PENDING)
+
+  dueDate     DateTime?
+  issueDate   DateTime?
+  description String?   @db.Text
+  paymentDate DateTime?
+  payments    Payment[]
+
+  // برای رابطه معکوس اگر نیاز باشد:
+  referencedBy Invoice[] @relation("InvoiceReference")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InvoiceItem {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  invoiceId Int
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  actualServiceId Int?
+  actualService   ActualService? @relation(fields: [actualServiceId], references: [id], onDelete: SetNull)
+
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // --- لینک به آیتم قابل فروش یا خدمت انجام شده ---
+  // inventoryItemId Int?
+  // inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  itemType    InvoiceItemType @default(SERVICE)
+  // todo:t4 اصلاحات نیاز دارد در کد
+  itemName    String // نام کالا/خدمت در لحظه فروش
+  sku         String? // کد کالا یا شناسه انبار
+  unit        String? // واحد شمارش (مثلا: عدد، ساعت، کیلوگرم)
+  description String?
+
+  quantity        Int
+  unitPrice       Float
+  //price           Float
+  discount        Float @default(0)
+  discountPercent Float @default(0)
+  tax             Float @default(0)
+  taxPercent      Float @default(0)
+  total           Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ReceivedDevice {
@@ -763,29 +815,6 @@ model Note {
   content     String    @db.Text
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-}
-
-model InvoiceItem {
-  id              Int             @id @unique @default(autoincrement())
-  workspaceId     Int
-  workspace       Workspace       @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
-  invoiceId       Int
-  invoice         Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  itemType        InvoiceItemType @default(SERVICE)
-  actualServiceId Int?
-  actualService   ActualService?  @relation(fields: [actualServiceId], references: [id], onDelete: SetNull)
-  productId       Int?
-  product         Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  description     String
-  quantity        Int
-  price           Float
-  discount        Float           @default(0)
-  discountPercent Float           @default(0)
-  tax             Float           @default(0)
-  taxPercent      Float           @default(0)
-  total           Float
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
 }
 
 model ActualServiceOnRequest {
