@@ -5,6 +5,13 @@ import DateDisplay from "@/@Client/Components/DateTime/DateDisplay";
 import { Column } from "ndui-ahrom/dist/components/Table/Table";
 import Link from "next/link";
 
+const invoiceTypeMap = {
+  SALES: "فروش",
+  PURCHASE: "خرید",
+  PROFORMA: "پیش‌فاکتور",
+  RETURN_SALES: "مرجوعی فروش",
+  RETURN_PURCHASE: "مرجوعی خرید",
+};
 export const columnsForAdmin: Column[] = [
   {
     name: "name",
@@ -16,7 +23,7 @@ export const columnsForAdmin: Column[] = [
     name: "type",
     field: "type",
     label: "نوع فاکتور",
-    render: (row) => row.type || "نامشخص",
+    render: (row) => invoiceTypeMap[row.type] || "نامشخص",
   },
   {
     name: "customer",

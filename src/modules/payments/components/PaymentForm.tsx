@@ -8,11 +8,12 @@ import { InvoiceWithRelations } from "@/modules/invoices/types";
 import PaymentCategorySelect2 from "@/modules/payment-categories/components/PaymentCategorySelect2";
 import { listItemRender } from "@/modules/workspace-users/data/table";
 import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
-import { Button, Input } from "ndui-ahrom";
+import { Button } from "ndui-ahrom";
 import { useState } from "react";
 import { createPaymentSchema } from "../validation/schema";
 import SelectInvoice from "./SelectInvoice";
 import SelectUser2 from "./SelectUser2";
+import Input2 from "@/@Client/Components/ui/Input2";
 
 interface PaymentFormProps {
   onSubmit: (data: any) => void;
@@ -59,7 +60,6 @@ export default function PaymentForm({
       reference,
       description,
       workspaceUser: user,
-      //   invoice: invoice,
       paymentCategoryId: paymentCategoryId,
     };
     if (invoice) {
@@ -177,7 +177,7 @@ export default function PaymentForm({
               }}
             />
           </div>
-          <Input
+          <Input2
             name="amount"
             label="مبلغ (تومان)"
             type="number"
@@ -220,14 +220,14 @@ export default function PaymentForm({
             ]}
             required
           />
-          <Input
+          <Input2
             name="reference"
             label="شماره پیگیری"
             value={reference}
             onChange={(e) => setReference(e.target.value)}
           />
           <div className="md:col-span-2">
-            <Input
+            <Input2
               name="description"
               label="توضیحات"
               type="textarea"
