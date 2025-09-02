@@ -3,7 +3,7 @@
 "use client";
 
 import DIcon from "@/@Client/Components/common/DIcon";
-import Select22 from "@/@Client/Components/wrappers/Select22";
+import Input2 from "@/@Client/Components/ui/Input2";
 import { InvoiceWithRelations } from "@/modules/invoices/types";
 import PaymentCategorySelect2 from "@/modules/payment-categories/components/PaymentCategorySelect2";
 import { listItemRender } from "@/modules/workspace-users/data/table";
@@ -13,7 +13,9 @@ import { useState } from "react";
 import { createPaymentSchema } from "../validation/schema";
 import SelectInvoice from "./SelectInvoice";
 import SelectUser2 from "./SelectUser2";
-import Input2 from "@/@Client/Components/ui/Input2";
+// کامپوننت تقویم را وارد می‌کنیم
+import Select3 from "@/@Client/Components/ui/Select3";
+import StandaloneDatePicker from "../components/StandaloneDatePicker";
 
 interface PaymentFormProps {
   onSubmit: (data: any) => void;
@@ -51,6 +53,12 @@ export default function PaymentForm({
   >(defaultValues.paymentCategoryId || undefined);
   const [error, setError] = useState<string | null>(null);
 
+  // ===>>> ۱. State جدید برای نگهداری تاریخ پرداخت <<<===
+  // تاریخ امروز به عنوان مقدار پیش‌فرض در نظر گرفته می‌شود
+  const [paidAt, setPaidAt] = useState<string | null>(
+    defaultValues.paidAt || new Date().toISOString()
+  );
+
   const handleSubmit = () => {
     const data = {
       amount: parseFloat(amount) || 0,
@@ -61,6 +69,8 @@ export default function PaymentForm({
       description,
       workspaceUser: user,
       paymentCategoryId: paymentCategoryId,
+      // ===>>> ۳. افزودن تاریخ به داده‌های نهایی برای ارسال <<<===
+      paidAt: paidAt,
     };
     if (invoice) {
       data["invoiceId"] = invoice.id;
@@ -155,15 +165,14 @@ export default function PaymentForm({
       {/* بخش اصلی فرم پرداخت */}
       <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border dark:border-slate-700">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* <PaymentCategorySelect2
-            label="دسته‌بندی پرداخت (اختیاری)"
-            value={paymentCategoryId}
-            // پارامتر ورودی 'selectedValue' دیگر یک رویداد نیست،
-            // بلکه خود مقدار نهایی است
-            onChange={(selectedValue) => {
-              setPaymentCategoryId(selectedValue);
-            }}
-          /> */}
+          {/* ===>>> ۲. افزودن کامپوننت تقویم به فرم <<<=== */}
+          <StandaloneDatePicker
+            name="paidAt"
+            label="تاریخ پرداخت"
+            value={paidAt}
+            onChange={(payload) => setPaidAt(payload ? payload.iso : null)}
+          />
+
           <div className="md:col-span-1">
             <PaymentCategorySelect2
               name="paymentCategoryId"
@@ -185,7 +194,7 @@ export default function PaymentForm({
             onChange={(e) => setAmount(e.target.value)}
             required
           />
-          <Select22
+          <Select3
             name="method"
             label="روش پرداخت"
             value={method}
@@ -197,7 +206,7 @@ export default function PaymentForm({
             ]}
             required
           />
-          <Select22
+          <Select3
             name="type"
             label="نوع تراکنش"
             value={type}
@@ -208,7 +217,7 @@ export default function PaymentForm({
             ]}
             required
           />
-          <Select22
+          <Select3
             name="status"
             label="وضعیت"
             value={status}
@@ -226,6 +235,7 @@ export default function PaymentForm({
             value={reference}
             onChange={(e) => setReference(e.target.value)}
           />
+
           <div className="md:col-span-2">
             <Input2
               name="description"

@@ -13,6 +13,7 @@ export const createPaymentSchema = z.object({
   description: z.string().optional(),
   status: z.string(),
   paymentCategoryId: z.any(),
+  paidAt: z.string().optional(),
 });
 
 export const updatePaymentStatusSchema = z.object({

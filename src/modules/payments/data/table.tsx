@@ -58,9 +58,15 @@ export const columnsForAdmin: Column[] = [
     render: (row) => <StatusBadge status={row.status} />,
   },
   {
+    name: "paidAt",
+    field: "paidAt",
+    label: "تاریخ تراکنش",
+    render: (row) => <DateDisplay date={row.paidAt} />,
+  },
+  {
     name: "date",
     field: "createdAt",
-    label: "تاریخ",
+    label: "تاریخ ایجاد",
     render: (row) => <DateDisplay date={row.createdAt} />,
   },
   {
