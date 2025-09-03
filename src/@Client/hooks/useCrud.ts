@@ -82,11 +82,10 @@ export function useCrud<
   //  getById بصورت موقت جایگزین شد  باید اصلاح شود متد گامنت شده زیری یعنی بعد از همین متد با اسم یگسان
   const getById = useCallback(
     async (id: number) => {
-    
       setLoading(true);
       setError(null);
       try {
-          if (!activeWorkspace) return  ;
+        if (!activeWorkspace) return;
         const data: T = await repository.getById(id);
         return data;
       } catch (error) {

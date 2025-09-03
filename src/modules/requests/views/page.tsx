@@ -95,7 +95,6 @@ export default function IndexPage({ isAdmin = false, title = "درخواست‌�
       fetcher={getAll}
       showIconViews={isAdmin}
       filterOptions={filters}
-      // listItemRender={listItemRender}
     />
   );
 }
