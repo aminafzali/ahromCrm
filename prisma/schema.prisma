@@ -210,9 +210,10 @@ model Request {
 }
 
 model Invoice {
-  id          Int       @id @unique @default(autoincrement())
-  workspaceId Int
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  id            Int       @id @unique @default(autoincrement())
+  invoiceNumber Int
+  workspaceId   Int
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
 
   requestId Int?
   request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
@@ -251,6 +252,8 @@ model Invoice {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, invoiceNumber])
 }
 
 model InvoiceItem {

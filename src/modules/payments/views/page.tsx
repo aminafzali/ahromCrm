@@ -4,7 +4,7 @@
 
 import Loading from "@/@Client/Components/common/Loading";
 import { TabsWrapper } from "@/@Client/Components/wrappers";
-import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper";
+import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper2";
 import { FilterOption } from "@/@Client/types";
 import CategoryTree from "@/modules/payment-categories/components/CategoryTree";
 import { usePaymentCategory } from "@/modules/payment-categories/hooks/usePaymentCategory";
@@ -62,7 +62,7 @@ export default function IndexPage({ isAdmin = true, title = "پرداخت‌ها
   const filters: FilterOption[] = useMemo(
     () => [
       {
-        name: "status",
+        name: "status_in",
         label: "وضعیت",
         options: [
           { value: "all", label: "همه" },
@@ -72,7 +72,7 @@ export default function IndexPage({ isAdmin = true, title = "پرداخت‌ها
         ],
       },
       {
-        name: "method",
+        name: "method_in",
         label: "روش پرداخت",
         options: [
           { value: "all", label: "همه" },
@@ -102,7 +102,11 @@ export default function IndexPage({ isAdmin = true, title = "پرداخت‌ها
   const categoryFilter = useMemo(() => {
     if (!selectedCategory) return {};
     const idsToFilter = getDescendantIds(selectedCategory, categories);
-    return { paymentCategoryId_in: idsToFilter };
+
+    // ===== شروع اصلاحیه کلیدی =====
+    // آرایه شناسه‌ها را به یک رشته جدا شده با کاما تبدیل می‌کنیم
+    return { paymentCategoryId_in: idsToFilter.join(",") };
+    // ===== پایان اصلاحیه کلیدی =====
   }, [selectedCategory, categories]);
 
   // ساخت extraFilter برای هر تب (فقط شامل نوع و دسته‌بندی)

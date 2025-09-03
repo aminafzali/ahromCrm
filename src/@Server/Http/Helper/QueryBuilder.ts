@@ -9,7 +9,10 @@ export class QueryBuilder {
 
   setWhere(where: any): QueryBuilder {
     console.log(`[QueryBuilder - LOG] Setting initial 'where' clause:`, where);
-    if (!where) return this;
+
+    if (!where) {
+      return this;
+    }
 
     for (const key in where) {
       const value = where[key];
@@ -22,50 +25,121 @@ export class QueryBuilder {
         continue;
       }
 
-      // ===== شروع اصلاحیه =====
-      if (key.endsWith("_in")) {
+      if (key.endsWith("_some")) {
+        const fieldName = key.replace("_some", "");
+        const ids = String(value)
+          .split(",")
+          .map(Number)
+          .filter((id) => !isNaN(id));
+        if (ids.length > 0) {
+          this.where[fieldName] = { some: { id: { in: ids } } };
+        }
+      } else if (key.endsWith("_in")) {
         const fieldName = key.replace("_in", "");
-        const valuesAsArray = Array.isArray(value)
-          ? value
-          : String(value).split(",");
+        const valuesAsArray = String(value).split(",");
 
-        // تشخیص اینکه فیلتر برای یک رابطه است یا یک فیلد ساده
-        // این یک روش ساده‌سازی شده است. در پروژه‌های بزرگ شاید نیاز به بررسی مدل Prisma باشد.
-        // ما فرض می‌کنیم اگر نام فیلد به 's' یا 'es' ختم شود (جمع)، یک رابطه است.
-        if (fieldName.endsWith("s") || fieldName.endsWith("es")) {
-          // منطق برای روابط چندبه‌چند (مثلا labels, userGroups)
+        // ===== شروع اصلاحیه کلیدی =====
+        // اگر نام فیلد به "Id" ختم می‌شود، مقادیر را به عدد تبدیل می‌کنیم
+        if (fieldName.endsWith("Id")) {
           const ids = valuesAsArray.map(Number).filter((id) => !isNaN(id));
           if (ids.length > 0) {
-            this.where[fieldName] = { some: { id: { in: ids } } };
-            console.log(
-              `[QueryBuilder - LOG] Applied 'RELATION in' on ${fieldName}`
-            );
+            this.where[fieldName] = { in: ids };
           }
         } else {
-          // منطق برای فیلدهای ساده (مثلا status, type)
+          // در غیر این صورت، مقادیر را به صورت رشته نگه می‌داریم (برای status, type و...)
           this.where[fieldName] = { in: valuesAsArray };
-          console.log(
-            `[QueryBuilder - LOG] Applied 'SIMPLE in' on ${fieldName}`
-          );
         }
-      }
-      // ===== پایان اصلاحیه =====
-      else if (key.endsWith("_gte")) {
+        // ===== پایان اصلاحیه کلیدی =====
+      } else if (key.endsWith("_gte")) {
         const fieldName = key.replace("_gte", "");
         if (!this.where[fieldName]) this.where[fieldName] = {};
-        this.where[fieldName] = { ...this.where[fieldName], gte: value };
-        console.log(`[QueryBuilder - LOG] Applied 'gte' on ${fieldName}`);
+        this.where[fieldName].gte = value;
       } else if (key.endsWith("_lte")) {
         const fieldName = key.replace("_lte", "");
         if (!this.where[fieldName]) this.where[fieldName] = {};
-        this.where[fieldName] = { ...this.where[fieldName], lte: value };
-        console.log(`[QueryBuilder - LOG] Applied 'lte' on ${fieldName}`);
+        this.where[fieldName].lte = value;
+      } else if (key.endsWith("_contains")) {
+        const fieldName = key.replace("_contains", "");
+        this.where[fieldName] = { contains: value, mode: "insensitive" };
       } else {
         this.where[key] = value;
       }
     }
+
     return this;
   }
+
+  // setWhere(where: any): QueryBuilder {
+  //   console.log(`[QueryBuilder - LOG] Setting initial 'where' clause:`, where);
+
+  //   if (!where) {
+  //     return this;
+  //   }
+
+  //   for (const key in where) {
+  //     const value = where[key];
+
+  //     if (
+  //       value === undefined ||
+  //       value === null ||
+  //       value === "all" ||
+  //       value === ""
+  //     ) {
+  //       continue;
+  //     }
+
+  //     // --- ۱. مدیریت اپراتورهای صریح (gte/lte) ---
+  //     if (key.endsWith("_gte")) {
+  //       const fieldName = key.replace("_gte", "");
+  //       if (!this.where[fieldName]) this.where[fieldName] = {};
+  //       this.where[fieldName].gte = value;
+  //     } else if (key.endsWith("_lte")) {
+  //       const fieldName = key.replace("_lte", "");
+  //       if (!this.where[fieldName]) this.where[fieldName] = {};
+  //       this.where[fieldName].lte = value;
+  //     }
+  //     // --- ۲. تشخیص هوشمند فیلتر روی روابط (مانند labels, userGroups) ---
+  //     else if (key.endsWith("s")) {
+  //       const fieldName = key;
+  //       const valuesAsArray = String(value).split(",");
+  //       const ids = valuesAsArray.map(Number).filter((id) => !isNaN(id));
+
+  //       if (ids.length > 0) {
+  //         this.where[fieldName] = {
+  //           some: {
+  //             id: {
+  //               in: ids,
+  //             },
+  //           },
+  //         };
+  //         console.log(
+  //           `[QueryBuilder - LOG] Applied 'RELATION in' on ${fieldName} with IDs: [${ids.join(
+  //             ", "
+  //           )}]`
+  //         );
+  //       }
+  //     }
+  //     // --- ۳. تشخیص هوشمند فیلتر چند مقداری روی فیلدهای ساده (مانند type) ---
+  //     else if (typeof value === "string" && value.includes(",")) {
+  //       const fieldName = key;
+  //       const valuesAsArray = value.split(",");
+  //       this.where[fieldName] = {
+  //         in: valuesAsArray,
+  //       };
+  //       console.log(
+  //         `[QueryBuilder - LOG] Applied 'SIMPLE in' on ${fieldName} with values: [${valuesAsArray.join(
+  //           ", "
+  //         )}]`
+  //       );
+  //     }
+  //     // --- ۴. مدیریت حالت تساوی ساده (حالت پیش‌فرض) ---
+  //     else {
+  //       this.where[key] = value;
+  //     }
+  //   }
+
+  //   return this;
+  // }
 
   // setWhere(where: any): QueryBuilder {
   //   console.log(`[QueryBuilder - LOG] Setting initial 'where' clause:`, where);

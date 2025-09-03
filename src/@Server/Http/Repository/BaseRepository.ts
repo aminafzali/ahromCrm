@@ -55,6 +55,7 @@ export abstract class BaseRepository<T> {
     // ===============================================
 
     const queryBuilder = new QueryBuilder();
+
     queryBuilder.setWhere(filters);
 
     if (search && searchFields && searchFields.length > 0) {

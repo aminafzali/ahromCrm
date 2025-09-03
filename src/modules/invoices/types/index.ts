@@ -14,6 +14,7 @@ export type InvoiceWithRelations = Invoice & {
   request: RequestWithRelation;
   items: InvoiceItem[];
   workspaceUser?: WorkspaceUserProfile;
+  status: InvoiceStatus;
 };
 
 /**
@@ -62,4 +63,3 @@ export interface PaymentData {
   reference?: string;
   date: Date;
 }
-

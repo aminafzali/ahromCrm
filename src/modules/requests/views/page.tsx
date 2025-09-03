@@ -1,5 +1,5 @@
 import Loading from "@/@Client/Components/common/Loading";
-import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper";
+import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper2";
 import { FilterOption } from "@/@Client/types";
 import { useServiceType } from "@/modules/service-types/hooks/useServiceType";
 import { ServiceType } from "@/modules/service-types/types";
@@ -49,14 +49,16 @@ export default function IndexPage({ isAdmin = false, title = "درخواست‌�
         label: "همه",
       },
     ];
+
     types.map((item) =>
       options.push({
         value: item.id,
         label: item.name,
       })
     );
+
     filters.push({
-      name: "serviceTypeId",
+      name: "serviceTypeId_in",
       label: "نوع سرویس",
       options: options, // تبدیل id به string
     });
@@ -76,7 +78,7 @@ export default function IndexPage({ isAdmin = false, title = "درخواست‌�
       })
     );
     filters.push({
-      name: "statusId",
+      name: "statusId_in",
       label: "وضعیت",
       options: options, // تبدیل id به string
     });

@@ -721,22 +721,32 @@ export default function InvoiceForm({
             <h3 className="card-title text-lg">آیتم‌های فاکتور</h3>
             <div className="flex gap-2">
               <Button
-                size="sm"
-                className="w-10 h-10 flex items-center justify-center"
+                size="md"
+                className="w-15 h-15 flex items-center justify-center"
                 variant={mode === "table" ? "primary" : "ghost"}
                 onClick={() => setMode("table")}
                 title="نمایش جدولی"
               >
-                <DIcon icon="fa-list" cdi={false} />
+                {/* <DIcon icon="fa-list" cdi={false} /> */}
+                <DIcon
+                  icon="fa-list"
+                  cdi={false}
+                  classCustom="!-mx-0 !text-lg"
+                ></DIcon>
               </Button>
               <Button
-                size="sm"
-                className="w-10 h-10 flex items-center justify-center"
+                size="md"
+                className="w-15 h-15 flex items-center justify-center"
                 variant={mode === "card" ? "primary" : "ghost"}
                 onClick={() => setMode("card")}
                 title="نمایش کارتی"
               >
-                <DIcon icon="fa-th-large" cdi={false} />
+                {/* <DIcon icon="fa-th-large" cdi={false} /> */}
+                <DIcon
+                  icon="fa-table"
+                  cdi={false}
+                  classCustom="!-mx-0 !text-lg"
+                ></DIcon>
               </Button>
             </div>
           </div>

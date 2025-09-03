@@ -46,7 +46,7 @@ const WorkspaceUsersPage = () => {
     const newFilters: FilterOption[] = [];
     if (labels.length > 0) {
       newFilters.push({
-        name: "labels_in", // نام فیلتر برای ارسال به بک‌اند
+        name: "labels_some", // نام فیلتر برای ارسال به بک‌اند
         label: "برچسب",
         options: [
           { value: "all", label: "همه" },
@@ -60,7 +60,7 @@ const WorkspaceUsersPage = () => {
 
     if (groups.length > 0) {
       newFilters.push({
-        name: "userGroups_in", // نام فیلتر برای ارسال به بک‌اند
+        name: "userGroups_some", // نام فیلتر برای ارسال به بک‌اند
         label: "گروه کاربری",
         options: [
           { value: "all", label: "همه" },
