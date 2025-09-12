@@ -210,10 +210,13 @@ model Request {
 }
 
 model Invoice {
-  id            Int       @id @unique @default(autoincrement())
-  invoiceNumber Int
-  workspaceId   Int
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  id Int @id @unique @default(autoincrement())
+
+  invoiceNumber     Int
+  invoiceNumberName String?
+
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
 
   requestId Int?
   request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
@@ -239,7 +242,8 @@ model Invoice {
   discountPercent Float @default(0) // Can remain Float as it's not a currency value
   total           Float
 
-  status InvoiceStatus @default(PENDING)
+  InvoiceStatus InvoiceStatus        @default(PENDING)
+  paymentStatus InvoicePaymentStatus @default(UNPAID)
 
   dueDate     DateTime?
   issueDate   DateTime?
@@ -253,7 +257,8 @@ model Invoice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([workspaceId, invoiceNumber])
+  @@index([workspaceId, type, invoiceNumber])
+  @@index([workspaceId, type]) // Added index for querying invoice numbers by type
 }
 
 model InvoiceItem {
@@ -875,17 +880,26 @@ enum PaymentMethod {
 }
 
 enum InvoiceStatus {
-  PENDING
-  PAID
-  CANCELED
+  PENDING // در انتظار تایید یا پرداخت
+  APPROVED // تایید شده
+  CANCELED // لغو شده
+  DRAFT // پیش‌نویس
+}
+
+// 3. New enum for Invoice Payment Status
+enum InvoicePaymentStatus {
+  UNPAID // پرداخت نشده
+  PARTIALLY_PAID // پرداخت ناقص
+  PAID // پرداخت کامل
+  OVERPAID // پرداخت مازاد
 }
 
 enum InvoiceType {
-  SALES
-  PURCHASE
-  PROFORMA
-  RETURN_SALES
-  RETURN_PURCHASE
+  SALES // فروش
+  PURCHASE // خرید
+  PROFORMA // پیش فاکتور
+  RETURN_SALES // مرجوعی فروش
+  RETURN_PURCHASE // مرجوعی خرید
 }
 
 enum PaymentType {
