@@ -1,7 +1,10 @@
 import {
   Invoice,
   InvoiceItem,
+  InvoicePaymentStatus,
+  InvoiceStatus,
   Label,
+  Payment,
   Request,
   Role,
   ServiceType,
@@ -16,10 +19,10 @@ import {
 export type InvoiceWithRelations = Invoice & {
   request?: RequestWithRelation;
   items: InvoiceItem[];
-  // payments?: Payment[];
+  payments?: Payment[];
   workspaceUser?: WorkspaceUserProfile;
-  // invoiceStatus: InvoiceStatus;
-  // paymentStatus: InvoicePaymentStatus;
+  invoiceStatus: InvoiceStatus;
+  paymentStatus: InvoicePaymentStatus;
 };
 
 /**
