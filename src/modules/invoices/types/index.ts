@@ -20,7 +20,7 @@ export type InvoiceWithRelations = Invoice & {
   request?: RequestWithRelation;
   items: InvoiceItem[];
   payments?: Payment[];
-  workspaceUser?: WorkspaceUserProfile;
+  workspaceUser: WorkspaceUserProfile;
   invoiceStatus: InvoiceStatus;
   paymentStatus: InvoicePaymentStatus;
 };

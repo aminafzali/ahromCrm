@@ -33,5 +33,5 @@ export const include = {
 };
 
 export const searchFileds = ["name"];
-export const relations = ["items"];
+export const relations = ["items", "payments"];
 export const connect = ["workspaceUser"];

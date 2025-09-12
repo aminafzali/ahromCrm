@@ -258,7 +258,6 @@ model Invoice {
   updatedAt DateTime @updatedAt
 
   @@index([workspaceId, type, invoiceNumber])
-  @@index([workspaceId, type]) // Added index for querying invoice numbers by type
 }
 
 model InvoiceItem {
