@@ -3,7 +3,10 @@
 import { NextResponse } from "next/server";
 
 export abstract class ApiResponse {
-  
+  static internalServerError(errorMessage: string, error: unknown) {
+    throw new Error("Method not implemented.");
+  }
+
   /**
    * Create a success response
    */

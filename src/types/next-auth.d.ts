@@ -6,6 +6,7 @@ import "next-auth/jwt";
 declare module "next-auth" {
   interface Session {
     user: {
+      workspaceId: any;
       id: string; // id همیشه رشته است
       name?: string | null;
       email?: string | null;

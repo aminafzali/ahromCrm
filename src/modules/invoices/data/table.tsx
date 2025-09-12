@@ -51,10 +51,10 @@ export const columnsForAdmin: Column[] = [
     render: (row) => row.total.toLocaleString(),
   },
   {
-    name: "status",
-    field: "status",
+    name: "invoiceStatus",
+    field: "invoiceStatus",
     label: "وضعیت",
-    render: (row) => <StatusBadge status={row.status} />,
+    render: (row) => <StatusBadge status={row.invoiceStatus} />,
   },
   {
     name: "issueDate",
@@ -110,10 +110,10 @@ export const columnsForUser: Column[] = [
     render: (row) => row.total.toLocaleString(),
   },
   {
-    name: "status",
-    field: "status",
+    name: "invoiceStatus",
+    field: "invoiceStatus",
     label: "وضعیت",
-    render: (row) => <StatusBadge status={row.status} />,
+    render: (row) => <StatusBadge status={row.invoiceStatus} />,
   },
   {
     name: "date",
@@ -146,7 +146,7 @@ export const listItemRender = (row: any) => (
         <div className="font-bold text-lg text-primary">
           {row.total.toLocaleString()} تومان
         </div>
-        <StatusBadge status={row.status} />
+        <StatusBadge status={row.invoiceStatus} />
       </div>
     </div>
     <div className="flex justify-between items-center mt-2">

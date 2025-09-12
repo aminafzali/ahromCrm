@@ -14,10 +14,9 @@ import {
  * Invoice with related data
  */
 export type InvoiceWithRelations = Invoice & {
-  request: RequestWithRelation;
+  request?: RequestWithRelation;
   items: InvoiceItem[];
   workspaceUser?: WorkspaceUserProfile;
-  status: InvoiceStatus;
 };
 
 /**
@@ -35,11 +34,6 @@ type WorkspaceUserProfile = WorkspaceUser & {
   userGroups?: UserGroup[];
   notifications?: Notification[];
 };
-
-/**
- * Invoice status type
- */
-export type InvoiceStatus = "PENDING" | "PAID" | "CANCELLED";
 
 /**
  * Invoice item type

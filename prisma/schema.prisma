@@ -242,7 +242,7 @@ model Invoice {
   discountPercent Float @default(0) // Can remain Float as it's not a currency value
   total           Float
 
-  InvoiceStatus InvoiceStatus        @default(PENDING)
+  invoiceStatus InvoiceStatus        @default(PENDING)
   paymentStatus InvoicePaymentStatus @default(UNPAID)
 
   dueDate     DateTime?

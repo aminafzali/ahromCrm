@@ -1,7 +1,7 @@
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
 import { connect, relations, searchFileds } from "../data/fetch";
-import { createInvoiceSchema } from "../validation/schema";
+import { createInvoiceSchema ,updateInvoiceSchema  } from "../validation/schema";
 
 class Repository extends BaseRepository<any> {
   constructor() {
@@ -27,7 +27,7 @@ export class InvoiceServiceApi extends BaseService<any> {
     super(
       repository,
       createInvoiceSchema,
-      createInvoiceSchema,
+      updateInvoiceSchema,
       searchFileds,
       relations
     );
@@ -63,25 +63,26 @@ export class InvoiceServiceApi extends BaseService<any> {
     //   message,
     // });
   }
+  
+  
+  // /**
+  //  * دریافت شماره فاکتور بعدی
+  //  */
+  // public async getNextInvoiceNumber() {
+  //   // برای فراخوانی متد جدید findFirst، باید this.repository را به نوع Repository کَست (cast) کنیم.
+  //   const lastInvoice = await (this.repository as Repository).findFirst({
+  //     orderBy: {
+  //       invoiceNumber: "desc",
+  //     },
+  //   });
 
-  /**
-   * دریافت شماره فاکتور بعدی
-   */
-  public async getNextInvoiceNumber() {
-    // برای فراخوانی متد جدید findFirst، باید this.repository را به نوع Repository کَست (cast) کنیم.
-    const lastInvoice = await (this.repository as Repository).findFirst({
-      orderBy: {
-        invoiceNumber: "desc",
-      },
-    });
+  //   if (lastInvoice && lastInvoice.invoiceNumber) {
+  //     return lastInvoice.invoiceNumber + 1;
+  //   }
 
-    if (lastInvoice && lastInvoice.invoiceNumber) {
-      return lastInvoice.invoiceNumber + 1;
-    }
-
-    // اگر هیچ فاکتوری وجود نداشت، از ۱ شروع کن
-    return 1;
-  }
+  //   // اگر هیچ فاکتوری وجود نداشت، از ۱ شروع کن
+  //   return 1;
+  // }
 
   // /**
   //  * Handle after create hook

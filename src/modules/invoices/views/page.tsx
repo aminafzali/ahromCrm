@@ -12,13 +12,14 @@ export default function IndexPage({ isAdmin = false, title = "صورتحساب�
   const filters: FilterOption[] = useMemo(
     () => [
       {
-        name: "status_in", // <--- اصلاحیه: اضافه کردن _in
+        name: "invoiceStatus_in", // <--- اصلاحیه: اضافه کردن _in
         label: "وضعیت فاکتور",
         options: [
           { value: "all", label: "همه وضعیت‌ها" },
-          { value: "PENDING", label: "در انتظار پرداخت" },
-          { value: "PAID", label: "پرداخت شده" },
+          { value: "PENDING", label: "در انتظار تایید" },
+          { value: "APPROVED", label: "تایید شده" },
           { value: "CANCELED", label: "لغو شده" },
+          { value: "DRAFT", label: "پیش‌نویس" },
         ],
       },
       {
