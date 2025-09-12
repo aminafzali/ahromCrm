@@ -85,12 +85,13 @@ export default function DetailPage({ id, isAdmin }: InvoiceDetailsViewProps) {
           <CreatePaymentPage
             defaultValues={{
               invoice: invoice,
-              user: invoice.workspaceUser,
+              workspaceUser: invoice.workspaceUser,
               amount: invoice.total,
             }}
             back={false}
             after={() => {
               closeModal();
+              fetchInvoiceDetails();
             }}
           />
         ),
@@ -135,18 +136,22 @@ export default function DetailPage({ id, isAdmin }: InvoiceDetailsViewProps) {
     status: (value: string) => (
       <span
         className={`px-3 py-1 rounded-lg ${
-          value === "PAID"
+          value === "SUCCESS"
             ? "bg-success text-success-content"
-            : value === "CANCELLED"
+            : value === "FAILED"
+            ? "bg-error text-error-content"
+            : value === "CANCELED"
             ? "bg-error text-error-content"
             : "bg-warning text-warning-content"
         }`}
       >
-        {value === "PAID"
-          ? "پرداخت شده"
-          : value === "CANCELLED"
+        {value === "SUCCESS"
+          ? "موفق"
+          : value === "FAILED"
+          ? "ناموفق"
+          : value === "CANCELED"
           ? "لغو شده"
-          : "در انتظار پرداخت"}
+          : "در انتظار تایید"}
       </span>
     ),
     createdAt: (value: string) => <DateDisplay date={value} />,

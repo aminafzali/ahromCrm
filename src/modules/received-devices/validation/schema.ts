@@ -30,10 +30,11 @@ export const createReceivedDeviceSchema = baseSchema.extend({
   ),
 });
 
-export const updateReceivedDeviceSchema = baseSchema.extend({
+export const updateReceivedDeviceSchema = baseSchema.partial().extend({
   // در حالت ویرایش، این فیلدها می‌توانند اختیاری باشند
   request: z.object({ id: z.number() }).optional().nullable(),
   workspaceUser: z.object({ id: z.number() }).optional().nullable(),
   deviceType: z.object({ id: z.number() }).optional().nullable(),
   brand: z.object({ id: z.number() }).optional().nullable(),
+  isDelivered: z.boolean().optional(),
 });

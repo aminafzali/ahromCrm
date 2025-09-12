@@ -7,6 +7,8 @@ export const include = {
     include: {
       user: true,
       role: true,
+      labels: true,
+      userGroups: true,
     },
   },
   assignedTo: {

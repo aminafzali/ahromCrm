@@ -1,9 +1,12 @@
 import {
   Invoice,
   InvoiceItem,
+  Label,
   Request,
+  Role,
   ServiceType,
   User,
+  UserGroup,
   WorkspaceUser,
 } from "@prisma/client";
 
@@ -26,6 +29,11 @@ export type RequestWithRelation = Request & {
 
 type WorkspaceUserProfile = WorkspaceUser & {
   user: User;
+  role: Role;
+  // روابط جدید را با تایپ‌های صحیح و تو در تو تعریف می‌کنیم
+  labels?: Label[];
+  userGroups?: UserGroup[];
+  notifications?: Notification[];
 };
 
 /**

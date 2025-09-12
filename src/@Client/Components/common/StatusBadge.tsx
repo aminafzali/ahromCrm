@@ -8,6 +8,7 @@ interface StatusBadgeProps {
 }
 
 const defaultStatusMap: Record<string, { label: string; color: string }> = {
+  "تحویل داده شده": { label: "تحویل داده شده", color: "success" },
   active: { label: "فعال", color: "success" },
   inactive: { label: "غیرفعال", color: "error" },
   pending: { label: "در حال پردازش", color: "primary text-white" },

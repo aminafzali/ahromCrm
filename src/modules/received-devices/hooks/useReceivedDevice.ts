@@ -6,14 +6,17 @@ import { useCrud } from "@/@Client/hooks/useCrud";
 import { z } from "zod";
 import { ReceivedDeviceRepository } from "../repo/ReceivedDeviceRepository";
 import { ReceivedDeviceWithRelations } from "../types";
-import { createReceivedDeviceSchema } from "../validation/schema";
+import {
+  createReceivedDeviceSchema,
+  updateReceivedDeviceSchema,
+} from "../validation/schema";
 
 export function useReceivedDevice() {
   const repo = new ReceivedDeviceRepository();
   const hook = useCrud<
     ReceivedDeviceWithRelations,
     z.infer<typeof createReceivedDeviceSchema>,
-    z.infer<typeof createReceivedDeviceSchema>,
+    z.infer<typeof updateReceivedDeviceSchema>,
     any
   >(repo);
   return { ...hook };

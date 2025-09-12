@@ -31,18 +31,28 @@ export const columnsForAdmin: Column[] = [
   {
     name: "receivedDate",
     field: "receivedDate",
-    label: "تاریخ تحویل",
+    label: "تاریخ دریافت",
     render: (row: ReceivedDeviceWithRelations) => (
       <DateDisplay date={row.receivedDate} />
     ),
   },
   {
-    name: "status",
-    field: "status",
-    label: "وضعیت",
+    name: "isDelivered",
+    field: "isDelivered",
+    label: " وضعیت تحویل",
     render: (row: ReceivedDeviceWithRelations) => {
       // ▼▼▼ تغییر نهایی برای رفع خطا در اینجا اعمال شده است ▼▼▼
-      const statusText = row.request?.status?.name || "پذیرش شده";
+      const statusText = row.isDelivered ? "تحویل داده شده" : "تحویل نشده است";
+      return <StatusBadge status={statusText} />;
+    },
+  },
+  {
+    name: "status",
+    field: "status",
+    label: "وضعیت درخواست",
+    render: (row: ReceivedDeviceWithRelations) => {
+      // ▼▼▼ تغییر نهایی برای رفع خطا در اینجا اعمال شده است ▼▼▼
+      const statusText = row.request?.status?.name || "بدون درخواست متصل";
       return <StatusBadge status={statusText} />;
     },
   },

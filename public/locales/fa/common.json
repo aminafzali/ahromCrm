@@ -120,5 +120,21 @@
   "model":"مدل",
   "receivedDate":"تاریخ دریافت",
   "problemDescription":"توضیح مشکل",
-  "initialCondition":"شرح وضعیت ظاهری "
+  "initialCondition":"شرح وضعیت ظاهری ",
+  "amount":"مبلغ",
+  "method":"روش پرداخت",
+  "CARD":"کارت",
+  "SALES":"فروش",
+  "workspaceId":"شناسه فضای کاری",
+  "workspaceUserId":"شناسه کاربر",
+  "workspaceUser":"کاربر",
+  "requestId":"شناسه درخواست",
+  "referenceInvoiceId":"شناسه فاکتور مرجع",
+  "taxPercent":"درصد مالیات",
+  "discountPercent":"درصد تخفیف",
+  "issueDate":"تاریخ صدور فاکتور",
+  "dueDate":"تاریخ سررسید فاکتور",
+  "invoiceNumber":"شماره فاکتور",
+  "displayName":"نام کاربر",
+  "roleId":"شناسه نقش"
 }

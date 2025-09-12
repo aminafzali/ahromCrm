@@ -3,6 +3,7 @@
 import {
   ActualService,
   Invoice,
+  Label,
   Note,
   Notification,
   ActualServiceOnRequest as PrismaActualServiceOnRequest,
@@ -11,6 +12,7 @@ import {
   ServiceType,
   Status,
   User,
+  UserGroup,
   WorkspaceUser,
 } from "@prisma/client";
 
@@ -18,6 +20,8 @@ import {
 type WorkspaceUserProfile = WorkspaceUser & {
   user: User;
   role?: Role; // نقش ممکن است همیشه include نشود
+  labels?: Label[];
+  userGroups?: UserGroup[];
 };
 
 // اینترفیس جدول واسط را برای شامل شدن خود خدمت واقعی، گسترش می‌دهیم

@@ -7,21 +7,32 @@ class Repository extends BaseRepository<any> {
   constructor() {
     super("Invoice");
   }
+  /**
+   * یک متد عمومی برای دسترسی به قابلیت findFirst پریزما.
+   * این متد ضروری است چون getter 'model' در BaseRepository به صورت protected تعریف شده
+   * و ما نمی‌توانیم مستقیماً از داخل کلاس Service به آن دسترسی داشته باشیم.
+   * این متد به 'this.model' دسترسی دارد چون کلاس Repository یک زیرکلاس (subclass) از BaseRepository است.
+   * @param args - آرگومان‌های کوئری برای findFirst پریزما (مثل orderBy, where).
+   */
+  public findFirst(args: any) {
+    return this.model.findFirst(args);
+  }
 }
 
 export class InvoiceServiceApi extends BaseService<any> {
   //protected notifRepo: NotificationServiceApi;
 
   constructor() {
+    const repository = new Repository(); // یک نمونه از ریپازیتوری سفارشی خودمان می‌سازیم
     super(
-      new Repository(),
+      repository,
       createInvoiceSchema,
       createInvoiceSchema,
       searchFileds,
       relations
     );
     this.connect = connect;
-    this.repository = new Repository();
+    this.repository = repository;
     // this.notifRepo = new NotificationServiceApi();
 
     // Initialize hooks
@@ -51,6 +62,25 @@ export class InvoiceServiceApi extends BaseService<any> {
     //   title: "ثبت فاکتور",
     //   message,
     // });
+  }
+
+  /**
+   * دریافت شماره فاکتور بعدی
+   */
+  public async getNextInvoiceNumber() {
+    // برای فراخوانی متد جدید findFirst، باید this.repository را به نوع Repository کَست (cast) کنیم.
+    const lastInvoice = await (this.repository as Repository).findFirst({
+      orderBy: {
+        invoiceNumber: "desc",
+      },
+    });
+
+    if (lastInvoice && lastInvoice.invoiceNumber) {
+      return lastInvoice.invoiceNumber + 1;
+    }
+
+    // اگر هیچ فاکتوری وجود نداشت، از ۱ شروع کن
+    return 1;
   }
 
   // /**
@@ -116,5 +146,4 @@ export class InvoiceServiceApi extends BaseService<any> {
   //     });
   //   }
   // }
-  
 }

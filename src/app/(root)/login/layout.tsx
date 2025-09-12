@@ -1,4 +1,4 @@
-import { ToastProvider, ToastContainer } from "ndui-ahrom";
+import { ToastContainer, ToastProvider } from "ndui-ahrom";
 
 export default function RootLayout({
   children,
@@ -6,9 +6,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-      <ToastProvider>
-        {children}
-        <ToastContainer position="top-center" />
-      </ToastProvider>
+    <ToastProvider>
+      <div className="">{children}</div>
+      <ToastContainer position="top-center" />
+    </ToastProvider>
   );
 }

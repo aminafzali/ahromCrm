@@ -20,6 +20,12 @@ export const columnsForAdmin: Column[] = [
     render: (row) => row.name || "نامشخص",
   },
   {
+    name: "invoiceNumber",
+    field: "invoiceNumber",
+    label: "شماره فاکتور",
+    render: (row) => row.invoiceNumber || "نامشخص",
+  },
+  {
     name: "type",
     field: "type",
     label: "نوع فاکتور",

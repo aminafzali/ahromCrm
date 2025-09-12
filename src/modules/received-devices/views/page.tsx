@@ -1,7 +1,8 @@
 "use client";
 
 import Loading from "@/@Client/Components/common/Loading";
-import IndexWrapper from "@/@Client/Components/wrappers/IndexWrapper/Index";
+
+import IndexWrapper from "@/@Client/Components/wrappers/V2/IndexWrapper";
 import { FilterOption } from "@/@Client/types";
 import { useBrand } from "@/modules/brands/hooks/useBrand";
 import { BrandWithRelations } from "@/modules/brands/types";
@@ -71,6 +72,18 @@ export default function IndexPage({ title = "دستگاه‌های دریافت�
       ],
     });
   }
+  // +++ افزودن فیلتر جدید برای وضعیت تحویل +++
+  const deliveredFilter: FilterOption = {
+    name: "isDelivered_bool",
+    label: "وضعیت تحویل دستگاه",
+    options: [
+      { value: "all", label: "همه" },
+      { value: "true", label: "تحویل داده شده" },
+      { value: "false", label: "تحویل نشده" },
+    ],
+  };
+  filters.push(deliveredFilter);
+  // +++ پایان افزودن فیلتر +++
 
   // هشدار: این فیلتر تا زمانی که منطق تو در توی آن در بک‌اند پیاده‌سازی نشود، کار نخواهد کرد
   if (statuses.length > 0) {
@@ -78,6 +91,7 @@ export default function IndexPage({ title = "دستگاه‌های دریافت�
       name: "statusId",
       label: "وضعیت درخواست",
       options: [
+        // { value: "null", label: "بدون درخواست متصل" },
         { value: "all", label: "همه" },
         ...statuses.map((item) => ({
           value: String(item.id),

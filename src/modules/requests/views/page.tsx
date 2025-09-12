@@ -69,7 +69,7 @@ export default function IndexPage({ isAdmin = false, title = "درخواست‌�
       {
         value: "all",
         label: "همه",
-      },
+      }
     ];
     statuses.map((item) =>
       options.push({

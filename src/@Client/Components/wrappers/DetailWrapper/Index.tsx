@@ -153,7 +153,7 @@ const DetailWrapper: React.FC<DetailPageWrapperProps> = ({
 
   return (
     <div className={`w-full ${className}`}>
-      <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
+      <div className="flex flex-wrap gap-2 mt-4 md:mt-0 mb-2 md:mb-2">
         {createActionButtons.map((button, index) => (
           <ButtonCreate
             key={index}

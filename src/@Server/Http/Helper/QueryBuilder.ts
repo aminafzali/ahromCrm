@@ -18,51 +18,82 @@ export class QueryBuilder {
       const value = where[key];
       if (
         value === undefined ||
-        value === null ||
+        // value === null ||
         value === "all" ||
         value === ""
       ) {
         continue;
       }
 
-      if (key.endsWith("_some")) {
-        const fieldName = key.replace("_some", "");
-        const ids = String(value)
-          .split(",")
-          .map(Number)
-          .filter((id) => !isNaN(id));
-        if (ids.length > 0) {
-          this.where[fieldName] = { some: { id: { in: ids } } };
+      if (value === "null" || null) {
+        if (key.endsWith("Id")) {
+          const fieldName = key.replace("Id", "");
+          console.log("تست آیدی", fieldName);
+          this.where[fieldName] = null;
+        } else if (key.endsWith("_some")) {
+          const fieldName = key.replace("_some", "");
+          this.where[fieldName] = null;
+        } else if (key.endsWith("_in")) {
+          const fieldName = key.replace("_in", "");
+          this.where[fieldName] = null;
+        } else if (key.endsWith("_contains")) {
+          const fieldName = key.replace("_contains", "");
+          this.where[fieldName] = null;
+        } else if (key.endsWith("_bool")) {
+          const fieldName = key.replace("_bool", "");
+          this.where[fieldName] = null;
+        } else {
+          this.where[key] = null;
         }
-      } else if (key.endsWith("_in")) {
-        const fieldName = key.replace("_in", "");
-        const valuesAsArray = String(value).split(",");
-
-        // ===== شروع اصلاحیه کلیدی =====
-        // اگر نام فیلد به "Id" ختم می‌شود، مقادیر را به عدد تبدیل می‌کنیم
-        if (fieldName.endsWith("Id")) {
-          const ids = valuesAsArray.map(Number).filter((id) => !isNaN(id));
+      } else {
+        if (key.endsWith("_some")) {
+          const fieldName = key.replace("_some", "");
+          const ids = String(value)
+            .split(",")
+            .map(Number)
+            .filter((id) => !isNaN(id));
           if (ids.length > 0) {
-            this.where[fieldName] = { in: ids };
+            this.where[fieldName] = { some: { id: { in: ids } } };
+          }
+        } else if (key.endsWith("_in")) {
+          const fieldName = key.replace("_in", "");
+          const valuesAsArray = String(value).split(",");
+
+          // ===== شروع اصلاحیه کلیدی =====
+          // اگر نام فیلد به "Id" ختم می‌شود، مقادیر را به عدد تبدیل می‌کنیم
+          if (fieldName.endsWith("Id")) {
+            const ids = valuesAsArray.map(Number).filter((id) => !isNaN(id));
+            if (ids.length > 0) {
+              this.where[fieldName] = { in: ids };
+            }
+          } else {
+            // در غیر این صورت، مقادیر را به صورت رشته نگه می‌داریم (برای status, type و...)
+            this.where[fieldName] = { in: valuesAsArray };
+          }
+          // ===== پایان اصلاحیه کلیدی =====
+        } else if (key.endsWith("_gte")) {
+          const fieldName = key.replace("_gte", "");
+          if (!this.where[fieldName]) this.where[fieldName] = {};
+          this.where[fieldName].gte = value;
+        } else if (key.endsWith("_lte")) {
+          const fieldName = key.replace("_lte", "");
+          if (!this.where[fieldName]) this.where[fieldName] = {};
+          this.where[fieldName].lte = value;
+        } else if (key.endsWith("_contains")) {
+          const fieldName = key.replace("_contains", "");
+          this.where[fieldName] = { contains: value, mode: "insensitive" };
+        } else if (key.endsWith("_bool")) {
+          const fieldName = key.replace("_bool", "");
+          if (value === "true") {
+            this.where[fieldName] = true;
+          } else if (value === "false") {
+            this.where[fieldName] = false;
+          } else {
+            this.where[fieldName] = {};
           }
         } else {
-          // در غیر این صورت، مقادیر را به صورت رشته نگه می‌داریم (برای status, type و...)
-          this.where[fieldName] = { in: valuesAsArray };
+          this.where[key] = value;
         }
-        // ===== پایان اصلاحیه کلیدی =====
-      } else if (key.endsWith("_gte")) {
-        const fieldName = key.replace("_gte", "");
-        if (!this.where[fieldName]) this.where[fieldName] = {};
-        this.where[fieldName].gte = value;
-      } else if (key.endsWith("_lte")) {
-        const fieldName = key.replace("_lte", "");
-        if (!this.where[fieldName]) this.where[fieldName] = {};
-        this.where[fieldName].lte = value;
-      } else if (key.endsWith("_contains")) {
-        const fieldName = key.replace("_contains", "");
-        this.where[fieldName] = { contains: value, mode: "insensitive" };
-      } else {
-        this.where[key] = value;
       }
     }
 

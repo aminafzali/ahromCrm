@@ -30,6 +30,7 @@ export const createInvoiceSchema = z.object({
   // فیلدهای تاریخ را برای اعتبارسنجی اضافه می‌کنیم
   issueDate: z.string().optional().nullable(),
   dueDate: z.string().optional().nullable(),
+  invoiceNumber: z.number(),
 });
 
 export const updateInvoiceStatusSchema = z.object({

@@ -1,19 +1,16 @@
 "use client";
 
+import React from "react";
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col min-h-screen bg-base-100">
-      <main
-      // className="flex-grow container mx-auto px-2"
-      >
-        {children}
-      </main>
-
-      {/* <Footer /> */}
+    <div className="">
+      {/* main container: حداکثر عرض و padding مناسب */}
+      <main className="">{children}</main>
     </div>
   );
 }

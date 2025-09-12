@@ -15,7 +15,6 @@ import { RequestWithRelations } from "../../types";
 
 // +++ ایمپورت‌های جدید برای قابلیت ویرایش +++
 import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import FormSubmissionView from "../../components/FormSubmissionView";
@@ -148,12 +147,27 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
         </a>
       </div>
     ),
-    user: (row) => (
-      <div className="flex justify-start lg:gap-2 py-1  mt-4 items-center">
-        <div className="lg:flex flex-row-reverse justify-between bg-white p-4 rounded-lg w-full boder-[1px] border-gray-400 items-start mb-3">
-          <div className="flex justify-center py-1 my-2 rounded-lg border-[1px] border-primary text-primary px-2">
-            <a href={`tel:${row.phone}`} className="text-primary text-lg flex">
-              {row.phone || "نامشخص"}
+    workspaceUser: (row) => (
+      <div className="bg-white p-2 rounded-lg shadow-sm hover:shadow-md transition-shadow mt-2">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <h3 className="font-semibold text-md">
+              {row.displayName || row.user?.name || "نامشخص"}
+            </h3>
+
+            {row.address && (
+              <p className="text-gray-500 text-sm mt-1">
+                <DIcon icon="fa-location-dot" cdi={false} classCustom="ml-1" />
+                {row.address}
+              </p>
+            )}
+          </div>
+          <div className="flex justify-between py-1 rounded-lg border-[1px] border-primary text-primary px-2">
+            <a
+              href={`tel:${row.user?.phone}`}
+              className="text-primary text-lg flex"
+            >
+              {row.phone || row.user?.phone || "نامشخص"}
               <DIcon
                 icon="fa-phone"
                 cdi={false}
@@ -161,30 +175,21 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
               />
             </a>
           </div>
-          <Link href={`/dashboard/users/${row.id}`} className="w-full py-2">
-            <h3 className="font-meduim text-md">{row.name || "نامشخص"}</h3>
-
-            <p className="text-gray-400 text-sm mt-2">
-              <DIcon icon="fa-location-dot" cdi={false} classCustom="ml-1" />
-              {row.address || " آدرس نامشخص"}
-            </p>
-
-            {row.labels && row.labels.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4 pt-2 border-t-[1px] border-t-gray-400">
-                {row.labels.map((item) => (
-                  <span
-                    key={item.id}
-                    className={` p-2 rounded-xl py-1 border-[1px]`}
-                    style={{ borderColor: item.color, color: item.color }}
-                  >
-                    {" "}
-                    {item.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </Link>
         </div>
+        {row.labels && row.labels.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {row.labels.map((item) => (
+              <span
+                key={item.id}
+                className={` p-2 rounded-lg py-1 border-[1px]`}
+                style={{ borderColor: item.color, color: item.color }}
+              >
+                {" "}
+                {item.name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     ),
     formSubmission: (value: any) => (

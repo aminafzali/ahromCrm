@@ -22,8 +22,8 @@ export default function SelectUserForReminder({
   };
   return (
     <>
-      <div className="input-group">
-        <input
+      <div className="input-group mt-2">
+        {/* <input
           type="text"
           className="form-control"
           value={selectedUserName || ""}
@@ -31,7 +31,7 @@ export default function SelectUserForReminder({
           readOnly
           onClick={() => setIsModalOpen(true)}
           style={{ cursor: "pointer" }}
-        />
+        /> */}
         <Button
           className="btn btn-outline-secondary"
           type="button"

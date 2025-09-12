@@ -39,3 +39,5 @@ export interface PaginatedReceivedDeviceResponse {
     limit: number;
   };
 }
+
+export type { ReceivedDevice };
