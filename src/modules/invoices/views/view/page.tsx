@@ -87,6 +87,22 @@ export default function DetailPage({ id, isAdmin }: InvoiceDetailsViewProps) {
   }
   const balanceDue = (invoice?.total || 0) - totalPaid;
 
+  const invoiceTypeMap = {
+    SALES: "فروش",
+    PURCHASE: "خرید",
+    PROFORMA: "پیش‌فاکتور",
+    RETURN_SALES: "مرجوعی فروش",
+    RETURN_PURCHASE: "مرجوعی خرید",
+  };
+
+  const paymentTypeByinvoiceTypeMap = {
+    SALES: "RECEIVE",
+    PURCHASE: "PAY",
+    PROFORMA: "RECEIVE",
+    RETURN_SALES: "PAY",
+    RETURN_PURCHASE: "RECEIVE",
+  };
+
   if (loading && !invoice) return <Loading />;
   if (statusCode === 404) return <NotFound />;
   if (!invoice) return <Loading />;
@@ -97,10 +113,15 @@ export default function DetailPage({ id, isAdmin }: InvoiceDetailsViewProps) {
         <Card>
           <div className="p-4 flex flex-col md:flex-row justify-between items-start gap-4">
             <div>
-              <h1 className="text-xl font-bold">
-                جزئیات فاکتور: {invoice.invoiceNumberName}
+              <h1 className="text-xl font-bold m-1">
+                <span
+                  className={`ml-2 px-2.5 py-1 bg-teal-100 text-teal-800 text-md ring-1 ring-teal-800 font-medium rounded-md`}
+                >
+                  فاکتور {invoiceTypeMap[invoice?.type] || "! نامشخص"}
+                </span>
+                : {invoice.invoiceNumberName}
               </h1>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
+              <div className="flex flex-wrap items-center gap-2 mt-3">
                 <InvoiceStatusBadge status={invoice.invoiceStatus} />
                 <PaymentStatusBadge status={invoice.paymentStatus} />
               </div>
@@ -438,6 +459,7 @@ export default function DetailPage({ id, isAdmin }: InvoiceDetailsViewProps) {
             invoice: invoice,
             workspaceUser: invoice.workspaceUser,
             amount: balanceDue > 0 ? balanceDue : 0,
+            type: paymentTypeByinvoiceTypeMap[invoice.type],
           }}
           back={false}
           after={() => {
