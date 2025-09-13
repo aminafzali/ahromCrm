@@ -213,7 +213,7 @@ model Invoice {
   id Int @id @unique @default(autoincrement())
 
   invoiceNumber     Int
-  invoiceNumberName String?
+  invoiceNumberName String
 
   workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
@@ -257,7 +257,7 @@ model Invoice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([workspaceId, type, invoiceNumber])
+  @@index([workspaceId, invoiceNumberName])
 }
 
 model InvoiceItem {

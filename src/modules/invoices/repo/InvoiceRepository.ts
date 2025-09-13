@@ -9,20 +9,40 @@ export class InvoiceRepository extends BaseRepository<
   constructor() {
     super("invoices");
   }
-/**
-   * شماره فاکتور بعدی را بر اساس نوع فاکتور از سرور دریافت می‌کند.
-   * @param type نوع فاکتور (e.g., SALES, PURCHASE)
+
+  /**
+   * شماره فاکتور بعدی را بر اساس نوع و کسب‌وکار از سرور دریافت می‌کند.
+   * @param type نوع فاکتور
+   * @param workspaceId شناسه کسب‌وکار
    */
-  public async getNextInvoiceNumber(type: InvoiceType): Promise<{ invoiceNumber: number; invoiceNumberName: string }> {
-    // نوع فاکتور را به عنوان کوئری پارامتر به API ارسال می‌کنیم
-    const endpoint = `invoices/next-number?type=${type}`;
+  public async getNextInvoiceNumber(
+    type: InvoiceType,
+    workspaceId: number
+  ): Promise<{ invoiceNumber: number; invoiceNumberName: string }> {
+    // پارامترها به صورت کوئری به API ارسال می‌شوند
+    const endpoint = `invoices/next-number?type=${type}&workspaceId=${workspaceId}`;
 
-    const result = await this.get<{ invoiceNumber: number; invoiceNumberName: string }>(endpoint);
+    const result = await this.get<{
+      invoiceNumber: number;
+      invoiceNumberName: string;
+    }>(endpoint);
 
-    // پاسخ سرور شامل شماره عددی و نام نمایشی خواهد بود
     return result;
   }
-  
+
+  // /**
+  //    * شماره فاکتور بعدی را بر اساس نوع فاکتور از سرور دریافت می‌کند.
+  //    * @param type نوع فاکتور (e.g., SALES, PURCHASE)
+  //    */
+  //   public async getNextInvoiceNumber(type: InvoiceType): Promise<{ invoiceNumber: number; invoiceNumberName: string }> {
+  //     // نوع فاکتور را به عنوان کوئری پارامتر به API ارسال می‌کنیم
+  //     const endpoint = `invoices/next-number?type=${type}`;
+
+  //     const result = await this.get<{ invoiceNumber: number; invoiceNumberName: string }>(endpoint);
+
+  //     // پاسخ سرور شامل شماره عددی و نام نمایشی خواهد بود
+  //     return result;
+  //   }
 }
 
 // import { BaseRepository } from "@/@Client/Http/Repository/BaseRepository";
