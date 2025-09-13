@@ -10,6 +10,11 @@ interface StatusBadgeProps {
 const defaultStatusMap: Record<string, { label: string; color: string }> = {
   "تحویل داده شده": { label: "تحویل داده شده", color: "success" },
   APPROVED: { label: "تایید شده", color: "success" },
+  // وضعیت تراکنش مبلغ فاکتور  InvoicePaymentStatus
+  UNPAID: { label: "پرداخت نشده", color: "neutral text-white" },
+  PARTIALLY_PAID: { label: "پرداخت ناقص", color: "error" },
+  OVERPAID: { label: "پرداخت مازاد", color: "warning" },
+  PAID: { label: "پرداخت کامل", color: "primary text-white" },
   active: { label: "فعال", color: "success" },
   inactive: { label: "غیرفعال", color: "error" },
   pending: { label: "در حال پردازش", color: "primary text-white" },
@@ -23,7 +28,7 @@ const defaultStatusMap: Record<string, { label: string; color: string }> = {
   completed: { label: "تکمیل شده", color: "success" },
   CARD: { label: "کارت خوان", color: "success" },
   SUCCESS: { label: "موفق", color: "success" },
-  PAID: { label: "پرداخت شده", color: "success" },
+  //PAID: { label: "پرداخت شده", color: "success" },
   "تکمیل شده": { label: "تکمیل شده", color: "success" },
   cancelled: { label: "لغو شده", color: "error" },
   "لغو شده": { label: "لغو شده", color: "error text-white" },

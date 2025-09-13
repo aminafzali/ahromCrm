@@ -44,8 +44,8 @@ const invoiceSchema = z.object({
   requestId: z.number().optional(),
   referenceInvoiceId: z.number().optional(),
   workspaceUser: z.object({ id: z.number() }),
-  issueDate: z.string().optional().nullable(),
-  dueDate: z.string().optional().nullable(),
+  issueDate: z.string().nullable(),
+  dueDate: z.string().nullable(),
 });
 
 /* ---------- types ---------- */
@@ -224,9 +224,7 @@ export default function InvoiceForm({
   const [error, setError] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string[]>>({});
   const [mode, setMode] = useState<"table" | "card">("table");
-  const [type, setType] = useState<InvoiceType>(
-    defaultValues?.type || "SALES"
-  );
+  const [type, setType] = useState<InvoiceType>(defaultValues?.type || "SALES");
   const [referenceInvoice, setReferenceInvoice] = useState<any | null>(
     defaultValues?.referenceInvoice || null
   );
@@ -555,7 +553,9 @@ export default function InvoiceForm({
       };
       if (req) data.requestId = req.id;
       // نام فاکتور حالا از invoiceNumberName استفاده می‌کند
-      data.name = `فاکتور ${user?.displayName || ""} ${calculateTotal()} شماره ${invoiceNumberName}`;
+      data.name = `فاکتور ${
+        user?.displayName || ""
+      } ${calculateTotal()} شماره ${invoiceNumberName}`;
 
       const validation = invoiceSchema.safeParse(data);
       if (!validation.success) {
@@ -626,9 +626,7 @@ export default function InvoiceForm({
               </button>
               <button
                 className={`px-4 py-2 rounded-md border text-sm transition-colors duration-200 ${
-                  type === "RETURN_SALES"
-                    ? "bg-primary text-white"
-                    : "bg-white"
+                  type === "RETURN_SALES" ? "bg-primary text-white" : "bg-white"
                 }`}
                 onClick={() => setType("RETURN_SALES")}
               >

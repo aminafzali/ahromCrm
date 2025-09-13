@@ -51,6 +51,12 @@ export const columnsForAdmin: Column[] = [
     render: (row) => row.total.toLocaleString(),
   },
   {
+    name: "paymentStatus",
+    field: "paymentStatus",
+    label: " وضعیت مالی",
+    render: (row) => <StatusBadge status={row.paymentStatus} />,
+  },
+  {
     name: "invoiceStatus",
     field: "invoiceStatus",
     label: "وضعیت",

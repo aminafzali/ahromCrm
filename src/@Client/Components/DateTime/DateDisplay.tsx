@@ -3,7 +3,7 @@ import { format } from "date-fns-jalali";
 import { enUS, faIR } from "date-fns/locale";
 
 interface DateDisplayProps {
-  date: string | number | Date; // پشتیبانی از رشته، عدد (تایم‌استمپ) و Date
+  date: string | number | Date | null; // پشتیبانی از رشته، عدد (تایم‌استمپ) و Date
   size?: "xs" | "sm" | "md" | "lg"; // پشتیبانی از رشته، عدد (تایم‌استمپ) و Date
   className?: string; // پشتیبانی از رشته، عدد (تایم‌استمپ) و Date
   locale?: "fa" | "en"; // انتخاب زبان (پیش‌فرض: فارسی)
@@ -27,7 +27,7 @@ const DateDisplay: React.FC<DateDisplayProps> = ({
   showTooltip = true,
   short = true,
 }) => {
-  if (!date) return null;
+  if (!date || date === null) return null;
 
   const parsedDate = new Date(date);
   const selectedLocale = locale === "fa" ? faIR : enUS;

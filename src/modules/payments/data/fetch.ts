@@ -16,7 +16,7 @@ export const include = {
     select: {
       id: true,
       total: true,
-      status: true,
+      invoiceStatus: true,
       request: {
         select: {
           id: true,
