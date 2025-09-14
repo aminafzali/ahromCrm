@@ -101,15 +101,15 @@ model WorkspaceUser {
   statusChanges        RequestStatusHistory[]
 
   // روابط چند به چند ساده (Implicit)
-  labels            Label[]             @relation("WorkspaceUserLabels")
-  userGroups        UserGroup[]         @relation("WorkspaceUserGroups")
+  labels     Label[]     @relation("WorkspaceUserLabels")
+  userGroups UserGroup[] @relation("WorkspaceUserGroups")
 
-// Project Management Relations
-  teams                   TeamMember[]
-  assignedProjects        Project[]      @relation("AssignedWorkspaceUsersToProject")
-  assignedTasks           Task[]         @relation("AssignedWorkspaceUsersToTask")
-  taskStatusChanges       TaskStatusHistory[]
-  relatedTasks            Task[]         @relation("TaskToWorkspaceUser")
+  // Project Management Relations
+  teams             TeamMember[]
+  assignedProjects  Project[]           @relation("AssignedWorkspaceUsersToProject")
+  assignedTasks     Task[]              @relation("AssignedWorkspaceUsersToTask")
+  taskStatusChanges TaskStatusHistory[]
+  relatedTasks      Task[]              @relation("TaskToWorkspaceUser")
 
   @@unique([workspaceId, userId])
 }
@@ -962,6 +962,12 @@ model Task {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // The redundant fields below have been removed.
+  // Request   Request? @relation(fields: [requestId], references: [id])
+  // requestId Int?
+  // Invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+  // invoiceId Int?
   Request   Request? @relation(fields: [requestId], references: [id])
   requestId Int?
   Invoice   Invoice? @relation(fields: [invoiceId], references: [id])
