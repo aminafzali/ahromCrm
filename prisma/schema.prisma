@@ -222,7 +222,6 @@ model Request {
   reviews        RequestReview[]
   cancellations  RequestCancellation[]
   actualServices ActualServiceOnRequest[]
-  Task           Task[]
 }
 
 model Invoice {
@@ -274,7 +273,7 @@ model Invoice {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  Task      Task[]
+
 
   @@index([workspaceId, invoiceNumberName])
 }
@@ -963,15 +962,6 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // The redundant fields below have been removed.
-  // Request   Request? @relation(fields: [requestId], references: [id])
-  // requestId Int?
-  // Invoice   Invoice? @relation(fields: [invoiceId], references: [id])
-  // invoiceId Int?
-  Request   Request? @relation(fields: [requestId], references: [id])
-  requestId Int?
-  Invoice   Invoice? @relation(fields: [invoiceId], references: [id])
-  invoiceId Int?
 }
 
 model TaskLabel {
