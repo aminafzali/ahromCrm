@@ -302,4 +302,5 @@ const IndexWrapper = <T, R extends BaseRepository<T, number>>({
   );
 };
 
+
 export default IndexWrapper;
