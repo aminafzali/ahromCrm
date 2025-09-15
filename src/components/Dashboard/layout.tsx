@@ -4,6 +4,7 @@
 
 import { dashboardBottomItems, dashboardMenuItems } from "@/lib/data";
 import { LayoutWrapper, ToastContainer, ToastProvider } from "ndui-ahrom";
+import { Toaster } from "../ui/toaster";
 import DashboardToolBar from "./DashboardToolBar";
 
 const sidebarContent = (
@@ -44,6 +45,7 @@ export default function DashboardLayout({
           {children}
         </div>
         <ToastContainer position="top-center" />
+        <Toaster />
       </LayoutWrapper>
     </ToastProvider>
   );

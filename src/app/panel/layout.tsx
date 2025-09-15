@@ -2,6 +2,7 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import { WorkspaceProvider } from "@/@Client/context/WorkspaceProvider";
+import { Toaster } from "@/components/ui/toaster";
 import { userBottomItems, userMenuItems } from "@/lib/data";
 import AuthProvider from "@/providers/AuthProvider";
 import {
@@ -60,6 +61,7 @@ export default function UserDashboardLayout({
             <ToastProvider>
               {children}
               <ToastContainer position="top-center" />
+              <Toaster />
             </ToastProvider>
           </WorkspaceProvider>
         </AuthProvider>
