@@ -61,8 +61,14 @@ model Workspace {
   actualServicesOnRequest ActualServiceOnRequest[]
   paymentCategories       PaymentCategory[] // رابطه متقابل برای دسته‌بندی پرداخت‌ها
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  Team              Team[]
+  Project           Project[]
+  Task              Task[]
+  PMStatus          PMStatus[]
+  TaskStatusHistory TaskStatusHistory[]
+  Workflow          Workflow[]
 }
 
 model WorkspaceUser {
@@ -97,6 +103,13 @@ model WorkspaceUser {
   // روابط چند به چند ساده (Implicit)
   labels     Label[]     @relation("WorkspaceUserLabels")
   userGroups UserGroup[] @relation("WorkspaceUserGroups")
+
+  // Project Management Relations
+  teams             TeamMember[]
+  assignedProjects  Project[]           @relation("AssignedWorkspaceUsersToProject")
+  assignedTasks     Task[]              @relation("AssignedWorkspaceUsersToTask")
+  taskStatusChanges TaskStatusHistory[]
+  relatedTasks      Task[]              @relation("TaskToWorkspaceUser")
 
   @@unique([workspaceId, userId])
 }
@@ -179,6 +192,8 @@ model Request {
   assignedToId Int?
   assignedTo   WorkspaceUser? @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
 
+  relatedTasks Task[] @relation("TaskToRequest")
+
   description      String          @db.Text
   serviceTypeId    Int?
   serviceType      ServiceType?    @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
@@ -231,6 +246,8 @@ model Invoice {
 
   referenceInvoiceId Int? // رفرنس به فاکتور مرجع (مثلاً برای ریفرنس‌ها)
   referenceInvoice   Invoice? @relation("InvoiceReference", fields: [referenceInvoiceId], references: [id])
+
+  relatedTasks Task[] @relation("TaskToInvoice")
 
   items InvoiceItem[]
   type  InvoiceType   @default(SALES)
@@ -323,11 +340,16 @@ model ReceivedDevice {
 }
 
 model Reminder {
-  id              Int           @id @default(autoincrement())
-  workspaceId     Int
-  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  id Int @id @default(autoincrement())
+
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
   workspaceUserId Int
   workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  taskId Int?
+  task   Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   title                String
   description          String?             @db.Text
@@ -494,6 +516,7 @@ model Label {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   workspaceUsers WorkspaceUser[] @relation("WorkspaceUserLabels")
+  TaskLabel      TaskLabel[]
 
   @@unique([name, workspaceId])
 }
@@ -838,6 +861,191 @@ model ActualServiceOnRequest {
   updatedAt       DateTime      @updatedAt
 
   @@unique([requestId, actualServiceId])
+}
+
+// >>>>>>>>>>>>> PROJECT MANAGEMENT MODELS (V4 - FINAL & CORRECTED) <<<<<<<<<<<<<<
+
+model Team {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+
+  parentId Int?
+  parent   Team?  @relation("TeamHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children Team[] @relation("TeamHierarchy")
+
+  members          TeamMember[]
+  assignedProjects Project[]    @relation("AssignedTeamsToProject")
+  assignedTasks    Task[]       @relation("AssignedTeamsToTask")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, workspaceId])
+}
+
+model TeamMember {
+  teamId          Int
+  workspaceUserId Int
+  team            Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@id([teamId, workspaceUserId])
+}
+
+model Project {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?   @db.Text
+
+  startDate DateTime?
+  endDate   DateTime?
+
+  statusId Int
+  status   PMStatus @relation(fields: [statusId], references: [id])
+
+  tasks Task[]
+
+  assignedUsers WorkspaceUser[] @relation("AssignedWorkspaceUsersToProject")
+  assignedTeams Team[]          @relation("AssignedTeamsToProject")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Task {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title       String
+  description String?   @db.Text
+  priority    String    @default("medium")
+
+  startDate DateTime?
+  endDate   DateTime?
+
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  statusId Int
+  status   PMStatus @relation(fields: [statusId], references: [id])
+
+  parentId Int?
+  parent   Task?  @relation("TaskHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subTasks Task[] @relation("TaskHierarchy")
+
+  assignedUsers WorkspaceUser[] @relation("AssignedWorkspaceUsersToTask")
+  assignedTeams Team[]          @relation("AssignedTeamsToTask")
+
+  isRecurring       Boolean?  @default(false)
+  recurrenceRule    String?
+  recurrenceEndDate DateTime?
+
+  labels TaskLabel[]
+
+  relatedEntityType      String?
+  relatedRequestId       Int?
+  relatedInvoiceId       Int?
+  relatedWorkspaceUserId Int?
+  relatedRequest         Request?       @relation("TaskToRequest", fields: [relatedRequestId], references: [id], onDelete: SetNull)
+  relatedInvoice         Invoice?       @relation("TaskToInvoice", fields: [relatedInvoiceId], references: [id], onDelete: SetNull)
+  relatedWorkspaceUser   WorkspaceUser? @relation("TaskToWorkspaceUser", fields: [relatedWorkspaceUserId], references: [id], onDelete: SetNull)
+
+  statusHistory TaskStatusHistory[]
+  reminders     Reminder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskLabel {
+  taskId  Int
+  labelId Int
+  task    Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label   Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@id([taskId, labelId])
+}
+
+model PMStatus {
+  id                   Int                 @id @default(autoincrement())
+  workspaceId          Int
+  workspace            Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                 String
+  color                String              @default("#cccccc")
+  type                 PMStatusType
+  projects             Project[]
+  tasks                Task[]
+  TaskStatusHistoryNew TaskStatusHistory[] @relation(name: "newStatus")
+  TaskStatusHistoryOld TaskStatusHistory[] @relation(name: "oldStatus")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, workspaceId, type])
+}
+
+model TaskStatusHistory {
+  id                       Int           @id @unique @default(autoincrement())
+  workspaceId              Int
+  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taskId                   Int
+  task                     Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  oldStatusId              Int?
+  oldStatus                PMStatus?     @relation(name: "oldStatus", fields: [oldStatusId], references: [id], onDelete: SetNull)
+  newStatusId              Int
+  newStatus                PMStatus      @relation(name: "newStatus", fields: [newStatusId], references: [id])
+  changedByWorkspaceUserId Int
+  changedBy                WorkspaceUser @relation(fields: [changedByWorkspaceUserId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  changedAt DateTime @default(now())
+}
+
+// >>>>>>>>>>>>> WORKFLOW AUTOMATION MODELS <<<<<<<<<<<<<<
+
+model Workflow {
+  id          Int            @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  entityType  String
+  steps       WorkflowStep[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([name, workspaceId])
+}
+
+model WorkflowStep {
+  id         Int      @id @default(autoincrement())
+  workflowId Int
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  statusId   Int
+  stepOrder  Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([workflowId, stepOrder])
+}
+
+// >>>>>>>>>>>>> ENUMS <<<<<<<<<<<<<<
+enum PMStatusType {
+  PROJECT
+  TASK
 }
 
 // >>>>>>>>>>>>> ENUMS <<<<<<<<<<<<<<
