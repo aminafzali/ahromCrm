@@ -18,7 +18,7 @@ export default function CreatePage({ back = true, after }: CreatePageProps) {
   return (
     <CreateWrapper
       title="ایجاد وظیفه جدید"
-      backUrl={back}
+      //backUrl={back}
       after={after}
       repo={new TaskRepository()}
       schema={createTaskSchema}
@@ -41,7 +41,8 @@ export default function CreatePage({ back = true, after }: CreatePageProps) {
         {
           key: "taskStatuses",
           fetcher: () =>
-            getAllPMStatuses({ page: 1, limit: 100, where: "type:TASK" }).then(
+            // اصلاح شد: فیلتر به صورت مستقیم پاس داده می‌شود
+            getAllPMStatuses({ page: 1, limit: 100, type: "TASK" }).then(
               (res) => res?.data || []
             ),
         },

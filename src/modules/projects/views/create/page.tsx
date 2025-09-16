@@ -41,11 +41,10 @@ export default function CreatePage({ back = true, after }: CreatePageProps) {
         {
           key: "projectStatuses",
           fetcher: () =>
-            getAllPMStatuses({
-              page: 1,
-              limit: 100,
-              where: "type:PROJECT",
-            }).then((res) => res?.data || []),
+            // اصلاح شد: فیلتر به صورت مستقیم پاس داده می‌شود
+            getAllPMStatuses({ page: 1, limit: 100, type: "PROJECT" }).then(
+              (res) => res?.data || []
+            ),
         },
       ]}
     />
