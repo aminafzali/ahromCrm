@@ -163,6 +163,12 @@ export const dashboardMenuItems = [
     href: "/dashboard/reminders",
   },
   {
+    id: "teams",
+    label: "تیم ها",
+    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+    href: "/dashboard/teams",
+  },
+  {
     id: "pm-statuses",
     label: "وضعیت ها",
     icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,

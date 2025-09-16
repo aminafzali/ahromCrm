@@ -10,7 +10,7 @@ import {
 
 class Repository extends BaseRepository<any> {
   constructor() {
-    super("pmStatus");
+    super("pMStatus");
   }
 }
 
