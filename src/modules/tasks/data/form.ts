@@ -103,6 +103,7 @@ export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
       name: "assignedUsers",
       label: "اعضای تخصیص یافته",
       type: "dataTable",
+      showName: "displayName",
       data: data?.get("workspaceUsers") || [],
       columns: columnsForSelectWorkspaceUser,
       multiple: true,

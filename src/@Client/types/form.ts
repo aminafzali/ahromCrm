@@ -30,6 +30,7 @@ export type FieldType =
 // ===== پایان اصلاحیه =====
 
 export interface FormField {
+  showName?: string;
   name: string;
   label: string;
   type: FieldType;

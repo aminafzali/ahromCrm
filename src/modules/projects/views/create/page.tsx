@@ -1,7 +1,7 @@
 // مسیر فایل: src/modules/projects/views/create/page.tsx
 
 "use client";
-import { CreateWrapper } from "@/@Client/Components/wrappers";
+import CreateWrapper from "@/@Client/Components/wrappers/V2/CreateWrapper";
 import { CreatePageProps } from "@/@Client/types/crud";
 import { usePMStatus } from "@/modules/pm-statuses/hooks/usePMStatus";
 import { useTeam } from "@/modules/teams/hooks/useTeam";

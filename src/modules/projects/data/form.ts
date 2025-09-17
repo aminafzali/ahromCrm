@@ -10,8 +10,7 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
   fields: [
     { name: "name", label: "نام پروژه", type: "text", required: true, col: 2 },
     { name: "description", label: "توضیحات", type: "textarea", col: 2 },
-    { name: "startDate", label: "تاریخ شروع", type: "date" },
-    { name: "endDate", label: "تاریخ پایان", type: "date" },
+
     {
       name: "status",
       label: "وضعیت پروژه",
@@ -23,6 +22,7 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
     {
       name: "assignedUsers",
       label: "اعضای تخصیص یافته",
+      showName: "displayName",
       type: "dataTable",
       data: data?.get("workspaceUsers") || [],
       columns: columnsForSelectWorkspaceUser,
@@ -36,6 +36,8 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
       columns: columnsForSelectTeam,
       multiple: true,
     },
+    { name: "startDate", label: "تاریخ شروع", type: "date" },
+    { name: "endDate", label: "تاریخ پایان", type: "date" },
   ],
   validation: createProjectSchema,
   layout: {

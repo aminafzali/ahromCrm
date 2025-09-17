@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 4010",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=2048 next dev -p 4010",
     "build": "prisma generate && next build",
     "start": "next start -p 4010",
     "lint": "next lint",
@@ -69,6 +69,7 @@
     "@types/sortablejs": "^1.15.8",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "10.4.17",
+    "cross-env": "^10.0.0",
     "daisyui": "^4.12.23",
     "eslint": "^9",
     "eslint-config-next": "15.1.7",

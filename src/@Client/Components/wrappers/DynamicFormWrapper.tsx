@@ -1,8 +1,9 @@
-import { ButtonSelectWithTable, DropdownV2, Input, Select } from "ndui-ahrom";
+import { DropdownV2, Input, Select } from "ndui-ahrom";
 import { FormWrapper } from ".";
 import { FormConfig, FormField } from "../../types/form";
 import DIcon from "../common/DIcon";
 //import Select from "../ui/Select";
+import ButtonSelectWithTable from "../ui/ButtonSelectWithTable2";
 import CustomDatePicker from "../ui/DatePicker";
 import Switch from "../ui/Switch";
 
@@ -46,6 +47,7 @@ const DynamicFormWrapper: React.FC<DynamicFormWrapperProps> = ({
             key={field.name}
             name={field.name}
             label={field.label}
+            showName={field.showName}
             columns={field.columns || []}
             data={field.data || []}
             modalTitle={field.label}

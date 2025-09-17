@@ -1,8 +1,6 @@
+import { Button, Modal, Table } from "ndui-ahrom";
 import React, { useState } from "react";
 import { useFormContext } from "react-hook-form";
-import Button from "../Button/Button";
-import Modal from "../Modal/Modal";
-import Table from "../Table/Table";
 
 // آیکون حذف آیتم
 const RemoveIcon = () => (
@@ -37,6 +35,7 @@ interface ButtonSelectWithTableProps extends ButtonBaseProps {
   tableProps?: Omit<React.ComponentProps<typeof Table>, "columns" | "data">;
   name: string;
   label?: string;
+  showName?: string;
   iconViewMode?: {
     remove?: React.ReactNode;
   };
@@ -55,6 +54,7 @@ const ButtonSelectWithTable: React.FC<ButtonSelectWithTableProps> = ({
   children,
   name,
   label,
+  showName,
   iconViewMode = { remove: <RemoveIcon /> },
   selectionMode = "multiple",
   ...buttonProps
@@ -68,9 +68,12 @@ const ButtonSelectWithTable: React.FC<ButtonSelectWithTableProps> = ({
   // مقدار واقعی از فرم؛ در حالت multiple آرایه و در حالت single شیء یا null
   const selectedValue = watch(name);
   // برای استفاده در جدول، همیشه آرایه است
-  const selectedItems = selectionMode === "multiple"
-    ? selectedValue || []
-    : selectedValue ? [selectedValue] : [];
+  const selectedItems =
+    selectionMode === "multiple"
+      ? selectedValue || []
+      : selectedValue
+      ? [selectedValue]
+      : [];
 
   const handleSelectionChange = (newSelected: any[]) => {
     if (selectionMode === "single") {
@@ -114,7 +117,7 @@ const ButtonSelectWithTable: React.FC<ButtonSelectWithTableProps> = ({
           <div className="flex flex-wrap gap-2 mt-2">
             {selectedItems.map((item: { id: any; name: any }) => (
               <span key={item.id}>
-                {item.name}
+                {item?.[showName as keyof typeof item] || item.name}
                 {selectionMode === "multiple" && " , "}
               </span>
             ))}
@@ -131,7 +134,8 @@ const ButtonSelectWithTable: React.FC<ButtonSelectWithTableProps> = ({
               key={item.id}
               className="bg-base-200 px-2 py-1 rounded-lg flex items-center gap-2"
             >
-              <span>{item.name}</span>
+              <span>{item?.[showName as keyof typeof item] || item.name}</span>
+
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -181,7 +185,9 @@ const ButtonSelectWithTable: React.FC<ButtonSelectWithTableProps> = ({
         value={
           selectionMode === "multiple"
             ? JSON.stringify(selectedItems.map((item: { id: any }) => item.id))
-            : selectedValue ? selectedValue.id : ""
+            : selectedValue
+            ? selectedValue.id
+            : ""
         }
       />
     </div>
