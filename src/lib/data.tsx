@@ -162,6 +162,30 @@ export const dashboardMenuItems = [
     icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
     href: "/dashboard/reminders",
   },
+  {
+    id: "teams",
+    label: "تیم ها",
+    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+    href: "/dashboard/teams",
+  },
+  {
+    id: "pm-statuses",
+    label: "وضعیت ها",
+    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+    href: "/dashboard/pm-statuses",
+  },
+  {
+    id: "projects",
+    label: "پروژه ها",
+    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+    href: "/dashboard/projects",
+  },
+  {
+    id: "tasks",
+    label: "وظایف",
+    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+    href: "/dashboard/tasks",
+  },
 ];
 
 export const dashboardBottomItems = [
