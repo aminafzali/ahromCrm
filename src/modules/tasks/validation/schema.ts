@@ -6,8 +6,8 @@ export const createTaskSchema = z.object({
   title: z.string().min(1, "عنوان وظیفه الزامی است."),
   description: z.string().optional(),
   priority: z.string().optional(),
-  startDate: z.date().optional().nullable(),
-  endDate: z.date().optional().nullable(),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
   project: z.object(
     { id: z.coerce.number() },
     { required_error: "انتخاب پروژه الزامی است." }
