@@ -891,9 +891,9 @@ model TeamMember {
   workspaceUserId Int
   team            Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
   workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@id([teamId, workspaceUserId])
 }
@@ -970,9 +970,9 @@ model TaskLabel {
   labelId Int
   task    Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
   label   Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@id([taskId, labelId])
 }
@@ -983,6 +983,7 @@ model PMStatus {
   workspace            Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name                 String
   color                String              @default("#cccccc")
+  order                Int                 @default(0)
   type                 PMStatusType
   projects             Project[]
   tasks                Task[]
@@ -1007,9 +1008,9 @@ model TaskStatusHistory {
   newStatus                PMStatus      @relation(name: "newStatus", fields: [newStatusId], references: [id])
   changedByWorkspaceUserId Int
   changedBy                WorkspaceUser @relation(fields: [changedByWorkspaceUserId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   changedAt DateTime @default(now())
 }

@@ -2,6 +2,7 @@
 
 export const include = {
   members: {
+    parent: true,
     select: {
       workspaceUser: {
         select: {
@@ -26,4 +27,4 @@ export const include = {
 };
 export const searchFileds = ["name"];
 export const relations = [];
-export const connects = ["members"];
+export const connects = ["members", "parent"];

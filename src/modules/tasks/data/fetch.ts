@@ -14,6 +14,13 @@ export const include = {
       },
     },
   },
+  // این بخش اضافه شده است
+  assignedTeams: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
 };
 export const searchFileds = ["title"];
 export const relations = [];

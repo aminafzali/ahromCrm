@@ -12,6 +12,14 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
       type: "text",
       required: true,
     },
+       // ===== شروع کد جدید =====
+    {
+      name: "parentId",
+      label: "تیم والد (اختیاری)",
+      type: "select",
+      options: data?.get("teams") || [], // لیست تیم‌ها برای انتخاب والد
+    },
+    // ===== پایان کد جدید =====
     {
       name: "description",
       label: "توضیحات",
@@ -37,6 +45,14 @@ export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
       type: "text",
       required: true,
     },
+       // ===== شروع کد جدید =====
+    {
+      name: "parentId",
+      label: "تیم والد (اختیاری)",
+      type: "select",
+      options: data?.get("teams") || [], // لیست تیم‌ها برای انتخاب والد
+    },
+    // ===== پایان کد جدید =====
     {
       name: "description",
       label: "توضیحات",

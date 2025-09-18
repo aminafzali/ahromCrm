@@ -28,4 +28,5 @@ export const updateTaskSchema = z.object({
   project: z.object({ id: z.coerce.number() }).optional(),
   status: z.object({ id: z.coerce.number() }).optional(),
   assignedUsers: z.array(z.object({ id: z.number() })).optional(),
+  statusId: z.number().optional(), 
 });

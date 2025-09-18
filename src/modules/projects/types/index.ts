@@ -12,3 +12,5 @@ export type ProjectWithRelations = Project & {
     tasks: number;
   };
 };
+
+export { Project };
