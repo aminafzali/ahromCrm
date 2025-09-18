@@ -5,7 +5,7 @@ import { WorkspaceUserWithRelations } from "../../workspace-users/types";
 
 export type TeamWithRelations = Team & {
   parent?: Team; // <-- این خط اضافه شد
-  children?: TeamWithRelations[]; // <-- این خط اضافه شد
+  children?: Team[]; // <-- این خط اضافه شد
   members?: { workspaceUser: WorkspaceUserWithRelations }[];
   _count?: {
     members: number;

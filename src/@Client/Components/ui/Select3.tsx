@@ -48,7 +48,7 @@ const Select3: React.FC<SelectProps> = ({
 
   // فیلتر کردن بر اساس سرچ
   const filteredOptions = options.filter((o) =>
-    o.label.toLowerCase().includes(search.toLowerCase())
+    o.label?.toLowerCase().includes(search.toLowerCase())
   );
 
   useEffect(() => {

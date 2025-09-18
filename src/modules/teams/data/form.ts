@@ -1,7 +1,10 @@
 // مسیر فایل: src/modules/teams/data/form.ts
 
 import { FormConfig } from "@/@Client/types/form";
-import { columnsForSelect as columnsForSelectWorkspaceUser } from "@/modules/workspace-users/data/table";
+import {
+  columnsForSelect,
+  columnsForSelect as columnsForSelectWorkspaceUser,
+} from "@/modules/workspace-users/data/table";
 import { createTeamSchema, updateTeamSchema } from "../validation/schema";
 
 export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
@@ -12,12 +15,14 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
       type: "text",
       required: true,
     },
-       // ===== شروع کد جدید =====
+    // ===== شروع کد جدید =====
     {
-      name: "parentId",
+      name: "parent",
       label: "تیم والد (اختیاری)",
-      type: "select",
+      type: "dataTable",
       options: data?.get("teams") || [], // لیست تیم‌ها برای انتخاب والد
+      columns: columnsForSelect,
+      required: false,
     },
     // ===== پایان کد جدید =====
     {
@@ -45,12 +50,14 @@ export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
       type: "text",
       required: true,
     },
-       // ===== شروع کد جدید =====
+    // ===== شروع کد جدید =====
     {
-      name: "parentId",
+      name: "parent",
       label: "تیم والد (اختیاری)",
-      type: "select",
+      type: "dataTable",
       options: data?.get("teams") || [], // لیست تیم‌ها برای انتخاب والد
+      columns: columnsForSelect,
+      required: false,
     },
     // ===== پایان کد جدید =====
     {

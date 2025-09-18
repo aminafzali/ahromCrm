@@ -1,5 +1,5 @@
-import { TeamWithRelations } from "../types"; // فرض می‌شود این تایپ موجود است
 import { useMemo } from "react";
+import { TeamWithRelations } from "../types"; // فرض می‌شود این تایپ موجود است
 
 // تعریف ساختار هر گره در درخت
 export interface TeamTreeNode {
@@ -43,7 +43,7 @@ const buildTree = (teams: TeamWithRelations[]): TeamTreeNode[] => {
 };
 
 export const useTeamTree = (teams: TeamWithRelations[]) => {
-  const treeData = useMemo(() => buildTree(teams), [teams]);
+  const treeData = useMemo(() => buildTree(teams), []);
 
   return { treeData };
 };
