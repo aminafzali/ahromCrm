@@ -50,8 +50,8 @@ export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
   fields: [
     { name: "name", label: "نام پروژه", type: "text", required: true, col: 2 },
     { name: "description", label: "توضیحات", type: "textarea", col: 2 },
-    { name: "startDate", label: "تاریخ شروع", type: "date" },
-    { name: "endDate", label: "تاریخ پایان", type: "date" },
+    // { name: "startDate", label: "تاریخ شروع", type: "date" },
+    // { name: "endDate", label: "تاریخ پایان", type: "date" },
     {
       name: "status",
       label: "وضعیت پروژه",

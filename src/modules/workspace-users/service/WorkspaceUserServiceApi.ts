@@ -54,6 +54,7 @@ export class WorkspaceUserServiceApi extends BaseService<any> {
           // شناسه را از آبجکت role استخراج کرده و به فیلد roleId پاس می‌دهیم
           roleId: role.id,
           displayName: displayName || name,
+          name: displayName || name,
 
           // برای روابط چند به چند نیز داده‌ها را به فرمت صحیح Prisma ترجمه می‌کنیم
           labels: labels
@@ -89,6 +90,7 @@ export class WorkspaceUserServiceApi extends BaseService<any> {
     // داده‌ها را برای Prisma ترجمه می‌کنیم
     const finalData = {
       displayName,
+      name: displayName,
       roleId: role.id,
       labels: labels
         ? {
