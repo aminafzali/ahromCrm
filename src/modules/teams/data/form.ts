@@ -1,11 +1,9 @@
 // مسیر فایل: src/modules/teams/data/form.ts
 
 import { FormConfig } from "@/@Client/types/form";
-import {
-  columnsForSelect,
-  columnsForSelect as columnsForSelectWorkspaceUser,
-} from "@/modules/workspace-users/data/table";
+import { columnsForSelect as columnsForSelectWorkspaceUser } from "@/modules/workspace-users/data/table";
 import { createTeamSchema, updateTeamSchema } from "../validation/schema";
+import { columnsForSelect } from "./table";
 
 export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
   fields: [
@@ -22,7 +20,6 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
       type: "dataTable",
       options: data?.get("teams") || [], // لیست تیم‌ها برای انتخاب والد
       columns: columnsForSelect,
-      required: false,
     },
     // ===== پایان کد جدید =====
     {

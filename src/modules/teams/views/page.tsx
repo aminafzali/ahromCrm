@@ -3,7 +3,7 @@
 
 import Loading from "@/@Client/Components/common/Loading";
 
-import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper2";
+import DataTableWrapper3 from "@/@Client/Components/wrappers/DataTableWrapper3";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import TeamTree from "../components/TeamTree";
 import { columns } from "../data/table";
@@ -90,7 +90,7 @@ export default function IndexPage() {
 
           {/* ستون اصلی (جدول تیم‌ها) */}
           <div className="lg:col-span-3">
-            <DataTableWrapper<TeamWithRelations>
+            <DataTableWrapper3<TeamWithRelations>
               columns={columns}
               createUrl="/dashboard/teams/create"
               loading={loading}
