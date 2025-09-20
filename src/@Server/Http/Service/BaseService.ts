@@ -337,7 +337,8 @@ export abstract class BaseService<T> {
   // ... تمام متدها و منطق‌های دیگر شما در این فایل دست‌نخورده و قدرتمند باقی می‌مانند ...
 
   async getAll(
-    params: FullQueryParams = { page: 1, limit: 10 }
+    params: FullQueryParams = { page: 1, limit: 10 },
+    context?: AuthContext // پارامتر context به صورت اختیاری اضافه شد
   ): Promise<PaginationResult<T>> {
     params.searchFields = this.searchableFields;
     const defaultFilter = this.defaultFilter;

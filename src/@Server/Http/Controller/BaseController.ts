@@ -222,9 +222,13 @@ export abstract class BaseController<T> {
         JSON.parse(JSON.stringify(params)) // از JSON برای نمایش بهتر آبجکت‌های تو در تو استفاده می‌کنیم
       );
       // ================================================================
-
-      // ۶. فراخوانی لایه سرویس با پارامترهای امن‌شده
-      const data = await this.service.getAll(params);
+// ===== شروع اصلاحیه کلیدی =====
+      // ما context را به متد getAll پاس می‌دهیم، دقیقاً مانند متد create
+      const data = await this.service.getAll(params, context);
+      // ===== پایان اصلاحیه کلیدی =====
+      
+      // // ۶. فراخوانی لایه سرویس با پارامترهای امن‌شده
+      // const data = await this.service.getAll(params);
 
       // ===== لاگ ردیابی ۵: بررسی داده‌های نهایی قبل از ارسال پاسخ =====
       console.log(

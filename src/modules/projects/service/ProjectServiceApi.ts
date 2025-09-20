@@ -3,6 +3,7 @@
 import { AuthContext } from "@/@Server/Http/Controller/BaseController";
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
+import { FullQueryParams } from "@/@Server/types";
 import prisma from "@/lib/prisma";
 import { connects, include, relations, searchFileds } from "../data/fetch";
 import { createProjectSchema, updateProjectSchema } from "../validation/schema";
@@ -27,6 +28,48 @@ export class ProjectServiceApi extends BaseService<any> {
     this.connect = connects;
   }
 
+  // ===== شروع اصلاحیه =====
+  /**
+   * متد getAll را بازنویسی می‌کنیم تا فیلتر مجازی 'assignedTo' را برای پروژه‌ها پردازش کند.
+   */
+  async getAll(params: FullQueryParams, context: AuthContext) {
+    // اگر آبجکت فیلتر وجود نداشت، آن را ایجاد می‌کنیم تا از خطا جلوگیری شود
+    if (!params.filters) {
+      params.filters = {};
+    }
+
+    const assignedToFilter = params.filters.assignedTo;
+
+    // اگر فیلتر 'assignedTo=me' وجود داشت و کاربر معتبر بود
+    if (assignedToFilter === "me" && context.workspaceUser) {
+      delete params.filters.assignedTo; // فیلتر مجازی را حذف می‌کنیم
+
+      const teamMemberships = await prisma.teamMember.findMany({
+        where: { workspaceUserId: context.workspaceUser.id },
+        select: { teamId: true },
+      });
+      const teamIds = teamMemberships.map((tm) => tm.teamId);
+
+      // یک شرط OR می‌سازیم تا پروژه‌هایی را پیدا کند که:
+      // ۱. کاربر مستقیماً به آن اختصاص داده شده
+      // ۲. یا یکی از تیم‌های کاربر به آن اختصاص داده شده
+      params.filters.OR = [
+        { assignedUsers: { some: { id: context.workspaceUser.id } } },
+      ];
+
+      if (teamIds.length > 0) {
+        params.filters.OR.push({
+          assignedTeams: { some: { id: { in: teamIds } } },
+        });
+      }
+    }
+
+    // متد اصلی getAll در BaseService را با پارامترهای اصلاح‌شده فراخوانی می‌کنیم
+    return super.getAll(params, context);
+  }
+  // ===== پایان اصلاحیه =====
+
+  //
   /**
    * متد create را برای مدیریت صحیح روابط چند-به-چند بازنویسی می‌کنیم.
    */

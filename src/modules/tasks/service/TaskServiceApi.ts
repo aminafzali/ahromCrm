@@ -3,6 +3,7 @@
 import { AuthContext } from "@/@Server/Http/Controller/BaseController";
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
+import { FullQueryParams } from "@/@Server/types";
 import prisma from "@/lib/prisma";
 import { connects, include, relations, searchFileds } from "../data/fetch";
 import { createTaskSchema, updateTaskSchema } from "../validation/schema";
@@ -26,6 +27,54 @@ export class TaskServiceApi extends BaseService<any> {
     this.repository = new Repository();
     this.connect = connects;
   }
+
+  // ===== شروع اصلاحیه =====
+  /**
+   * متد getAll را بازنویسی می‌کنیم تا فیلترهای مجازی 'assignedTo' را برای وظایف پردازش کند.
+   */
+  async getAll(params: FullQueryParams, context: AuthContext) {
+    // اگر آبجکت فیلتر وجود نداشت، آن را ایجاد می‌کنیم
+    if (!params.filters) {
+      params.filters = {};
+    }
+
+    const assignedToFilter = params.filters.assignedTo;
+
+    if (assignedToFilter && context.workspaceUser) {
+      delete params.filters.assignedTo;
+
+      if (assignedToFilter === "me") {
+        params.filters.assignedUsers = {
+          some: {
+            workspaceUserId: context.workspaceUser.id,
+          },
+        };
+      } else if (assignedToFilter === "my_teams") {
+        const teamMemberships = await prisma.teamMember.findMany({
+          where: { workspaceUserId: context.workspaceUser.id },
+          select: { teamId: true },
+        });
+        const teamIds = teamMemberships.map((tm) => tm.teamId);
+
+        if (teamIds.length > 0) {
+          params.filters.assignedTeams = {
+            some: {
+              id: {
+                in: teamIds,
+              },
+            },
+          };
+        } else {
+          // اگر کاربر عضو تیمی نبود، هیچ وظیفه‌ای برنگردان
+          params.filters.id = -1;
+        }
+      }
+    }
+
+    // فراخوانی متد اصلی با پارامترهای اصلاح‌شده
+    return super.getAll(params, context);
+  }
+  // ===== پایان اصلاحیه =====
 
   /**
    * متد create را برای مدیریت صحیح روابط بازنویسی می‌کنیم.
