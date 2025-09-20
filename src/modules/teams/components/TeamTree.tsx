@@ -17,7 +17,8 @@ const TreeItem: React.FC<TreeItemProps> = ({
   const hasChildren = node.children && node.children.length > 0;
   const isSelected = selectedId === node.id;
 
-  const handleToggle = () => {
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (hasChildren) {
       setIsOpen(!isOpen);
     }
@@ -29,28 +30,40 @@ const TreeItem: React.FC<TreeItemProps> = ({
   };
 
   return (
-    <div className="ml-4">
+    <div className="my-1">
       <div
-        className={`flex items-center p-2 rounded-md cursor-pointer transition-colors ${
+        className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${
           isSelected
-            ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200"
+            ? "bg-primary/10 text-primary font-semibold"
             : "hover:bg-gray-100 dark:hover:bg-slate-700"
         }`}
         onClick={handleNodeClick}
       >
+        <DIcon
+          icon={
+            hasChildren
+              ? isOpen
+                ? "fa-folder-open"
+                : "fa-folder"
+              : "fa-user-group"
+          }
+          className="w-1 h-1 ml-4 text-gray-500"
+        />
+        <span className="font-medium text-sm pt-3 mx-2">{node.name}</span>
         {hasChildren && (
-          <button onClick={handleToggle} className="mr-2 text-gray-500">
+          <button
+            onClick={handleToggle}
+            className="mr-auto text-gray-400 hover:text-gray-700"
+          >
             <DIcon
               icon={isOpen ? "fa-chevron-down" : "fa-chevron-left"}
-              className="w-3 h-3"
+              className="w-3 h-3 pt-3 transition-transform"
             />
           </button>
         )}
-        {!hasChildren && <span className="mr-2 w-3"></span>}
-        <span className="font-medium text-sm">{node.name}</span>
       </div>
       {hasChildren && isOpen && (
-        <div className="pl-4 border-r-2 border-gray-200 dark:border-slate-600">
+        <div className="pl-4 border-r-2 border-gray-200 dark:border-slate-600 ml-2">
           {node.children.map((child) => (
             <TreeItem
               key={child.id}

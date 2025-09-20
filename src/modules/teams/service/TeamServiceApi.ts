@@ -26,7 +26,8 @@ export class TeamServiceApi extends BaseService<any> {
     this.repository = new Repository(); // این خط برای دسترسی مستقیم لازم است
     this.connect = connects;
   }
-
+ 
+  
   /**
    * متد create را برای مدیریت رابطه چند به چند با اعضا بازنویسی می‌کنیم
    */
