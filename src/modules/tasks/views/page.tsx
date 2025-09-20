@@ -1,11 +1,15 @@
-// // // مسیر فایل: src/modules/tasks/views/page.tsx
+// // // // مسیر فایل: src/modules/tasks/views/page.tsx
 "use client";
 
-import DataTableWrapper3 from "@/@Client/Components/wrappers/DataTableWrapper3";
+import DataTableWrapper3, {
+  CustomFilterItem,
+} from "@/@Client/Components/wrappers/DataTableWrapper3";
 import { FilterOption } from "@/@Client/types";
 import { usePMStatus } from "@/modules/pm-statuses/hooks/usePMStatus";
 import { PMStatus } from "@/modules/pm-statuses/types";
 import { useProject } from "@/modules/projects/hooks/useProject";
+import { TeamWithRelations } from "@/modules/teams/types";
+import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
 import { useEffect, useMemo, useState } from "react";
 import TaskAssignmentFilter from "../components/TaskAssignmentFilter";
 import { PriorityBadge, columnsForAdmin, listItemRender } from "../data/table";
@@ -46,17 +50,20 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
     { label: string; value: number }[]
   >([]);
 
-  // State های جدید برای مدیریت فیلترها
-  const [assignmentFilters, setAssignmentFilters] = useState({});
+  const [selectedUsers, setSelectedUsers] = useState<
+    WorkspaceUserWithRelations[]
+  >([]);
+  const [selectedTeams, setSelectedTeams] = useState<TeamWithRelations[]>([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState<
     (string | number)[]
   >([]);
 
   useEffect(() => {
+  
     getAllStatuses({ page: 1, limit: 200, type: "TASK" }).then((res) =>
       setTaskStatuses(res.data || [])
     );
-
+  
     getAllProjects({ page: 1, limit: 1000, assignedTo: "me" }).then((res) => {
       const projectsForSelect = (res.data || []).map((p) => ({
         label: p.name,
@@ -66,6 +73,35 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
     });
   }, []);
 
+  const handleSelectionChange = (
+    users: WorkspaceUserWithRelations[],
+    teams: TeamWithRelations[]
+  ) => {
+    setSelectedUsers(users);
+    setSelectedTeams(teams);
+  };
+
+  const handleDeselectItem = (item: CustomFilterItem) => {
+    if (item.type === "team") {
+      setSelectedTeams((prev) => prev.filter((t) => t.id !== item.id));
+    }
+    if (item.type === "user") {
+      setSelectedUsers((prev) => prev.filter((u) => u.id !== item.id));
+    }
+  };
+
+  const extraFilter = useMemo(() => {
+    const filters: any = {};
+    if (selectedUsers.length > 0) {
+      filters.assignedUsers_some = selectedUsers.map((u) => u.id).join(",");
+    }
+    if (selectedTeams.length > 0) {
+      filters.assignedTeams_some = selectedTeams.map((t) => t.id).join(",");
+    }
+    return filters;
+  }, [selectedUsers, selectedTeams]);
+
+  // ===== شروع اصلاحیه =====
   const filterOptions: FilterOption[] = useMemo(
     () => [
       {
@@ -103,16 +139,30 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
     ],
     []
   );
+  // ===== پایان اصلاحیه =====
 
-  const handleCardDrop = async (
+  const customFilterItems: CustomFilterItem[] = useMemo(
+    () => [
+      ...selectedTeams.map((t) => ({ id: t.id, name: t.name, type: "team" })),
+      // ===== شروع اصلاحیه =====
+      // از ?? برای اطمینان از اینکه name همیشه string است استفاده می‌کنیم
+      ...selectedUsers.map((u) => ({
+        id: u.id,
+        name: u.displayName ?? u.user.name,
+        type: "user",
+      })),
+      // ===== پایان اصلاحیه =====
+    ],
+    [selectedTeams, selectedUsers]
+  );
+
+  const handleCardDrop = (
     taskId: string | number,
     newStatusId: string | number
   ) => {
-    try {
-      await update(Number(taskId), { statusId: Number(newStatusId) });
-    } catch (err) {
+    update(Number(taskId), { statusId: Number(newStatusId) }).catch((err) => {
       console.error("Failed to update task status:", err);
-    }
+    });
   };
 
   return (
@@ -128,15 +178,17 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
         dateFilterFields={dateFilterFields}
         listItemRender={listItemRender}
         defaultViewMode="kanban"
-        // پاس دادن فیلترهای اختصاصی به دیتا تیبل
-        extraFilter={assignmentFilters}
-        // پاس دادن کامپوننت فیلتر سفارشی
+        extraFilter={extraFilter}
         customFilterComponent={
           <TaskAssignmentFilter
             selectedProjectIds={selectedProjectIds}
-            onAssignmentChange={setAssignmentFilters}
+            onSelectionChange={handleSelectionChange}
+            selectedUsers={selectedUsers}
+            selectedTeams={selectedTeams}
           />
         }
+        customFilterItems={customFilterItems}
+        onCustomFilterItemRemove={handleDeselectItem}
         kanbanOptions={{
           enabled: true,
           groupByField: "statusId",
@@ -151,6 +203,159 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
     </div>
   );
 }
+
+// "use client";
+
+// import DataTableWrapper3 from "@/@Client/Components/wrappers/DataTableWrapper3";
+// import { FilterOption } from "@/@Client/types";
+// import { usePMStatus } from "@/modules/pm-statuses/hooks/usePMStatus";
+// import { PMStatus } from "@/modules/pm-statuses/types";
+// import { useProject } from "@/modules/projects/hooks/useProject";
+// import { useEffect, useMemo, useState } from "react";
+// import TaskAssignmentFilter from "../components/TaskAssignmentFilter";
+// import { PriorityBadge, columnsForAdmin, listItemRender } from "../data/table";
+// import { useTask } from "../hooks/useTask";
+// import { TaskWithRelations } from "../types";
+
+// const TaskKanbanCard = ({ item }: { item: TaskWithRelations }) => (
+//   <div className="p-3 bg-white dark:bg-slate-700 rounded-lg border dark:border-slate-600 shadow-sm hover:shadow-md transition-shadow">
+//     <h4 className="font-bold text-md mb-2 text-slate-800 dark:text-slate-100">
+//       {item.title}
+//     </h4>
+//     <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+//       <div className="flex items-center">
+//         <span className="font-semibold ml-1">پروژه:</span>
+//         <span>{item.project?.name || "---"}</span>
+//       </div>
+//       <div className="flex items-center">
+//         <span className="font-semibold ml-1">اولویت:</span>
+//         <PriorityBadge priority={item.priority} />
+//       </div>
+//       {item.endDate && (
+//         <div className="flex items-center pt-1">
+//           <span className="font-semibold ml-1">تاریخ پایان:</span>
+//           <span>{new Date(item.endDate).toLocaleDateString("fa-IR")}</span>
+//         </div>
+//       )}
+//     </div>
+//   </div>
+// );
+
+// export default function IndexPage({ title = "مدیریت وظایف" }) {
+//   const { getAll, update, loading, error } = useTask();
+//   const { getAll: getAllStatuses, loading: loadingStatuses } = usePMStatus();
+//   const { getAll: getAllProjects, loading: loadingProjects } = useProject();
+
+//   const [taskStatuses, setTaskStatuses] = useState<PMStatus[]>([]);
+//   const [userProjects, setUserProjects] = useState<
+//     { label: string; value: number }[]
+//   >([]);
+
+//   // State های جدید برای مدیریت فیلترها
+//   const [assignmentFilters, setAssignmentFilters] = useState({});
+//   const [selectedProjectIds, setSelectedProjectIds] = useState<
+//     (string | number)[]
+//   >([]);
+
+//   useEffect(() => {
+//     getAllStatuses({ page: 1, limit: 200, type: "TASK" }).then((res) =>
+//       setTaskStatuses(res.data || [])
+//     );
+
+//     getAllProjects({ page: 1, limit: 1000, assignedTo: "me" }).then((res) => {
+//       const projectsForSelect = (res.data || []).map((p) => ({
+//         label: p.name,
+//         value: p.id,
+//       }));
+//       setUserProjects(projectsForSelect);
+//     });
+//   }, []);
+
+//   const filterOptions: FilterOption[] = useMemo(
+//     () => [
+//       {
+//         name: "projectId_in",
+//         label: "پروژه",
+//         options: [{ value: "all", label: "همه پروژه‌ها" }, ...userProjects],
+//       },
+//       {
+//         name: "statusId_in",
+//         label: "وضعیت",
+//         options: [
+//           { value: "all", label: "همه وضعیت‌ها" },
+//           ...taskStatuses.map((s) => ({ value: s.id, label: s.name })),
+//         ],
+//       },
+//       {
+//         name: "priority_in",
+//         label: "اولویت",
+//         options: [
+//           { value: "all", label: "همه" },
+//           { value: "low", label: "پایین" },
+//           { value: "medium", label: "متوسط" },
+//           { value: "high", label: "بالا" },
+//           { value: "urgent", label: "فوری" },
+//         ],
+//       },
+//     ],
+//     [userProjects, taskStatuses]
+//   );
+
+//   const dateFilterFields = useMemo(
+//     () => [
+//       { name: "startDate", label: "تاریخ شروع" },
+//       { name: "endDate", label: "تاریخ پایان" },
+//     ],
+//     []
+//   );
+
+//   const handleCardDrop = async (
+//     taskId: string | number,
+//     newStatusId: string | number
+//   ) => {
+//     try {
+//       await update(Number(taskId), { statusId: Number(newStatusId) });
+//     } catch (err) {
+//       console.error("Failed to update task status:", err);
+//     }
+//   };
+
+//   return (
+//     <div className="w-full">
+//       <DataTableWrapper3<TaskWithRelations>
+//         columns={columnsForAdmin}
+//         createUrl="/dashboard/tasks/create"
+//         loading={loading || loadingStatuses || loadingProjects}
+//         error={error}
+//         title={title}
+//         fetcher={getAll}
+//         filterOptions={filterOptions}
+//         dateFilterFields={dateFilterFields}
+//         listItemRender={listItemRender}
+//         defaultViewMode="kanban"
+//         // پاس دادن فیلترهای اختصاصی به دیتا تیبل
+//         extraFilter={assignmentFilters}
+//         // پاس دادن کامپوننت فیلتر سفارشی
+//         customFilterComponent={
+//           <TaskAssignmentFilter
+//             selectedProjectIds={selectedProjectIds}
+//             onAssignmentChange={setAssignmentFilters}
+//           />
+//         }
+//         kanbanOptions={{
+//           enabled: true,
+//           groupByField: "statusId",
+//           columns: taskStatuses.map((status) => ({
+//             id: status.id,
+//             title: status.name,
+//           })),
+//           cardRender: (item) => <TaskKanbanCard item={item} />,
+//           onCardDrop: handleCardDrop,
+//         }}
+//       />
+//     </div>
+//   );
+// }
 // "use client";
 
 // import DataTableWrapper3 from "@/@Client/Components/wrappers/DataTableWrapper3";

@@ -6,7 +6,7 @@
 import DIcon from "@/@Client/Components/common/DIcon";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import TaskForm from "../../components/TaskForm";
+import TaskForm from "../../components/TaskForm2";
 import { useTask } from "../../hooks/useTask";
 
 // پراپ‌های ورودی برای کامپوننت صفحه

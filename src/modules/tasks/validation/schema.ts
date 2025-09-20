@@ -17,6 +17,7 @@ export const createTaskSchema = z.object({
     { required_error: "انتخاب وضعیت الزامی است." }
   ),
   assignedUsers: z.array(z.object({ id: z.number() })).optional(),
+  assignedTeams: z.array(z.object({ id: z.number() })).optional(),
 });
 
 export const updateTaskSchema = z.object({
@@ -28,5 +29,6 @@ export const updateTaskSchema = z.object({
   project: z.object({ id: z.coerce.number() }).optional(),
   status: z.object({ id: z.coerce.number() }).optional(),
   assignedUsers: z.array(z.object({ id: z.number() })).optional(),
+  assignedTeams: z.array(z.object({ id: z.number() })).optional(),
   statusId: z.number().optional(), 
 });

@@ -60,6 +60,12 @@ interface DateFilterField {
   name: string;
   label: string;
 }
+// اینترفیس برای آیتم‌های فیلتر سفارشی
+export interface CustomFilterItem {
+  id: number | string;
+  name: string | null;
+  type: string; // برای تفکیک بین کاربر، تیم و...
+}
 
 interface DataTableWrapperProps<T> {
   columns: Column[];
@@ -82,6 +88,10 @@ interface DataTableWrapperProps<T> {
   listItemRender?: (row: any) => React.ReactNode;
   kanbanOptions?: KanbanOptions<T>;
   customFilterComponent?: React.ReactNode;
+  // ===== شروع پراپ‌های جدید =====
+  customFilterItems?: CustomFilterItem[];
+  onCustomFilterItemRemove?: (item: CustomFilterItem) => void;
+  // ===== پایان پراپ‌های جدید =====
 }
 
 const KanbanCard = <T,>({
@@ -238,6 +248,8 @@ const DataTableWrapper3 = <T extends { id: number | string }>({
   listItemRender,
   kanbanOptions = { enabled: false } as KanbanOptions<T>,
   customFilterComponent,
+  customFilterItems = [], // <-- پراپ جدید را اینجا دریافت می‌کنیم
+  onCustomFilterItemRemove,
 }: DataTableWrapperProps<T>) => {
   const [data, setData] = useState<T[]>([]);
   const [pagination, setPagination] = useState({
@@ -496,7 +508,7 @@ const DataTableWrapper3 = <T extends { id: number | string }>({
               )}
             </div>
 
-            {hasActiveTags && (
+            {/* {hasActiveTags && (
               <div className="flex flex-wrap items-center gap-2 pt-3">
                 {Array.from(filtersValue.entries()).map(
                   ([key, values]) =>
@@ -522,7 +534,67 @@ const DataTableWrapper3 = <T extends { id: number | string }>({
                     ))
                 )}
               </div>
+            )} */}
+
+            {/* ===== شروع بخش جدید برای نمایش تگ‌ها ===== */}
+            {/* 1. تگ‌های استاندارد (سبز رنگ) */}
+            {hasActiveTags && (
+              <div className="flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-gray-200 dark:border-slate-700">
+                {Array.from(filtersValue.entries()).map(
+                  ([key, values]) =>
+                    Array.isArray(values) &&
+                    values.map((value) => (
+                      <div
+                        key={`${key}-${value}`}
+                        className="group flex items-center bg-teal-50 dark:bg-teal-900/50 text-teal-800 dark:text-teal-200 text-sm font-medium pl-3 pr-1.5 py-1 rounded-full"
+                      >
+                        <span>
+                          {optionsMap.get(`${key}-${value}`) || value}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveFilterTag(key, value)}
+                          className="flex-shrink-0 ml-1.5 h-5 w-5 rounded-full inline-flex items-center justify-center"
+                        >
+                          <DIcon
+                            icon="fa-times"
+                            classCustom="text-teal-500 dark:text-teal-400 group-hover:text-teal-700 text-xs"
+                          />
+                        </button>
+                      </div>
+                    ))
+                )}
+              </div>
             )}
+            {/* 2. تگ‌های سفارشی (نارنجی رنگ) */}
+            {customFilterItems.length > 0 && (
+              <div
+                className={`flex flex-wrap items-center gap-2 pt-3 ${
+                  hasActiveTags
+                    ? "pt-2"
+                    : "mt-3 border-t border-gray-200 dark:border-slate-700"
+                }`}
+              >
+                {customFilterItems.map((item) => (
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    className="group flex items-center bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200 text-sm font-medium pl-3 pr-1.5 py-1 rounded-full"
+                  >
+                    <span>{item.name}</span>
+                    <button
+                      onClick={() => onCustomFilterItemRemove?.(item)}
+                      className="flex-shrink-0 ml-1.5 h-5 w-5 rounded-full inline-flex items-center justify-center"
+                    >
+                      <DIcon
+                        icon="fa-times"
+                        classCustom="text-orange-500 dark:text-orange-400 group-hover:text-orange-700 text-xs"
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* ===== پایان بخش جدید ===== */}
+
             {dateFilterFields.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                 {dateFilterFields.map((field) => (
