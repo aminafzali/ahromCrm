@@ -1,6 +1,12 @@
 // مسیر فایل: src/modules/teams/data/fetch.ts
 
 export const include = {
+  parent: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
   members: {
     select: {
       workspaceUser: {
@@ -26,4 +32,4 @@ export const include = {
 };
 export const searchFileds = ["name"];
 export const relations = [];
-export const connects = ["members"];
+export const connects = ["members", "parent"];

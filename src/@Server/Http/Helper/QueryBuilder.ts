@@ -59,15 +59,28 @@ export class QueryBuilder {
           const fieldName = key.replace("_in", "");
           const valuesAsArray = String(value).split(",");
 
+          // // ===== شروع اصلاحیه کلیدی =====
+          // // اگر نام فیلد به "Id" ختم می‌شود، مقادیر را به عدد تبدیل می‌کنیم
+          // if (fieldName.endsWith("Id")) {
+          //   const ids = valuesAsArray.map(Number).filter((id) => !isNaN(id));
+          //   if (ids.length > 0) {
+          //     this.where[fieldName] = { in: ids };
+          //   }
+          // } else {
+          //   // در غیر این صورت، مقادیر را به صورت رشته نگه می‌داریم (برای status, type و...)
+          //   this.where[fieldName] = { in: valuesAsArray };
+          // }
+          // // ===== پایان اصلاحیه کلیدی =====
+
           // ===== شروع اصلاحیه کلیدی =====
-          // اگر نام فیلد به "Id" ختم می‌شود، مقادیر را به عدد تبدیل می‌کنیم
-          if (fieldName.endsWith("Id")) {
+          // بررسی می‌کنیم که نام فیلد خود "id" است یا به "Id" ختم می‌شود
+          if (fieldName.toLowerCase().endsWith("id")) {
             const ids = valuesAsArray.map(Number).filter((id) => !isNaN(id));
             if (ids.length > 0) {
               this.where[fieldName] = { in: ids };
             }
           } else {
-            // در غیر این صورت، مقادیر را به صورت رشته نگه می‌داریم (برای status, type و...)
+            // برای سایر فیلترها (مانند status, type) مقادیر را به صورت رشته نگه می‌داریم
             this.where[fieldName] = { in: valuesAsArray };
           }
           // ===== پایان اصلاحیه کلیدی =====

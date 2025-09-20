@@ -12,6 +12,8 @@ class Repository extends BaseRepository<any> {
   constructor() {
     super("pMStatus");
   }
+
+  
 }
 
 export class PMStatusServiceApi extends BaseService<any> {

@@ -103,10 +103,10 @@ export const columnsForAdmin: Column[] = [
 export const columnsForSelect: Column[] = [
   {
     name: "name",
-    field: "user.name",
+    field: "name",
     label: "نام عضو",
     // رندر نیز باید از مسیر صحیح تو در تو داده را بخواند
-    render: (row: any) => row.displayName || row.user?.name || "-",
+    render: (row: any) => row.displayName || row.name || row.user?.name || "-",
   },
   {
     name: "phone",
@@ -116,7 +116,7 @@ export const columnsForSelect: Column[] = [
   },
   {
     name: "role",
-    field: "role.name",
+    field: "role",
     label: "نقش",
     render: (row: any) => row.role?.name || "-",
   },

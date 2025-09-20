@@ -46,6 +46,7 @@ const DynamicFormWrapper: React.FC<DynamicFormWrapperProps> = ({
             key={field.name}
             name={field.name}
             label={field.label}
+          //  showName={field.showName}
             columns={field.columns || []}
             data={field.data || []}
             modalTitle={field.label}
