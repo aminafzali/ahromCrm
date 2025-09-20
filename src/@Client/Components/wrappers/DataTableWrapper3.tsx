@@ -81,6 +81,7 @@ interface DataTableWrapperProps<T> {
   extraFilter?: Record<string, any>;
   listItemRender?: (row: any) => React.ReactNode;
   kanbanOptions?: KanbanOptions<T>;
+  customFilterComponent?: React.ReactNode;
 }
 
 const KanbanCard = <T,>({
@@ -236,6 +237,7 @@ const DataTableWrapper3 = <T extends { id: number | string }>({
   extraFilter,
   listItemRender,
   kanbanOptions = { enabled: false } as KanbanOptions<T>,
+  customFilterComponent,
 }: DataTableWrapperProps<T>) => {
   const [data, setData] = useState<T[]>([]);
   const [pagination, setPagination] = useState({
@@ -459,6 +461,9 @@ const DataTableWrapper3 = <T extends { id: number | string }>({
           </div>
           <div className="collapse-content overflow-visible">
             <div className="flex flex-wrap items-center gap-3">
+              {/* ===== رندر کردن کامپوننت فیلتر سفارشی ===== */}
+              {customFilterComponent && <div>{customFilterComponent}</div>}
+
               {filterOptions.map((filter) => (
                 <div key={filter.name} className="w-full sm:w-auto md:w-52">
                   <MultiSelectFilter
@@ -471,12 +476,26 @@ const DataTableWrapper3 = <T extends { id: number | string }>({
                   />
                 </div>
               ))}
-              <div className="ml-auto">
-                <Button variant="ghost" onClick={clear} className="!text-error">
-                  پاک کردن همه
-                </Button>
-              </div>
+
+              {/* دکمه پاک کردن در انتها */}
+              {(hasActiveTags ||
+                dateFilterFields.some(
+                  (f) =>
+                    filtersValue.has(`${f.name}_gte`) ||
+                    filtersValue.has(`${f.name}_lte`)
+                )) && (
+                <div className="ml-auto self-center">
+                  <Button
+                    variant="ghost"
+                    onClick={clear}
+                    className="!text-error"
+                  >
+                    پاک کردن فیلترها
+                  </Button>
+                </div>
+              )}
             </div>
+
             {hasActiveTags && (
               <div className="flex flex-wrap items-center gap-2 pt-3">
                 {Array.from(filtersValue.entries()).map(
