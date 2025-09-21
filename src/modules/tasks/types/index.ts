@@ -7,5 +7,5 @@ export type TaskWithRelations = Task & {
   status: PMStatus;
   project: Project;
   assignedUsers?: WorkspaceUserWithRelations[];
- //  assignedTeams?: Team[]; // این خط اضافه شده است
+  assignedTeams?: Team[]; // این خط اضافه شده است
 };

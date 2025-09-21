@@ -1,5 +1,3 @@
-// مسیر فایل: src/modules/tasks/data/fetch.ts
-
 export const include = {
   status: true,
   project: true,
