@@ -2,14 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 
 interface Option {
   value: string | number;
-  label: string;
+  label: string | null;
 }
 
 interface SelectProps
   extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size"> {
   label?: string;
   options: Option[];
-  name: string;
+  name?: string;
   placeholder?: string;
   renderOption?: (option: Option) => React.ReactNode;
   size?: "xs" | "sm" | "md" | "lg";
@@ -17,8 +17,8 @@ interface SelectProps
 }
 
 const Select3: React.FC<SelectProps> = ({
-  name,
-  label,
+  name = "",
+  label = "",
   options,
   renderOption,
   size = "md",

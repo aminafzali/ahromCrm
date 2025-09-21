@@ -1,206 +1,977 @@
+// // // مسیر: src/modules/tasks/components/TaskForm.tsx
+// src/modules/tasks/components/TaskForm.tsx
 "use client";
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import Loading from "@/@Client/Components/common/Loading";
-import ButtonSelectWithTable2 from "@/@Client/Components/ui/ButtonSelectWithTable2";
 import RichTextEditor from "@/@Client/Components/ui/RichTextEditor";
+import Select3 from "@/@Client/Components/ui/Select3";
 import StandaloneDatePicker from "@/@Client/Components/ui/StandaloneDatePicker2";
 import { usePMStatus } from "@/modules/pm-statuses/hooks/usePMStatus";
 import { useProject } from "@/modules/projects/hooks/useProject";
-import { columnsForSelect as teamColumns } from "@/modules/teams/data/table";
 import { TeamWithRelations } from "@/modules/teams/types";
-import { columnsForSelect as userColumns } from "@/modules/workspace-users/data/table";
 import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Input } from "ndui-ahrom";
-import { useEffect, useState } from "react";
-import { Controller, FormProvider, useForm } from "react-hook-form";
-import { z } from "zod";
-import {
-  createTaskSchema,
-  updateTaskSchema,
-} from "../validation/schema";
-import Select3 from "@/@Client/Components/ui/Select3";
-
-// تعریف نوع داده‌های فرم بر اساس Zod schema
-type TaskFormData = z.infer<typeof createTaskSchema>;
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { createTaskSchema, updateTaskSchema } from "../validation/schema";
 
 interface TaskFormProps {
-  onSubmit: (data: TaskFormData) => void;
+  onSubmit: (data: any) => void;
   loading?: boolean;
   initialData?: any;
 }
+
+// helper: ساده برای مقایسه آرایه id ها
+const idsEqual = (a: any[] | undefined, b: any[] | undefined) => {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+};
 
 export default function TaskForm({
   onSubmit,
   loading = false,
   initialData,
 }: TaskFormProps) {
-  // --- راه‌اندازی React Hook Form ---
-  const formMethods = useForm<TaskFormData>({
-    resolver: zodResolver(initialData ? updateTaskSchema : createTaskSchema),
-    defaultValues: {
-      title: initialData?.title || "",
-      description: initialData?.description || "",
-      project: initialData?.project || undefined,
-      status: initialData?.status || undefined,
-      priority: initialData?.priority || "medium",
-      startDate: initialData?.startDate || null,
-      endDate: initialData?.endDate || null,
-      assignedUsers: initialData?.assignedUsers || [],
-      assignedTeams: initialData?.assignedTeams || [],
-    },
-  });
+  // --- state فرم ---
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [description, setDescription] = useState(
+    initialData?.description || ""
+  );
+  const [projectId, setProjectId] = useState<number | undefined>(
+    initialData?.project?.id
+  );
+  const [statusId, setStatusId] = useState<number | undefined>(
+    initialData?.status?.id
+  );
+  const [priority, setPriority] = useState<string>(
+    initialData?.priority || "medium"
+  );
+  const [startDate, setStartDate] = useState<string | null>(
+    initialData?.startDate || null
+  );
+  const [endDate, setEndDate] = useState<string | null>(
+    initialData?.endDate || null
+  );
 
-  const { control, watch, setValue, handleSubmit, formState: { errors } } = formMethods;
+  const [assignedUserIds, setAssignedUserIds] = useState<number[]>(
+    initialData?.assignedUsers?.map((u: any) => u.id) || []
+  );
+  const [assignedTeamIds, setAssignedTeamIds] = useState<number[]>(
+    initialData?.assignedTeams?.map((t: any) => t.id) || []
+  );
 
-  // --- State برای گزینه‌های داینامیک ---
-  const [projectOptions, setProjectOptions] = useState<{ label: string; value: number }[]>([]);
-  const [statusOptions, setStatusOptions] = useState<{ label: string; value: number }[]>([]);
-  const [assignableUsers, setAssignableUsers] = useState<WorkspaceUserWithRelations[]>([]);
-  const [assignableTeams, setAssignableTeams] = useState<TeamWithRelations[]>([]);
+  // --- گزینه‌ها و داده‌های داینامیک ---
+  const [projectOptions, setProjectOptions] = useState<
+    { label: string; value: number }[]
+  >([]);
+  const [statusOptions, setStatusOptions] = useState<
+    { label: string; value: number }[]
+  >([]);
+  const [assignableUsers, setAssignableUsers] = useState<
+    WorkspaceUserWithRelations[]
+  >([]);
+  const [assignableTeams, setAssignableTeams] = useState<TeamWithRelations[]>(
+    []
+  );
+  const [errors, setErrors] = useState<any>({});
 
-  // --- هوک‌ها برای واکشی داده‌ها ---
-  const { getById: getProjectById, loading: loadingProjectDetails } = useProject();
+  // --- هوک‌های واکشی ---
+  const { getById: getProjectById, loading: loadingProjectDetails } =
+    useProject();
   const { getAll: getAllProjects, loading: loadingProjects } = useProject();
   const { getAll: getAllStatuses, loading: loadingStatuses } = usePMStatus();
 
-  // --- واکشی داده‌های اولیه (لیست پروژه‌ها و وضعیت‌ها) ---
+  // --- بارگذاری لیست پروژه‌ها و وضعیت‌ها (یکبار) ---
   useEffect(() => {
-    
-    getAllProjects({ page: 1, limit: 1000, assignedTo: "me" }).then(res => 
-      setProjectOptions((res.data || []).map((p: any) => ({ label: p.name, value: p.id })))
-    );
-    
-    getAllStatuses({ page: 1, limit: 100, type: "TASK" }).then(res => 
-      setStatusOptions((res.data || []).map((s: any) => ({ label: s.name, value: s.id })))
-    );
+    let mounted = true;
+
+    (async () => {
+      try {
+        const res = await getAllProjects({
+          page: 1,
+          limit: 1000,
+          assignedTo: "me",
+        });
+        if (!mounted) return;
+        const newProjects = (res?.data || []).map((p: any) => ({
+          label: p.name,
+          value: p.id,
+        }));
+        setProjectOptions((prev) =>
+          idsEqual(
+            prev.map((x) => x.value),
+            newProjects.map((x) => x.value)
+          )
+            ? prev
+            : newProjects
+        );
+      } catch (e) {
+        console.error("getAllProjects error", e);
+      }
+    })();
+
+    (async () => {
+      try {
+        const res = await getAllStatuses({ page: 1, limit: 100, type: "TASK" });
+        if (!mounted) return;
+        const newStatuses = (res?.data || []).map((s: any) => ({
+          label: s.name,
+          value: s.id,
+        }));
+        setStatusOptions((prev) =>
+          idsEqual(
+            prev.map((x) => x.value),
+            newStatuses.map((x) => x.value)
+          )
+            ? prev
+            : newStatuses
+        );
+      } catch (e) {
+        console.error("getAllStatuses error", e);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // --- مشاهده تغییرات پروژه برای واکشی تیم‌ها و کاربران مرتبط ---
-  const watchedProject = watch("project");
-  useEffect(() => {
-    const fetchProjectAssignments = async () => {
-      if (!watchedProject?.id) {
-        setAssignableUsers([]);
-        setAssignableTeams([]);
+  // ----------------------------------------------------------------
+  // NEW: متد پایدار برای بارگذاری تیم‌ها/کاربران پروژه (فراخوانی صریح، نه داخل یک useEffect با dep متغیر)
+  // ----------------------------------------------------------------
+  const fetchProjectAssignments = useCallback(
+    async (projId?: number) => {
+      // اگر پروجکت نامعتبر است => فقط پاک کن (ولی فقط زمانی که واقعاً تغییر لازم باشه)
+      if (!projId) {
+        setAssignableUsers((prev) => (prev.length ? [] : prev));
+        setAssignableTeams((prev) => (prev.length ? [] : prev));
+        // همچنین حذف انتخاب‌های اختصاص داده شده
+        setAssignedUserIds((prev) => (prev.length ? [] : prev));
+        setAssignedTeamIds((prev) => (prev.length ? [] : prev));
         return;
       }
-      try {
-        const projectDetails = await getProjectById(watchedProject.id, { 
-          include: { assignedUsers: {include:{user:true}}, assignedTeams: true } 
-        });
-        setAssignableUsers(projectDetails?.assignedUsers || []);
-        setAssignableTeams(projectDetails?.assignedTeams || []);
-        
-        // با تغییر پروژه، اعضای انتخاب شده قبلی را پاک می‌کنیم
-        setValue("assignedUsers", []);
-        setValue("assignedTeams", []);
 
+      try {
+        const projectDetails = await getProjectById(projId);
+        const newUsers = projectDetails?.assignedUsers || [];
+        const newTeams = projectDetails?.assignedTeams || [];
+
+        // فقط در صورت واقعی تفاوت آپدیت بزنیم
+        setAssignableUsers((prev) => {
+          const prevIds = prev.map((p) => p.id);
+          const nextIds = newUsers.map((u: any) => u.id);
+          return idsEqual(prevIds, nextIds) ? prev : newUsers;
+        });
+
+        setAssignableTeams((prev) => {
+          const prevIds = prev.map((p) => p.id);
+          const nextIds = newTeams.map((t: any) => t.id);
+          return idsEqual(prevIds, nextIds) ? prev : newTeams;
+        });
+
+        // فیلتر انتخاب‌های قبلی تا فقط آیتم‌های موجود بمانند
+        setAssignedUserIds((prev) =>
+          prev.filter((userId) => newUsers.some((u: any) => u.id === userId))
+        );
+        setAssignedTeamIds((prev) =>
+          prev.filter((teamId) => newTeams.some((t: any) => t.id === teamId))
+        );
       } catch (error) {
         console.error("Error fetching project assignments:", error);
+        // در صورت نیاز می‌توان خطای UI را ست کرد
       }
-    };
-    fetchProjectAssignments();
-  }, [watchedProject, getProjectById, setValue]);
+    },
+    [getProjectById]
+  );
 
+  // اگر فرم با initialData ای آمد که project دارد، یک‌بار آن را بارگذاری کن
+  useEffect(() => {
+    if (initialData?.project?.id) {
+      // مهم: این صدا فقط یک‌بار در mount/initialData اجرا می‌شود
+      fetchProjectAssignments(initialData.project.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally run once on mount for initialData
+
+  // --- مشتقات memoized ---
+  const selectedUserObjects = useMemo(
+    () => assignableUsers.filter((u) => assignedUserIds.includes(u.id)),
+    [assignableUsers, assignedUserIds]
+  );
+
+  const selectedTeamObjects = useMemo(
+    () => assignableTeams.filter((t) => assignedTeamIds.includes(t.id)),
+    [assignableTeams, assignedTeamIds]
+  );
+
+  // --- نرمالایزر تغییرات Select3 (پشتیبانی از event یا آرایه) ---
+  const normalizeMultiChange = useCallback((payload: any) => {
+    if (Array.isArray(payload)) return payload.map(Number);
+    if (payload && payload.target) {
+      const target = payload.target as HTMLSelectElement;
+      if (target.multiple)
+        return Array.from(target.selectedOptions).map((o) => Number(o.value));
+      return target.value ? [Number(target.value)] : [];
+    }
+    return [];
+  }, []);
+
+  // handler ها برای assigned lists
+  const handleAssignedTeamsChange = useCallback(
+    (payload: any) => {
+      const next = normalizeMultiChange(payload);
+      setAssignedTeamIds((prev) => (idsEqual(prev, next) ? prev : next));
+    },
+    [normalizeMultiChange]
+  );
+
+  const handleAssignedUsersChange = useCallback(
+    (payload: any) => {
+      const next = normalizeMultiChange(payload);
+      setAssignedUserIds((prev) => (idsEqual(prev, next) ? prev : next));
+    },
+    [normalizeMultiChange]
+  );
+
+  // --- early loading return (هوک‌ها بالاتر قرار دارند) ---
   const isLoading = loadingProjects || loadingStatuses;
   if (isLoading) return <Loading />;
 
-  // مشاهده مقادیر انتخاب شده برای نمایش به صورت تگ
-  const selectedTeams = watch("assignedTeams") || [];
-  const selectedUsers = watch("assignedUsers") || [];
+  // --- submit ---
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const dataToValidate = {
+      title,
+      description,
+      project: projectId ? { id: projectId } : undefined,
+      status: statusId ? { id: statusId } : undefined,
+      priority,
+      startDate,
+      endDate,
+      assignedUsers: assignedUserIds.map((id) => ({ id })),
+      assignedTeams: assignedTeamIds.map((id) => ({ id })),
+    };
+
+    const schema = initialData ? updateTaskSchema : createTaskSchema;
+    const validation = schema.safeParse(dataToValidate);
+
+    if (!validation.success) {
+      setErrors(validation.error.flatten().fieldErrors);
+      return;
+    }
+
+    setErrors({});
+    onSubmit(validation.data);
+  };
+
+  // --- وقتی کاربر پروژه را انتخاب می‌کند: پروژه را ست کن و بلافاصله assignmentها را بارگذاری کن ---
+  const handleProjectChange = (e: any) => {
+    let nextId: number | undefined;
+    if (e && e.target)
+      nextId = e.target.value ? Number(e.target.value) : undefined;
+    else nextId = e ? Number(e) : undefined;
+
+    setProjectId(nextId);
+    // بلافاصله بارگذاری (اگر nextId تعریف شده است)، یا پاکسازی اگر undefined
+    fetchProjectAssignments(nextId);
+  };
 
   return (
-    <FormProvider {...formMethods}>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border dark:border-slate-700 space-y-6">
-          <Input name="title" label="عنوان وظیفه" required 
-          //error={errors.title?.message}
-           />
-          <Controller name="description" control={control} render={({ field }) => (
-            <RichTextEditor label="توضیحات" value={field.value} onChange={field.onChange} />
-          )} />
+    <form onSubmit={handleSubmit}>
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border dark:border-slate-700 space-y-6">
+        <Input
+          name="title"
+          label="عنوان وظیفه"
+          value={title}
+          onChange={(e: any) => setTitle(e.target.value)}
+          required
+        />
+
+        <div>
+          <label className="label">
+            <span className="label-text">توضیحات</span>
+          </label>
+          <RichTextEditor value={description} onChange={setDescription} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Select3
+            label="پروژه"
+            value={projectId}
+            onChange={handleProjectChange}
+            options={projectOptions}
+            required
+            name="project"
+          />
+
+          <Select3
+            label="وضعیت"
+            value={statusId}
+            onChange={(e: any) => {
+              if (e && e.target)
+                setStatusId(
+                  e.target.value ? Number(e.target.value) : undefined
+                );
+              else setStatusId(e ? Number(e) : undefined);
+            }}
+            options={statusOptions}
+            required
+            name="status"
+          />
+        </div>
+
+        <div className="p-4 border border-dashed rounded-lg space-y-4">
+          <h3 className="font-bold">اختصاص به:</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Controller name="project" control={control} render={({ field }) => (
-                <Select3 label="پروژه" options={projectOptions} value={field.value?.id}
-                          onChange={val => field.onChange({ id: Number(val.target.value) })}
-                          required name={"" } />
-            )} />
-            <Controller name="status" control={control} render={({ field }) => (
-                <Select3 label="وضعیت" options={statusOptions} value={field.value?.id}
-                          onChange={val => field.onChange({ id: Number(val.target.value) })}
-                          required name={""}  />
-            )} />
+            <Select3
+              label="تیم‌ها"
+              name="assignedTeams"
+              options={assignableTeams.map((t) => ({
+                label: t.name,
+                value: t.id,
+              }))}
+              value={assignedTeamIds.map(String)}
+              onChange={handleAssignedTeamsChange}
+              disabled={!projectId || loadingProjectDetails}
+              multiple
+            />
+
+            <Select3
+              label="کاربران"
+              name="assignedUsers"
+              options={assignableUsers.map((u) => ({
+                label: u.displayName ?? u.user?.name ?? "کاربر بی‌نام",
+                value: u.id,
+              }))}
+              value={assignedUserIds.map(String)}
+              onChange={handleAssignedUsersChange}
+              disabled={!projectId || loadingProjectDetails}
+              multiple
+            />
           </div>
 
-          {/* ===== بخش اختصاص به با استفاده از ButtonSelectWithTable2 ===== */}
-          <div className="p-4 border border-dashed rounded-lg space-y-4">
-            <h3 className="font-bold">اختصاص به:</h3>
-            <div className="flex flex-wrap gap-4">
-              <ButtonSelectWithTable2
-                label="تیم‌ها"
-                name="assignedTeams"
-                data={assignableTeams}
-                columns={teamColumns}
-                onSelect={(selected) => setValue("assignedTeams", selected)}
-                disabled={!watchedProject || loadingProjectDetails}
-                selectionMode="multiple"
-              />
-              <ButtonSelectWithTable2
-                label="کاربران"
-                name="assignedUsers"
-                data={assignableUsers}
-                columns={userColumns}
-                showName="displayName"
-                onSelect={(selected) => setValue("assignedUsers", selected)}
-                disabled={!watchedProject || loadingProjectDetails}
-                selectionMode="multiple"
-              />
+          {(selectedTeamObjects.length > 0 ||
+            selectedUserObjects.length > 0) && (
+            <div className="flex flex-wrap items-center gap-2 pt-3 border-t">
+              {selectedTeamObjects.map((team) => (
+                <div
+                  key={`team-tag-${team.id}`}
+                  className="badge badge-lg badge-outline gap-2"
+                >
+                  <DIcon icon="fa-users" /> {team.name}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAssignedTeamIds((prev) =>
+                        prev.filter((id) => id !== team.id)
+                      )
+                    }
+                    className="btn btn-xs btn-circle btn-ghost"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+
+              {selectedUserObjects.map((user) => (
+                <div
+                  key={`user-tag-${user.id}`}
+                  className="badge badge-lg badge-outline gap-2"
+                >
+                  <DIcon icon="fa-user" /> {user.displayName || user.user?.name}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAssignedUserIds((prev) =>
+                        prev.filter((id) => id !== user.id)
+                      )
+                    }
+                    className="btn btn-xs btn-circle btn-ghost"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
             </div>
-            {(selectedTeams.length > 0 || selectedUsers.length > 0) && (
-              <div className="flex flex-wrap items-center gap-2 pt-3 border-t">
-                {selectedTeams.map(team => (
-                  <div key={`team-tag-${team?.id}`} className="badge badge-lg badge-outline gap-2">
-                    <DIcon icon="fa-users" /> {team?.name}
-                    <button type="button" onClick={() => setValue("assignedTeams", selectedTeams.filter(t => t.id !== team.id))} className="btn btn-xs btn-circle btn-ghost">✕</button>
-                  </div>
-                ))}
-                {selectedUsers.map(user => (
-                  <div key={`user-tag-${user.id}`} className="badge badge-lg badge-outline gap-2">
-                    <DIcon icon="fa-user" /> {user?.displayName || user?.user.name}
-                    <button type="button" onClick={() => setValue("assignedUsers", selectedUsers.filter(u => u.id !== user.id))} className="btn btn-xs btn-circle btn-ghost">✕</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Controller name="startDate" control={control} render={({ field }) => (
-              <StandaloneDatePicker label="تاریخ شروع" value={field.value} onChange={(payload) => field.onChange(payload ? payload.iso : null)} />
-            )} />
-            <Controller name="endDate" control={control} render={({ field }) => (
-              <StandaloneDatePicker label="تاریخ پایان" value={field.value} onChange={(payload) => field.onChange(payload ? payload.iso : null)} />
-            )} />
-            <Controller name="priority" control={control} render={({ field }) => (
-              <Select label="اولویت" {...field}
-                options={[
-                  { label: "پایین", value: "low" }, { label: "متوسط", value: "medium" },
-                  { label: "بالا", value: "high" }, { label: "فوری", value: "urgent" },
-                ]}
-              />
-            )} />
-          </div>
+          )}
         </div>
 
-        <div className="flex justify-end mt-6">
-          <Button type="submit" disabled={loading} loading={loading}>
-            {initialData ? "ذخیره تغییرات" : "ایجاد وظیفه"}
-          </Button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StandaloneDatePicker
+            name="startDate"
+            label="تاریخ شروع"
+            value={startDate}
+            onChange={(payload: any) =>
+              setStartDate(payload ? payload.iso : null)
+            }
+          />
+          <StandaloneDatePicker
+            name="endDate"
+            label="تاریخ پایان"
+            value={endDate}
+            onChange={(payload: any) =>
+              setEndDate(payload ? payload.iso : null)
+            }
+          />
+          <Select3
+            label="اولویت"
+            value={priority}
+            onChange={(e: any) =>
+              e && e.target
+                ? setPriority(e.target.value)
+                : setPriority(String(e))
+            }
+            options={[
+              { label: "پایین", value: "low" },
+              { label: "متوسط", value: "medium" },
+              { label: "بالا", value: "high" },
+              { label: "فوری", value: "urgent" },
+            ]}
+            name="priority"
+          />
         </div>
-      </form>
-    </FormProvider>
+      </div>
+
+      <div className="flex justify-end mt-6">
+        <Button type="submit" disabled={loading} loading={loading}>
+          {initialData ? "ذخیره تغییرات" : "ایجاد وظیفه"}
+        </Button>
+      </div>
+    </form>
   );
 }
+
+// "use client";
+
+// import DIcon from "@/@Client/Components/common/DIcon";
+// import Loading from "@/@Client/Components/common/Loading";
+// import RichTextEditor from "@/@Client/Components/ui/RichTextEditor";
+// import Select3 from "@/@Client/Components/ui/Select3";
+// import StandaloneDatePicker from "@/@Client/Components/ui/StandaloneDatePicker2";
+// import { usePMStatus } from "@/modules/pm-statuses/hooks/usePMStatus";
+// import { useProject } from "@/modules/projects/hooks/useProject";
+// import { TeamWithRelations } from "@/modules/teams/types";
+// import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
+// import { Button, Input } from "ndui-ahrom";
+// import { useEffect, useMemo, useState } from "react";
+// import { createTaskSchema, updateTaskSchema } from "../validation/schema";
+
+// interface TaskFormProps {
+//   onSubmit: (data: any) => void;
+//   loading?: boolean;
+//   initialData?: any;
+// }
+
+// export default function TaskForm({
+//   onSubmit,
+//   loading = false,
+//   initialData,
+// }: TaskFormProps) {
+//   // --- State های فرم (دقیقاً مانند الگوی اصلی شما) ---
+//   const [title, setTitle] = useState(initialData?.title || "");
+//   const [description, setDescription] = useState(
+//     initialData?.description || ""
+//   );
+//   const [projectId, setProjectId] = useState<number | undefined>(
+//     initialData?.project?.id
+//   );
+//   const [statusId, setStatusId] = useState<number | undefined>(
+//     initialData?.status?.id
+//   );
+//   const [priority, setPriority] = useState(initialData?.priority || "medium");
+//   const [startDate, setStartDate] = useState<string | null>(
+//     initialData?.startDate || null
+//   );
+//   const [endDate, setEndDate] = useState<string | null>(
+//     initialData?.endDate || null
+//   );
+
+//   const [assignedUserIds, setAssignedUserIds] = useState<number[]>(
+//     initialData?.assignedUsers?.map((u: any) => u.id) || []
+//   );
+//   const [assignedTeamIds, setAssignedTeamIds] = useState<number[]>(
+//     initialData?.assignedTeams?.map((t: any) => t.id) || []
+//   );
+
+//   // --- State برای گزینه‌های داینامیک ---
+//   const [projectOptions, setProjectOptions] = useState<
+//     { label: string; value: number }[]
+//   >([]);
+//   const [statusOptions, setStatusOptions] = useState<
+//     { label: string; value: number }[]
+//   >([]);
+//   const [assignableUsers, setAssignableUsers] = useState<
+//     WorkspaceUserWithRelations[]
+//   >([]);
+//   const [assignableTeams, setAssignableTeams] = useState<TeamWithRelations[]>(
+//     []
+//   );
+//   const [errors, setErrors] = useState<any>({});
+
+//   // --- هوک‌ها برای واکشی داده‌ها ---
+//   const { getById: getProjectById, loading: loadingProjectDetails } =
+//     useProject();
+//   const { getAll: getAllProjects, loading: loadingProjects } = useProject();
+//   const { getAll: getAllStatuses, loading: loadingStatuses } = usePMStatus();
+
+//   useEffect(() => {
+//     getAllProjects({ page: 1, limit: 1000, assignedTo: "me" }).then((res) => {
+//       setProjectOptions(
+//         (res?.data || []).map((p: any) => ({ label: p.name, value: p.id }))
+//       );
+//     });
+
+//     getAllStatuses({ page: 1, limit: 100, type: "TASK" }).then((res) => {
+//       setStatusOptions(
+//         (res?.data || []).map((s: any) => ({ label: s.name, value: s.id }))
+//       );
+//     });
+//   }, []);
+
+//   useEffect(() => {
+//     const fetchProjectAssignments = async () => {
+//       if (!projectId) {
+//         setAssignableUsers([]);
+//         setAssignableTeams([]);
+//         return;
+//       }
+//       try {
+//         const projectDetails = await getProjectById(projectId); // فراخوانی فقط با یک آرگومان
+//         setAssignableUsers(projectDetails?.assignedUsers || []);
+//         setAssignableTeams(projectDetails?.assignedTeams || []);
+
+//         setAssignedUserIds((prev) =>
+//           prev.filter((userId) =>
+//             projectDetails?.assignedUsers?.some((u) => u.id === userId)
+//           )
+//         );
+//         setAssignedTeamIds((prev) =>
+//           prev.filter((teamId) =>
+//             projectDetails?.assignedTeams?.some((t) => t.id === teamId)
+//           )
+//         );
+//       } catch (error) {
+//         console.error("Error fetching project assignments:", error);
+//       }
+//     };
+//     fetchProjectAssignments();
+//   }, [projectId, getProjectById]);
+
+//   const handleSubmit = (e: React.FormEvent) => {
+//     e.preventDefault();
+//     const dataToValidate = {
+//       title,
+//       description,
+//       project: projectId ? { id: projectId } : undefined,
+//       status: statusId ? { id: statusId } : undefined,
+//       priority,
+//       startDate,
+//       endDate,
+//       assignedUsers: assignedUserIds.map((id) => ({ id })),
+//       assignedTeams: assignedTeamIds.map((id) => ({ id })),
+//     };
+
+//     const schema = initialData ? updateTaskSchema : createTaskSchema;
+//     const validation = schema.safeParse(dataToValidate);
+
+//     if (!validation.success) {
+//       setErrors(validation.error.flatten().fieldErrors);
+//       return;
+//     }
+//     setErrors({});
+//     onSubmit(validation.data);
+//   };
+
+//   const selectedUserObjects = useMemo(
+//     () => assignableUsers.filter((u) => assignedUserIds.includes(u.id)),
+//     [assignableUsers, assignedUserIds]
+//   );
+//   const selectedTeamObjects = useMemo(
+//     () => assignableTeams.filter((t) => assignedTeamIds.includes(t.id)),
+//     [assignableTeams, assignedTeamIds]
+//   );
+
+//   const isLoading = loadingProjects || loadingStatuses;
+//   if (isLoading) return <Loading />;
+
+//   return (
+//     <form onSubmit={handleSubmit}>
+//       <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border dark:border-slate-700 space-y-6">
+//         <Input
+//           name="title"
+//           label="عنوان وظیفه"
+//           value={title}
+//           onChange={(e) => setTitle(e.target.value)}
+//           required
+//           //      error={errors.title?.[0]}
+//         />
+
+//         {/* ===== اصلاحیه: استفاده از لیبل جداگانه برای RichTextEditor ===== */}
+//         <div>
+//           <label className="label">
+//             <span className="label-text">توضیحات</span>
+//           </label>
+//           <RichTextEditor value={description} onChange={setDescription} />
+//         </div>
+
+//         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+//           <Select3
+//             label="پروژه"
+//             value={projectId}
+//             onChange={(e) => setProjectId(Number(e.target.value))}
+//             options={projectOptions}
+//             required
+//             name={""} //      error={errors.project?.message}
+//           />
+//           <Select3
+//             label="وضعیت"
+//             value={statusId}
+//             onChange={(e) => setStatusId(Number(e.target.value))}
+//             options={statusOptions}
+//             required
+//             name={""} //      error={errors.status?.message}
+//           />
+//         </div>
+
+//         <div className="p-4 border border-dashed rounded-lg space-y-4">
+//           <h3 className="font-bold">اختصاص به:</h3>
+//           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+//             <Select3
+//               label="تیم‌ها"
+//               name="assignedTeams"
+//               options={assignableTeams.map((t) => ({
+//                 label: t.name,
+//                 value: t.id,
+//               }))}
+//               value={assignedTeamIds.map(String)}
+//               onChange={(e) =>
+//                 setAssignedTeamIds(Array.from(e.target.value, Number))
+//               }
+//               disabled={!projectId || loadingProjectDetails}
+//               multiple
+//             />
+//             <Select3
+//               label="کاربران"
+//               name="assignedUsers"
+//               options={assignableUsers.map((u) => ({
+//                 label: u.displayName ?? u.user.name, // حل خطای null
+//                 value: u.id,
+//               }))}
+//               value={assignedUserIds.map(String)}
+//               onChange={(e) =>
+//                 setAssignedUserIds(Array.from(e.target.value, Number))
+//               }
+//               disabled={!projectId || loadingProjectDetails}
+//               multiple
+//             />
+//           </div>
+//           {(selectedTeamObjects.length > 0 ||
+//             selectedUserObjects.length > 0) && (
+//             <div className="flex flex-wrap items-center gap-2 pt-3 border-t">
+//               {selectedTeamObjects.map((team) => (
+//                 <div
+//                   key={`team-tag-${team.id}`}
+//                   className="badge badge-lg badge-outline gap-2"
+//                 >
+//                   <DIcon icon="fa-users" /> {team.name}
+//                   <button
+//                     type="button"
+//                     onClick={() =>
+//                       setAssignedTeamIds((prev) =>
+//                         prev.filter((id) => id !== team.id)
+//                       )
+//                     }
+//                     className="btn btn-xs btn-circle btn-ghost"
+//                   >
+//                     ✕
+//                   </button>
+//                 </div>
+//               ))}
+//               {selectedUserObjects.map((user) => (
+//                 <div
+//                   key={`user-tag-${user.id}`}
+//                   className="badge badge-lg badge-outline gap-2"
+//                 >
+//                   <DIcon icon="fa-user" /> {user.displayName || user.user.name}
+//                   <button
+//                     type="button"
+//                     onClick={() =>
+//                       setAssignedUserIds((prev) =>
+//                         prev.filter((id) => id !== user.id)
+//                       )
+//                     }
+//                     className="btn btn-xs btn-circle btn-ghost"
+//                   >
+//                     ✕
+//                   </button>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+//         </div>
+
+//         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+//           {/* ===== اصلاحیه: افزودن پراپ name به DatePicker ===== */}
+//           <StandaloneDatePicker
+//             name="startDate"
+//             label="تاریخ شروع"
+//             value={startDate}
+//             onChange={(payload) => setStartDate(payload ? payload.iso : null)}
+//           />
+//           <StandaloneDatePicker
+//             name="endDate"
+//             label="تاریخ پایان"
+//             value={endDate}
+//             onChange={(payload) => setEndDate(payload ? payload.iso : null)}
+//           />
+//           <Select3
+//             label="اولویت"
+//             value={priority}
+//             onChange={(e) => setPriority(e.target.value)}
+//             options={[
+//               { label: "پایین", value: "low" },
+//               { label: "متوسط", value: "medium" },
+//               { label: "بالا", value: "high" },
+//               { label: "فوری", value: "urgent" },
+//             ]}
+//             name={""}
+//           />
+//         </div>
+//       </div>
+
+//       <div className="flex justify-end mt-6">
+//         <Button type="submit" disabled={loading} loading={loading}>
+//           {initialData ? "ذخیره تغییرات" : "ایجاد وظیفه"}
+//         </Button>
+//       </div>
+//     </form>
+//   );
+// }
+
+// // "use client";
+
+// // import DIcon from "@/@Client/Components/common/DIcon";
+// // import Loading from "@/@Client/Components/common/Loading";
+// // import RichTextEditor from "@/@Client/Components/ui/RichTextEditor";
+// // import Select from "@/@Client/Components/ui/Select";
+// // import Select3 from "@/@Client/Components/ui/Select3";
+// // import StandaloneDatePicker from "@/@Client/Components/ui/StandaloneDatePicker2";
+// // import { usePMStatus } from "@/modules/pm-statuses/hooks/usePMStatus";
+// // import { useProject } from "@/modules/projects/hooks/useProject";
+// // import { include as projectSingleInclude } from "@/modules/projects/data/fetch";
+// // import { TeamWithRelations } from "@/modules/teams/types";
+// // import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
+// // import { Button, Input } from "ndui-ahrom";
+// // import { useEffect, useMemo, useState } from "react";
+// // import { createTaskSchema, updateTaskSchema } from "../validation/schema";
+
+// // interface TaskFormProps {
+// //   onSubmit: (data: any) => void;
+// //   loading?: boolean;
+// //   initialData?: any;
+// // }
+
+// // export default function TaskForm({
+// //   onSubmit,
+// //   loading = false,
+// //   initialData,
+// // }: TaskFormProps) {
+// //   const [title, setTitle] = useState(initialData?.title || "");
+// //   const [description, setDescription] = useState(initialData?.description || "");
+// //   const [projectId, setProjectId] = useState<number | undefined>(initialData?.project?.id);
+// //   const [statusId, setStatusId] = useState<number | undefined>(initialData?.status?.id);
+// //   const [priority, setPriority] = useState(initialData?.priority || "medium");
+// //   const [startDate, setStartDate] = useState<string | null>(initialData?.startDate || null);
+// //   const [endDate, setEndDate] = useState<string | null>(initialData?.endDate || null);
+// //   const [assignedUserIds, setAssignedUserIds] = useState<number[]>(
+// //     initialData?.assignedUsers?.map((u: any) => u.id) || []
+// //   );
+// //   const [assignedTeamIds, setAssignedTeamIds] = useState<number[]>(
+// //     initialData?.assignedTeams?.map((t: any) => t.id) || []
+// //   );
+
+// //   const [projectOptions, setProjectOptions] = useState<{ label: string; value: number }[]>([]);
+// //   const [statusOptions, setStatusOptions] = useState<{ label: string; value: number }[]>([]);
+// //   const [assignableUsers, setAssignableUsers] = useState<WorkspaceUserWithRelations[]>([]);
+// //   const [assignableTeams, setAssignableTeams] = useState<TeamWithRelations[]>([]);
+// //   const [errors, setErrors] = useState<any>({});
+
+// //   const { getById: getProjectById, loading: loadingProjectDetails } = useProject();
+// //   const { getAll: getAllProjects, loading: loadingProjects } = useProject();
+// //   const { getAll: getAllStatuses, loading: loadingStatuses } = usePMStatus();
+
+// //   useEffect(() => {
+// //     getAllProjects({ page: 1, limit: 1000 }).then((res) => {
+// //       setProjectOptions((res?.data || []).map((p: any) => ({ label: p.name, value: p.id })));
+// //     });
+// //     // @ts-ignore
+// //     getAllStatuses({ page: 1, limit: 100, type: "TASK" }).then((res) => {
+// //       setStatusOptions((res?.data || []).map((s: any) => ({ label: s.name, value: s.id })));
+// //     });
+// //   }, []);
+
+// //   useEffect(() => {
+// //     const fetchProjectAssignments = async () => {
+// //       if (!projectId) {
+// //         setAssignableUsers([]);
+// //         setAssignableTeams([]);
+// //         return;
+// //       }
+// //       try {
+// //         const projectDetails = await getProjectById(projectId, { include: projectSingleInclude });
+// //         setAssignableUsers(projectDetails?.assignedUsers || []);
+// //         setAssignableTeams(projectDetails?.assignedTeams || []);
+
+// //         setAssignedUserIds((prev) => prev.filter((userId) => projectDetails?.assignedUsers?.some((u: any) => u.id === userId)));
+// //         setAssignedTeamIds((prev) => prev.filter((teamId) => projectDetails?.assignedTeams?.some((t: any) => t.id === teamId)));
+// //       } catch (error) {
+// //         console.error("Error fetching project assignments:", error);
+// //       }
+// //     };
+// //     fetchProjectAssignments();
+// //   }, [projectId, getProjectById]);
+
+// //   const handleSubmit = (e: React.FormEvent) => {
+// //     e.preventDefault();
+// //     // ساختار داده برای ولیدیشن دقیقا مطابق با الگوی PaymentForm
+// //     const dataToValidate = {
+// //       title,
+// //       description,
+// //       project: projectId ? { id: projectId } : undefined,
+// //       status: statusId ? { id: statusId } : undefined,
+// //       priority,
+// //       startDate,
+// //       endDate,
+// //       assignedUsers: assignedUserIds.map((id) => ({ id })),
+// //       assignedTeams: assignedTeamIds.map((id) => ({ id })),
+// //     };
+
+// //     const schema = initialData ? updateTaskSchema : createTaskSchema;
+// //     const validation = schema.safeParse(dataToValidate);
+
+// //     if (!validation.success) {
+// //       setErrors(validation.error.flatten().fieldErrors);
+// //       return;
+// //     }
+// //     setErrors({});
+// //     onSubmit(validation.data);
+// //   };
+
+// //   const isLoading = loadingProjects || loadingStatuses;
+// //   if (isLoading) return <Loading />;
+
+// //   const selectedUserObjects = useMemo(() => assignableUsers.filter((u) => assignedUserIds.includes(u.id)), [assignableUsers, assignedUserIds]);
+// //   const selectedTeamObjects = useMemo(() => assignableTeams.filter((t) => assignedTeamIds.includes(t.id)), [assignableTeams, assignedTeamIds]);
+
+// //   return (
+// //     <form onSubmit={handleSubmit} className="space-y-6">
+// //       {Object.keys(errors).length > 0 && (
+// //          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
+// //            <p>لطفا خطاهای فرم را برطرف کنید:</p>
+// //            <ul className="list-disc list-inside mt-2">
+// //             {Object.entries(errors).map(([key, value]) => (
+// //               // @ts-ignore
+// //               <li key={key}>{`${key}: ${value.join(', ')}`}</li>
+// //             ))}
+// //            </ul>
+// //          </div>
+// //       )}
+// //       <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border dark:border-slate-700 space-y-6">
+// //         <Input
+// //           name="title"
+// //           label="عنوان وظیفه"
+// //           value={title}
+// //           onChange={(e) => setTitle(e.target.value)}
+// //           required
+// //           error={errors.title?.[0]}
+// //         />
+// //         <RichTextEditor label="توضیحات" value={description} onChange={setDescription} />
+
+// //         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+// //           <Select
+// //             label="پروژه"
+// //             value={projectId}
+// //             onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : undefined)}
+// //             options={projectOptions}
+// //             required
+// //             error={errors.project?.[0]}
+// //           />
+// //           <Select
+// //             label="وضعیت"
+// //             value={statusId}
+// //             onChange={(e) => setStatusId(e.target.value ? Number(e.target.value) : undefined)}
+// //             options={statusOptions}
+// //             required
+// //             error={errors.status?.[0]}
+// //           />
+// //         </div>
+
+// //         <div className="p-4 border border-dashed rounded-lg space-y-4">
+// //           <h3 className="font-bold">اختصاص به:</h3>
+// //           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+// //             <Select3
+// //               label="تیم‌ها"
+// //               name="assignedTeams"
+// //               options={assignableTeams.map((t) => ({ label: t.name, value: t.id }))}
+// //               value={assignedTeamIds.map(String)}
+// //               onChange={(values) => setAssignedTeamIds(values.map(Number))}
+// //               disabled={!projectId || loadingProjectDetails}
+// //               multiple
+// //             />
+// //             <Select3
+// //               label="کاربران"
+// //               name="assignedUsers"
+// //               options={assignableUsers.map((u) => ({ label: u.displayName || u.user.name || "کاربر بی‌نام", value: u.id }))}
+// //               value={assignedUserIds.map(String)}
+// //               onChange={(values) => setAssignedUserIds(values.map(Number))}
+// //               disabled={!projectId || loadingProjectDetails}
+// //               multiple
+// //             />
+// //           </div>
+// //           {(selectedTeamObjects.length > 0 || selectedUserObjects.length > 0) && (
+// //             <div className="flex flex-wrap items-center gap-2 pt-3 border-t">
+// //               {selectedTeamObjects.map((team) => (
+// //                 <div key={`team-tag-${team.id}`} className="badge badge-lg badge-outline gap-2">
+// //                   <DIcon icon="fa-users" /> {team.name}
+// //                   <button type="button" onClick={() => setAssignedTeamIds((prev) => prev.filter((id) => id !== team.id))} className="btn btn-xs btn-circle btn-ghost">✕</button>
+// //                 </div>
+// //               ))}
+// //               {selectedUserObjects.map((user) => (
+// //                 <div key={`user-tag-${user.id}`} className="badge badge-lg badge-outline gap-2">
+// //                   <DIcon icon="fa-user" /> {user.displayName || user.user.name}
+// //                   <button type="button" onClick={() => setAssignedUserIds((prev) => prev.filter((id) => id !== user.id))} className="btn btn-xs btn-circle btn-ghost">✕</button>
+// //                 </div>
+// //               ))}
+// //             </div>
+// //           )}
+// //         </div>
+
+// //         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+// //           <StandaloneDatePicker label="تاریخ شروع" value={startDate} onChange={(date) => setStartDate(date)} />
+// //           <StandaloneDatePicker label="تاریخ پایان" value={endDate} onChange={(date) => setEndDate(date)} />
+// //           <Select
+// //             label="اولویت"
+// //             value={priority}
+// //             onChange={(e) => setPriority(e.target.value)}
+// //             options={[
+// //               { label: "پایین", value: "low" },
+// //               { label: "متوسط", value: "medium" },
+// //               { label: "بالا", value: "high" },
+// //               { label: "فوری", value: "urgent" },
+// //             ]}
+// //           />
+// //         </div>
+// //       </div>
+
+// //       <div className="flex justify-end mt-6">
+// //         <Button type="submit" disabled={loading} loading={loading}>
+// //           {initialData ? "ذخیره تغییرات" : "ایجاد وظیفه"}
+// //         </Button>
+// //       </div>
+// //     </form>
+// //   );
+// // }
