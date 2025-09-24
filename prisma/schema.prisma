@@ -937,6 +937,8 @@ model Task {
   statusId Int
   status   PMStatus @relation(fields: [statusId], references: [id])
 
+  orderInStatus Float?
+
   parentId Int?
   parent   Task?  @relation("TaskHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   subTasks Task[] @relation("TaskHierarchy")

@@ -14,7 +14,7 @@ export const PriorityBadge = ({ priority }: { priority: string }) => {
     urgent: { label: "فوری", color: "red" },
   };
 
-  const style = priorityStyles[priority.toLowerCase()] || priorityStyles.low;
+  const style = priorityStyles[priority?.toLowerCase()] || priorityStyles.low;
 
   return (
     <span

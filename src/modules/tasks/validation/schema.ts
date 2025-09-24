@@ -13,7 +13,18 @@ export const createTaskSchema = z.object({
   assignedTeams: z.array(z.object({ id: z.number() })).optional(), // <-- این خط اضافه شد
 });
 
-export const updateTaskSchema = createTaskSchema.partial();
+export const updateTaskSchema = z.object({
+  title: z.string().optional(),
+  description: z.string().optional().nullable(),
+  priority: z.string().optional(),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
+  statusId: z.number().optional(),
+  projectId: z.number().optional(),
+  orderInStatus: z.number().optional().nullable(), // <<<<<<< این خط را اضافه کن
+  assignedUsers: z.array(z.object({ id: z.number() })).optional(),
+  assignedTeams: z.array(z.object({ id: z.number() })).optional(),
+});
 // import { z } from "zod";
 
 // // یک schema پایه برای موجودیت‌های مرتبط که فقط id آنها برای ما مهم است
