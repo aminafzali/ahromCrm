@@ -1,8 +1,13 @@
 // مسیر فایل: src/lib/authOptions.ts
+// مسیر فایل: src/lib/authOptions.ts
 
 import prisma from "@/lib/prisma";
 import { NextAuthOptions, User as NextAuthUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+
+// ✅ تعریف ثابت‌های دمو
+const DEMO_PHONE = "09371417732";
+const DEMO_CODE = "000000";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -13,6 +18,22 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.phone || !credentials.otp) {
           throw new Error("شماره تلفن و کد تایید الزامی است.");
         }
+        const { phone, otp } = credentials; // ✅ منطق حالت دمو: دور زدن چک‌های OTP
+
+        if (phone === DEMO_PHONE && otp === DEMO_CODE) {
+          const user = await prisma.user.findUnique({
+            where: { phone },
+          });
+          if (user) {
+            // اگر کاربر پیدا شد، لاگین دمو با موفقیت انجام شده است.
+            return {
+              id: user.id.toString(),
+              name: user.name,
+              email: user.email,
+              phone: user.phone,
+            } as NextAuthUser;
+          }
+        } // ✅ پایان منطق دمو // منطق عادی OTP (فقط در صورتی اجرا می‌شود که حالت دمو نباشد یا دمو ناموفق باشد)
         const user = await prisma.user.findUnique({
           where: { phone: credentials.phone },
         });
@@ -55,7 +76,6 @@ export const authOptions: NextAuthOptions = {
     },
     async redirect({ url, baseUrl }) {
       if (url.startsWith(baseUrl)) {
-        // ++ اصلاحیه: هدایت به آدرس جدید و صحیح ++
         return `${baseUrl}/workspaces`;
       }
       return url;
@@ -65,3 +85,68 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
 };
+// import prisma from "@/lib/prisma";
+// import { NextAuthOptions, User as NextAuthUser } from "next-auth";
+// import CredentialsProvider from "next-auth/providers/credentials";
+
+// export const authOptions: NextAuthOptions = {
+//   providers: [
+//     CredentialsProvider({
+//       name: "credentials",
+//       credentials: { phone: {}, otp: {} },
+//       async authorize(credentials): Promise<NextAuthUser | null> {
+//         if (!credentials?.phone || !credentials.otp) {
+//           throw new Error("شماره تلفن و کد تایید الزامی است.");
+//         }
+//         const user = await prisma.user.findUnique({
+//           where: { phone: credentials.phone },
+//         });
+//         if (!user) {
+//           throw new Error("کاربری با این مشخصات یافت نشد.");
+//         }
+//         if (user.otp !== credentials.otp) {
+//           throw new Error("کد تایید نامعتبر است.");
+//         }
+//         if (!user.otpExpires || user.otpExpires < new Date()) {
+//           throw new Error("کد تایید منقضی شده است.");
+//         }
+//         await prisma.user.update({
+//           where: { id: user.id },
+//           data: { otp: null, otpExpires: null },
+//         });
+//         return {
+//           id: user.id.toString(),
+//           name: user.name,
+//           email: user.email,
+//           phone: user.phone,
+//         };
+//       },
+//     }),
+//   ],
+//   callbacks: {
+//     async jwt({ token, user }) {
+//       if (user) {
+//         token.id = user.id;
+//         token.phone = (user as any).phone;
+//       }
+//       return token;
+//     },
+//     async session({ session, token }) {
+//       if (token && session.user) {
+//         session.user.id = token.id as string;
+//         session.user.phone = token.phone as string;
+//       }
+//       return session;
+//     },
+//     async redirect({ url, baseUrl }) {
+//       if (url.startsWith(baseUrl)) {
+//         // ++ اصلاحیه: هدایت به آدرس جدید و صحیح ++
+//         return `${baseUrl}/workspaces`;
+//       }
+//       return url;
+//     },
+//   },
+//   pages: { signIn: "/login", error: "/login" },
+//   session: { strategy: "jwt" },
+//   secret: process.env.NEXTAUTH_SECRET,
+// };
