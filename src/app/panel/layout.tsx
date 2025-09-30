@@ -61,8 +61,7 @@ export default function UserDashboardLayout({
             <ToastProvider>
               {children}
               <ToastContainer position="top-center" />
-              <Toaster />
-            </ToastProvider>
+            </ToastProvider>       
           </WorkspaceProvider>
         </AuthProvider>
       </div>

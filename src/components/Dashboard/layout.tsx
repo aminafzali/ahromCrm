@@ -4,7 +4,7 @@
 
 import { dashboardBottomItems, dashboardMenuItems } from "@/lib/data";
 import { LayoutWrapper, ToastContainer, ToastProvider } from "ndui-ahrom";
-import { Toaster } from "../ui/toaster";
+import { ToasterProvider } from "../ui/toaster-provider";
 import DashboardToolBar from "./DashboardToolBar";
 
 const sidebarContent = (
@@ -41,11 +41,12 @@ export default function DashboardLayout({
         breakpoint={1024}
         elevatedToolbar={false}
       >
-        <div className="p-2 min-h-screen px-4 bg-base-100 pb-24">
-          {children}
-        </div>
+        <ToasterProvider>
+          <div className="p-2 min-h-screen px-4 bg-base-100 pb-24">
+            {children}
+          </div>
+        </ToasterProvider>
         <ToastContainer position="top-center" />
-        <Toaster />
       </LayoutWrapper>
     </ToastProvider>
   );

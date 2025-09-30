@@ -1,9 +1,9 @@
 "use client";
 
+import { useToast } from "@/components/ui/toaster-provider"; // <-- Change the import path
+import axios from "axios";
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
-import axios from "axios";
-import { useToast } from "@/components/ui/use-toast";
 
 const fetcher = (url: string) => axios.get(url).then((res) => res.data);
 
@@ -30,7 +30,7 @@ export function useModuleCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>>(
     const { id, ...updateData } = arg;
     return axios.put(config.apiId(id), updateData).then((res) => res.data);
   };
-  
+
   const deleteFetcher = (
     key: string,
     { arg: id }: { arg: number | string }
@@ -39,21 +39,39 @@ export function useModuleCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>>(
   };
 
   // --- SWR Hooks ---
-  const { data, error, isLoading, mutate: refresh } = useSWR<any, Error>(config.api, fetcher);
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: refresh,
+  } = useSWR<any, Error>(config.api, fetcher);
 
   // --- Mutations with TYPE ASSERTION ---
 
-  const { trigger: createTrigger, isMutating: isCreating } = useSWRMutation(config.api, createFetcher);
+  const { trigger: createTrigger, isMutating: isCreating } = useSWRMutation(
+    config.api,
+    createFetcher
+  );
   // We assert the type of the trigger function to remove ambiguity
   const createItem = createTrigger as (arg: TCreate) => Promise<T | undefined>;
 
-  const { trigger: updateTrigger, isMutating: isUpdating } = useSWRMutation(config.api, updateFetcher);
+  const { trigger: updateTrigger, isMutating: isUpdating } = useSWRMutation(
+    config.api,
+    updateFetcher
+  );
   // We assert the type for the update trigger as well
-  const updateItem = updateTrigger as (arg: { id: number | string } & TUpdate) => Promise<T | undefined>;
-  
-  const { trigger: deleteTrigger, isMutating: isDeleting } = useSWRMutation(config.api, deleteFetcher);
+  const updateItem = updateTrigger as (
+    arg: { id: number | string } & TUpdate
+  ) => Promise<T | undefined>;
+
+  const { trigger: deleteTrigger, isMutating: isDeleting } = useSWRMutation(
+    config.api,
+    deleteFetcher
+  );
   // And for the delete trigger
-  const deleteItem = deleteTrigger as (arg: number | string) => Promise<any | undefined>;
+  const deleteItem = deleteTrigger as (
+    arg: number | string
+  ) => Promise<any | undefined>;
 
   // --- Handler Functions (These will now work correctly) ---
   const handleCreate = async (newData: TCreate) => {
@@ -63,7 +81,11 @@ export function useModuleCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>>(
       refresh();
       return result;
     } catch (error: any) {
-      toast({ variant: "destructive", title: "خطا", description: error.message || "خطا در ایجاد آیتم." });
+      toast({
+        variant: "destructive",
+        title: "خطا",
+        description: error.message || "خطا در ایجاد آیتم.",
+      });
       throw error;
     }
   };
@@ -75,7 +97,11 @@ export function useModuleCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>>(
       refresh();
       return result;
     } catch (error: any) {
-      toast({ variant: "destructive", title: "خطا", description: error.message || "خطا در ویرایش آیتم." });
+      toast({
+        variant: "destructive",
+        title: "خطا",
+        description: error.message || "خطا در ویرایش آیتم.",
+      });
       throw error;
     }
   };
@@ -86,7 +112,11 @@ export function useModuleCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>>(
       toast({ title: "موفقیت", description: "با موفقیت حذف شد." });
       refresh();
     } catch (error: any) {
-      toast({ variant: "destructive", title: "خطا", description: error.message || "خطا در حذف آیتم." });
+      toast({
+        variant: "destructive",
+        title: "خطا",
+        description: error.message || "خطا در حذف آیتم.",
+      });
       throw error;
     }
   };
