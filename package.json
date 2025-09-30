@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=2048 next dev -p 4010",
     "build": "prisma generate && next build",
-    "start": "next start -p 4010",
+    "start": "next start", 
     "lint": "next lint",
     "lintf": "next lint --fix",
     "elint": "eslint --fix \"src/**/*.{js,jsx,ts,tsx}\"",

@@ -14,7 +14,6 @@ export default function WorkspacesHubPage() {
   const {
     workspaces = [],
     setActiveWorkspace,
-    isLoading,
     refetchWorkspaces,
   } = useWorkspace();
 
@@ -23,54 +22,24 @@ export default function WorkspacesHubPage() {
 
   // پرچم برای جلوگیری از چندبار refetch/refresh
   const didAttemptRefetch = useRef(false);
-  const didAttemptRouterRefresh = useRef(false);
 
-  // 1) وقتی کاربر تازه لاگین کرده و لیست خالیه، یکبار refetch کنیم
+  // 1) وقتی کاربر لاگین شد و لیست خالی است، فقط یک‌بار و بدون بلاک‌کردن UI refetch کن
   useEffect(() => {
-    // فقط وقتی وضعیت authenticated شد و هنوز لیست خالیه، یکبار اقدام کن
     if (
       status === "authenticated" &&
-      !isLoading &&
       Array.isArray(workspaces) &&
       workspaces.length === 0 &&
       !didAttemptRefetch.current
     ) {
       didAttemptRefetch.current = true;
-
-      (async () => {
-        try {
-          const newList = await refetchWorkspaces();
-          // اگر refetchWorkspaces مقدار جدید آورد (طول > 0)، نیازی به router.refresh نیست
-          if (!Array.isArray(newList) || newList.length === 0) {
-            // اگر پس از refetch هنوز خالیه، به عنوان fallback یک router.refresh بزن (یکبار)
-            if (!didAttemptRouterRefresh.current) {
-              didAttemptRouterRefresh.current = true;
-              try {
-                router.refresh();
-              } catch (e) {
-                // بعضی نسخه‌ها ممکنه خطا بدهند؛ تنها لاگ کن
-                console.error("router.refresh failed (fallback):", e);
-              }
-            }
-          }
-        } catch (e) {
-          console.error("refetchWorkspaces on auth failed:", e);
-          // fallback: در صورت خطا سعی می‌کنیم router.refresh بزنیم (یکبار)
-          if (!didAttemptRouterRefresh.current) {
-            didAttemptRouterRefresh.current = true;
-            try {
-              router.refresh();
-            } catch (er) {
-              console.error("router.refresh failed after refetch error:", er);
-            }
-          }
-        }
-      })();
+      refetchWorkspaces().catch((e) =>
+        console.error("refetchWorkspaces on auth failed:", e)
+      );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, isLoading]); // وابستگی‌ها محدود تا از حلقه جلوگیری شود
+  }, [status, workspaces, refetchWorkspaces]);
 
-  if (isLoading) return <Loading />;
+  // فقط زمانی که سشن هنوز در حال بارگذاری است، لودینگ نشان بده
+  if (status === "loading") return <Loading />;
 
   const handleSelect = (ws: any) => {
     try {

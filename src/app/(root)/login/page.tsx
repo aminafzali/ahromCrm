@@ -27,7 +27,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    const isDemo = phone.toLowerCase().trim() === "demo";
+    const isDemo = phone.toLowerCase().trim() === "1234";
     const finalPhone = isDemo ? DEMO_PHONE : phone;
 
     try {
@@ -100,9 +100,9 @@ export default function LoginPage() {
                 <h1 className="text-2xl font-semibold text-gray-800">
                   ورود به حساب کاربری
                 </h1>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-gray-500 mt-2">
                   {step === 1
-                    ? "برای شروع شماره موبایل خود را وارد نمایید."
+                    ? "برای ورود شماره تلفن خود را وارد کنید و در صورت نیاز به مشاهده نسخه تستی یا دمو عدد 1234 را وارد نمایید"
                     : `کد تایید به شماره ${phone || "----"} ارسال گردید.`}
                 </p>
               </div>
@@ -180,7 +180,7 @@ export default function LoginPage() {
                   <Input
                     name="phone"
                     label="شماره موبایل"
-                    placeholder="09123456789 یا demo"
+                    placeholder="09372526589"
                     type="tel"
                     className="bg-white"
                     value={phone}
