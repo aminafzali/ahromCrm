@@ -42,8 +42,11 @@ export default function LoginPage() {
         if (result?.error) {
           setError(result.error);
         } else if (result?.ok) {
+          // Give NextAuth a moment to set the session cookie
+          await new Promise((resolve) => setTimeout(resolve, 100));
           const callbackUrl = searchParams.get("callbackUrl") || "/workspaces";
           router.push(callbackUrl);
+          router.refresh();
         }
       } else {
         // حالت عادی: ارسال OTP واقعی
@@ -74,8 +77,11 @@ export default function LoginPage() {
     if (result?.error) {
       setError(result.error);
     } else if (result?.ok) {
+      // Give NextAuth a moment to set the session cookie
+      await new Promise((resolve) => setTimeout(resolve, 100));
       const callbackUrl = searchParams.get("callbackUrl") || "/workspaces";
       router.push(callbackUrl);
+      router.refresh();
     }
   };
 

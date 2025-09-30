@@ -1,7 +1,7 @@
 // مسیر فایل: src/@Client/context/WorkspaceProvider.tsx
 "use client";
 
-import axios from "axios";
+import apiClient from "@/@Client/lib/axios";
 import { useSession } from "next-auth/react";
 import {
   createContext,
@@ -97,6 +97,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     console.log("[WorkspaceProvider] fetchWorkspaces start (status):", status);
     if (status === "loading") {
       console.log("[WorkspaceProvider] session still loading — skipping fetch");
+      setIsLoading(true);
       return [];
     }
 
@@ -115,7 +116,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
     setIsLoading(true);
     try {
-      const res = await axios.get<UserWorkspace[]>("/api/user/workspaces");
+      const res = await apiClient.get<UserWorkspace[]>("/user/workspaces");
       const userWorkspaces = res.data || [];
       console.log(
         "[WorkspaceProvider] fetchWorkspaces result length =",
@@ -193,28 +194,21 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   }, [status]);
 
   /* ===== automatic refetch when session becomes authenticated =====
-     - attempts up to 2 times with short delay to cover race with cookie/token setting
+     - immediate fetch + up to 5 retries with short backoff to cover cookie/token race
      - avoids infinite loop using authRefetchAttempts
   */
   useEffect(() => {
     let cancelled = false;
     const runAutoRefetch = async () => {
       if (status === "authenticated") {
-        // only if current workspaces are empty, we try to fetch again (race fix)
-        if (Array.isArray(workspaces) && workspaces.length > 0) {
-          console.log(
-            "[WorkspaceProvider] already have workspaces — skipping auto-refetch"
-          );
-          authRefetchAttempts.current = 0;
-          return;
-        }
-
-        // try up to 2 attempts
-        while (!cancelled && authRefetchAttempts.current < 2) {
+        console.log(
+          "[WorkspaceProvider] status became authenticated, starting auto-refetch"
+        );
+        authRefetchAttempts.current = 0;
+        while (!cancelled && authRefetchAttempts.current < 5) {
           authRefetchAttempts.current += 1;
-          console.log(
-            `[WorkspaceProvider] auto refetch attempt ${authRefetchAttempts.current}`
-          );
+          const attempt = authRefetchAttempts.current;
+          console.log(`[WorkspaceProvider] auto-refetch attempt ${attempt}`);
           const list = await fetchWorkspaces();
           if (Array.isArray(list) && list.length > 0) {
             console.log(
@@ -223,14 +217,17 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
             );
             break;
           }
-          // small delay before next try
-          await new Promise((r) => setTimeout(r, 250));
+          const delayMs = Math.min(200 * attempt, 800);
+          await new Promise((r) => setTimeout(r, delayMs));
         }
-
-        // if after attempts still empty, leave it — page components can call refetchWorkspaces or router.refresh if needed
-      } else {
+      } else if (status === "unauthenticated") {
         // reset attempts when user logs out
+        console.log("[WorkspaceProvider] status unauthenticated, resetting");
         authRefetchAttempts.current = 0;
+        // Keep isLoading true - don't show empty state until we know auth status is final
+      } else if (status === "loading") {
+        console.log("[WorkspaceProvider] status is loading");
+        setIsLoading(true);
       }
     };
 
@@ -239,8 +236,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       cancelled = true;
     };
-    // we intentionally depend on status only; fetchWorkspaces reads status via closure
-  }, [status, fetchWorkspaces, workspaces]);
+  }, [status, fetchWorkspaces]);
 
   /* ===== setActiveWorkspace helper ===== */
   const setActiveWorkspace = (workspace: UserWorkspace | null) => {

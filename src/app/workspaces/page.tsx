@@ -15,6 +15,7 @@ export default function WorkspacesHubPage() {
     workspaces = [],
     setActiveWorkspace,
     refetchWorkspaces,
+    isLoading,
   } = useWorkspace();
 
   const router = useRouter();
@@ -38,8 +39,8 @@ export default function WorkspacesHubPage() {
     }
   }, [status, workspaces, refetchWorkspaces]);
 
-  // فقط زمانی که سشن هنوز در حال بارگذاری است، لودینگ نشان بده
-  if (status === "loading") return <Loading />;
+  // زمانی که سشن یا Provider در حال بارگذاری‌اند، لودینگ نشان بده
+  if (status === "loading" || isLoading) return <Loading />;
 
   const handleSelect = (ws: any) => {
     try {

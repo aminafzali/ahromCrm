@@ -2,8 +2,9 @@
 
 "use client";
 
+import apiClient from "@/@Client/lib/axios";
 import { workspaceSchema } from "@/@Server/services/workspaces/WorkspaceApiService";
-import axios, { AxiosError } from "axios";
+import type { AxiosError } from "axios";
 import { useToast } from "ndui-ahrom";
 import { useCallback, useState } from "react";
 import { z } from "zod";
@@ -21,7 +22,7 @@ export function useWorkspaceCrud() {
     async (data: CreateWorkspaceInput) => {
       setSubmitting(true);
       try {
-        const response = await axios.post("/api/workspaces", data);
+        const response = await apiClient.post("/workspaces", data);
         showToast("ورک‌اسپیس با موفقیت ایجاد شد.", "success");
         return response.data;
       } catch (error) {
