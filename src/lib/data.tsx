@@ -204,18 +204,18 @@ export const dashboardBottomItems = [
     href: "/dashboard/requests",
   },
   {
-    id: "settings",
-    value: "settings",
-    label: "وضعیت ها",
+    id: "tasks",
+    value: "tasks",
+    label: "وظایف",
     icon: <DIcon icon="fa-octagon-check" cdi={false}></DIcon>,
-    href: "/dashboard/statuses",
+    href: "/dashboard/tasks",
   },
   {
-    id: "service-types",
-    value: "service-types",
-    label: "خدمات",
-    icon: <DIcon icon="fa-gears" cdi={false}></DIcon>,
-    href: "/dashboard/service-types",
+    id: "notifications",
+    value: "notifications",
+    label: "اعلان ها",
+    icon: <DIcon icon="fa-bell" cdi={false}></DIcon>,
+    href: "/dashboard/notifications",
   },
 ];
 

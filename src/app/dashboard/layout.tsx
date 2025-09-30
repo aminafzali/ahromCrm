@@ -4,17 +4,14 @@
 
 import { WorkspaceProvider } from "@/@Client/context/WorkspaceProvider";
 import DashboardComponentLayout from "@/components/Dashboard/layout";
-import AuthProvider from "@/providers/AuthProvider";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    // ترتیب پروایدرها مهم است. ابتدا Auth و سپس Workspace
-    <AuthProvider>
-      <WorkspaceProvider>
-        {/* ما کامپوننت بصری شما را در داخل پروایدرها قرار می‌دهیم */}
-        <DashboardComponentLayout>{children}</DashboardComponentLayout>
-      </WorkspaceProvider>
-    </AuthProvider>
+    // AuthProvider در root layout وجود دارد، نیازی به تکرار نیست
+    <WorkspaceProvider>
+      {/* ما کامپوننت بصری شما را در داخل پروایدرها قرار می‌دهیم */}
+      <DashboardComponentLayout>{children}</DashboardComponentLayout>
+    </WorkspaceProvider>
   );
 }
 

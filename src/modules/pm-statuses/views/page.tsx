@@ -9,6 +9,7 @@ import {
   DragEndEvent,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -29,12 +30,20 @@ import { toast } from "react-toastify";
 
 // کامپوننت برای هر آیتم قابل جابجایی
 const SortableStatusItem = ({ status }: { status: PMStatus }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: status.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: status.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    touchAction: "none",
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
@@ -42,13 +51,11 @@ const SortableStatusItem = ({ status }: { status: PMStatus }) => {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="flex items-center justify-between p-4 mb-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-blue-500"
+      {...listeners}
+      className="flex items-center justify-between p-4 mb-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-blue-500 cursor-grab active:cursor-grabbing"
     >
       <div className="flex items-center">
-        <div
-          {...listeners}
-          className="cursor-grab p-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-        >
+        <div className="p-2 text-gray-500 dark:text-gray-400">
           <DIcon icon="fa-grip-vertical" />
         </div>
         <span
@@ -91,7 +98,17 @@ export default function CustomizeStatusesPage() {
   }, []);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 

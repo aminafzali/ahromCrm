@@ -1,16 +1,16 @@
-"use client";
-
+// File: src/app/(root)/layout.tsx
 import React from "react";
 
+
 export default function RootLayout({
-  children,
+children,
 }: {
-  children: React.ReactNode;
+children: React.ReactNode;
 }) {
-  return (
-    <div className="">
-      {/* main container: حداکثر عرض و padding مناسب */}
-      <main className="">{children}</main>
-    </div>
-  );
+return (
+<div className="">
+{/* main container: حداکثر عرض و padding مناسب */}
+<main className="">{children}</main>
+</div>
+);
 }

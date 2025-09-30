@@ -2,7 +2,7 @@
 
 "use client";
 import IndexWrapper from "@/@Client/Components/wrappers/V2/IndexWrapper";
-import { columns } from "../data/table";
+import { columns, listItemRender } from "../data/table";
 import { ProjectRepository } from "../repo/ProjectRepository";
 
 const ProjectsPage = () => {
@@ -11,6 +11,8 @@ const ProjectsPage = () => {
       columns={columns}
       repo={new ProjectRepository()}
       title="پروژه‌ها"
+      listItemRender={listItemRender}
+      defaultViewMode="list"
     />
   );
 };

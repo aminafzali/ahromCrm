@@ -3,7 +3,6 @@
 import DIcon from "@/@Client/Components/common/DIcon";
 import { WorkspaceProvider } from "@/@Client/context/WorkspaceProvider";
 import { userBottomItems, userMenuItems } from "@/lib/data";
-import AuthProvider from "@/providers/AuthProvider";
 import {
   Button,
   LayoutWrapper,
@@ -52,17 +51,13 @@ export default function UserDashboardLayout({
       className="bg-white"
     >
       <div className="px-4 pt-2 min-h-screen md:p-6 bg-base-100  pb-20">
-        {/* 
-        todo:t4
-        موارد اوت پرووایدر و ورک اسپیس پروایدر رو اضافه کردم که شاید مشکل از شوند  */}
-        <AuthProvider>
-          <WorkspaceProvider>
-            <ToastProvider>
-              {children}
-              <ToastContainer position="top-center" />
-            </ToastProvider>
-          </WorkspaceProvider>
-        </AuthProvider>
+        {/* AuthProvider در root layout وجود دارد، فقط WorkspaceProvider و ToastProvider نیاز است */}
+        <WorkspaceProvider>
+          <ToastProvider>
+            {children}
+            <ToastContainer position="top-center" />
+          </ToastProvider>
+        </WorkspaceProvider>
       </div>
     </LayoutWrapper>
   );

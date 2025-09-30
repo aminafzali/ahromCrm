@@ -1,7 +1,8 @@
 // // مسیر فایل: src/app/workspaces/_components/WorkspaceForm.tsx
-// مسیر فایل: src/app/workspaces/_components/WorkspaceForm.tsx
+// src/app/workspaces/_components/WorkspaceForm.tsx
 "use client";
 
+import type { UserWorkspace } from "@/@Client/context/WorkspaceProvider";
 import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 import { useWorkspaceCrud } from "@/@Client/hooks/useWorkspaceCrud";
 import { workspaceSchema } from "@/@Server/services/workspaces/WorkspaceApiService";
@@ -12,7 +13,8 @@ import { z } from "zod";
 
 export default function WorkspaceForm() {
   const router = useRouter();
-  const { refetchWorkspaces } = useWorkspace();
+  const { refetchWorkspaces, setActiveWorkspace, addWorkspace } =
+    useWorkspace();
   const { create, submitting } = useWorkspaceCrud();
 
   const {
@@ -26,9 +28,61 @@ export default function WorkspaceForm() {
   const handleSave = async (data: z.infer<typeof workspaceSchema>) => {
     try {
       const result = await create(data);
+      console.log("CREATE RESULT:", result);
+
       if (result) {
-        await refetchWorkspaces();
-        // ++ اصلاحیه: هدایت به آدرس جدید و صحیح ++
+        // این خط تایپ درست رو از refetchWorkspaces می‌گیره (Promise<UserWorkspace[]>)
+        let userWorkspaces: UserWorkspace[] = [];
+        try {
+          userWorkspaces = await refetchWorkspaces();
+          console.log(
+            "REFETCH USER WORKSPACES after create:",
+            userWorkspaces.length
+          );
+        } catch (e) {
+          console.error("refetchWorkspaces failed:", e);
+        }
+
+        // پیدا کردن رکورد مربوط به workspace جدید در میان userWorkspaces
+        const newUserWorkspace = userWorkspaces.find(
+          (uw) =>
+            uw.workspace?.slug === result.slug ||
+            uw.workspaceId === result.id ||
+            uw.workspace?.id === result.id
+        );
+
+        if (newUserWorkspace) {
+          try {
+            setActiveWorkspace?.(newUserWorkspace);
+          } catch (e) {
+            console.warn("setActiveWorkspace failed:", e);
+          }
+        } else {
+          // اگر رکورد پیدا نشد، یک رکورد خوشبینانه اضافه کن تا UI سریعاً آپدیت شود
+          try {
+            const optimistic: UserWorkspace = {
+              id: Date.now(), // id ناپایدار ولی کافی برای UI محلی
+              workspaceId: result.id,
+              userId: result.ownerId ?? null,
+              roleId: null as any,
+              workspace: {
+                id: result.id,
+                name: result.name,
+                slug: result.slug,
+              },
+              role: {
+                id: 0,
+                name: "Admin",
+              },
+            };
+            addWorkspace?.(optimistic);
+            setActiveWorkspace?.(optimistic);
+          } catch (e) {
+            console.warn("optimistic add failed:", e);
+          }
+        }
+
+        // ناوبری به صفحه ورک‌اسپیس‌ها
         router.push("/workspaces");
       }
     } catch (error) {
