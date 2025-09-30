@@ -1,0 +1,1146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// schema.prisma
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// >>>>>>>>>>>>> WORKSPACE & RBAC (Role-Based Access Control) MODELS <<<<<<<<<<<<<<
+
+model Workspace {
+  id          Int    @id @default(autoincrement())
+  name        String
+  description String @default("")
+  slug        String @unique
+  ownerId     Int
+  owner       User   @relation("OwnedWorkspaces", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // --- Back-relations for ALL workspace-specific data ---
+  roles       Role[]
+  permissions Permission[]
+  members     WorkspaceUser[]
+
+  // These models are workspace-specific but not directly tied to a user's profile
+  products                Product[]
+  brands                  Brand[]
+  categories              Category[]
+  statuses                Status[]
+  deviceTypes             DeviceType[]
+  serviceTypes            ServiceType[]
+  actualServices          ActualService[]
+  forms                   Form[]
+  labels                  Label[]
+  userGroups              UserGroup[]
+  attributes              Attribute[]
+  warranties              Warranty[]
+  fields                  Field[]
+  formSubmissions         FormSubmission[]
+  productImages           ProductImage[]
+  productAttributes       ProductAttribute[]
+  productVariants         ProductVariant[]
+  expertReviews           ExpertReview[]
+  notes                   Note[]
+  invoiceItems            InvoiceItem[]
+  requests                Request[]
+  invoices                Invoice[]
+  receivedDevices         ReceivedDevice[]
+  reminders               Reminder[]
+  notifications           Notification[]
+  payments                Payment[]
+  reviews                 Review[]
+  requestStatusHistories  RequestStatusHistory[]
+  requestReviews          RequestReview[]
+  requestCancellations    RequestCancellation[]
+  requestAttachments      RequestAttachment[]
+  actualServicesOnRequest ActualServiceOnRequest[]
+  paymentCategories       PaymentCategory[] // رابطه متقابل برای دسته‌بندی پرداخت‌ها
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  Team              Team[]
+  Project           Project[]
+  Task              Task[]
+  PMStatus          PMStatus[]
+  TaskStatusHistory TaskStatusHistory[]
+  Workflow          Workflow[]
+}
+
+model WorkspaceUser {
+  id          Int @id @default(autoincrement())
+  workspaceId Int
+  userId      Int
+  roleId      Int
+
+  displayName String?
+  phone       String?
+  name        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  // روابط به درخواست‌ها، فاکتورها و ...
+  requests             Request[]
+  requestsAssigned     Request[]              @relation("AssignedTo")
+  notifications        Notification[]
+  reminders            Reminder[]
+  requestCancellations RequestCancellation[]
+  requestReviews       RequestReview[]
+  payments             Payment[]
+  invoices             Invoice[]
+  reviews              Review[]
+  receivedDevices      ReceivedDevice[]
+  statusChanges        RequestStatusHistory[]
+
+  // روابط چند به چند ساده (Implicit)
+  labels     Label[]     @relation("WorkspaceUserLabels")
+  userGroups UserGroup[] @relation("WorkspaceUserGroups")
+
+  // Project Management Relations
+  teams             TeamMember[]
+  assignedProjects  Project[]           @relation("AssignedWorkspaceUsersToProject")
+  assignedTasks     Task[]              @relation("AssignedWorkspaceUsersToTask")
+  taskStatusChanges TaskStatusHistory[]
+  relatedTasks      Task[]              @relation("TaskToWorkspaceUser")
+
+  @@unique([workspaceId, userId])
+}
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  permissions RolePermission[]
+  users       WorkspaceUser[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([name, workspaceId])
+}
+
+model Permission {
+  id          Int              @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  action      String
+  description String?
+  module      String
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([action, workspaceId])
+}
+
+model RolePermission {
+  // ===== شروع اصلاحیه =====
+  id Int @id @default(autoincrement())
+  // ===== پایان اصلاحیه =====
+
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // ===== پایان اصلاحیه =====
+
+  // ===== شروع اصلاحیه =====
+  // کلید اصلی ترکیبی به یک محدودیت یکتایی تبدیل شد
+  @@unique([roleId, permissionId])
+}
+
+// >>>>>>>>>>>>> CORE MODELS (Refactored for Workspace) <<<<<<<<<<<<<<
+
+model User {
+  id        Int      @id @unique @default(autoincrement())
+  name      String?
+  email     String?  @unique
+  phone     String   @unique
+  password  String?
+  address   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  otp        String?
+  otpExpires DateTime?
+
+  // روابط سراسری کاربر (گذرنامه)
+  ownedWorkspaces Workspace[]     @relation("OwnedWorkspaces")
+  workspaces      WorkspaceUser[]
+}
+
+model Request {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  assignedToId Int?
+  assignedTo   WorkspaceUser? @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  relatedTasks Task[] @relation("TaskToRequest")
+
+  description      String          @db.Text
+  serviceTypeId    Int?
+  serviceType      ServiceType?    @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  address          String?
+  preferredDate    DateTime?
+  preferredTime    DateTime?
+  note             String?
+  statusId         Int?
+  status           Status?         @relation(fields: [statusId], references: [id], onDelete: SetNull)
+  priority         String          @default("متوسط")
+  estimatedPrice   Float?
+  actualPrice      Float?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  completedAt      DateTime?
+  trackingCode     String?
+  formSubmissionid Int?
+  formSubmission   FormSubmission? @relation(fields: [formSubmissionid], references: [id])
+
+  receivedDevice ReceivedDevice?
+  notes          Note[]
+  invoices       Invoice[]
+  notifications  Notification[]
+  attachments    RequestAttachment[]
+  statusHistory  RequestStatusHistory[]
+  reviews        RequestReview[]
+  cancellations  RequestCancellation[]
+  actualServices ActualServiceOnRequest[]
+}
+
+model Invoice {
+  id Int @id @unique @default(autoincrement())
+
+  invoiceNumber     Int
+  invoiceNumberName String
+
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  requestId Int?
+  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  // orderId Int?
+  // order   Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  name String?
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Restrict)
+
+  referenceInvoiceId Int? // رفرنس به فاکتور مرجع (مثلاً برای ریفرنس‌ها)
+  referenceInvoice   Invoice? @relation("InvoiceReference", fields: [referenceInvoiceId], references: [id])
+
+  relatedTasks Task[] @relation("TaskToInvoice")
+
+  items InvoiceItem[]
+  type  InvoiceType   @default(SALES)
+
+  subtotal        Float @default(0)
+  tax             Float @default(0)
+  taxPercent      Float @default(0) // Can remain Float as it's not a currency value
+  discount        Float @default(0)
+  discountPercent Float @default(0) // Can remain Float as it's not a currency value
+  total           Float
+
+  invoiceStatus InvoiceStatus        @default(PENDING)
+  paymentStatus InvoicePaymentStatus @default(UNPAID)
+
+  dueDate     DateTime?
+  issueDate   DateTime?
+  description String?   @db.Text
+  paymentDate DateTime?
+  payments    Payment[]
+
+  // برای رابطه معکوس اگر نیاز باشد:
+  referencedBy Invoice[] @relation("InvoiceReference")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, invoiceNumberName])
+}
+
+model InvoiceItem {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  invoiceId Int
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  actualServiceId Int?
+  actualService   ActualService? @relation(fields: [actualServiceId], references: [id], onDelete: SetNull)
+
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // --- لینک به آیتم قابل فروش یا خدمت انجام شده ---
+  // inventoryItemId Int?
+  // inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  itemType    InvoiceItemType @default(SERVICE)
+  // todo:t4 اصلاحات نیاز دارد در کد
+  itemName    String // نام کالا/خدمت در لحظه فروش
+  sku         String? // کد کالا یا شناسه انبار
+  unit        String? // واحد شمارش (مثلا: عدد، ساعت، کیلوگرم)
+  description String?
+
+  quantity        Int
+  unitPrice       Float
+  //price           Float
+  discount        Float @default(0)
+  discountPercent Float @default(0)
+  tax             Float @default(0)
+  taxPercent      Float @default(0)
+  total           Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ReceivedDevice {
+  id              Int           @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  model              String?
+  serialNumber       String?
+  receivedDate       DateTime   @default(now())
+  problemDescription String     @db.Text
+  initialCondition   String     @db.Text
+  notes              String?    @db.Text
+  isDelivered        Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  deviceTypeId       Int
+  deviceType         DeviceType @relation(fields: [deviceTypeId], references: [id])
+  brandId            Int
+  brand              Brand      @relation(fields: [brandId], references: [id])
+  requestId          Int?       @unique
+  request            Request?   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model Reminder {
+  id Int @id @default(autoincrement())
+
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  taskId Int?
+  task   Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  title                String
+  description          String?             @db.Text
+  dueDate              DateTime
+  status               ReminderStatus      @default(PENDING)
+  type                 String
+  entityId             Int?
+  entityType           String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  notified             Boolean             @default(false)
+  lastNotified         DateTime?
+  repeatInterval       String?
+  notificationChannels NotificationChannel @default(ALL)
+  timezone             String              @default("UTC")
+  retryCount           Int?                @default(0)
+  lastRetry            DateTime?
+}
+
+model Notification {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  requestId Int?
+  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  title     String
+  note      String?
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  sendSms   Boolean  @default(true)
+  sendEmail Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Payment {
+  id              Int           @id @unique @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  invoiceId   Int?
+  invoice     Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  amount      Float
+  type        PaymentType   @default(RECEIVE)
+  reference   String?
+  status      PaymentStatus @default(PENDING)
+  method      PaymentMethod @default(CARD)
+  paidAt      DateTime?
+  description String?       @db.Text
+
+  // ===== شروع اصلاحیه =====
+  paymentCategoryId Int?
+  paymentCategory   PaymentCategory? @relation(fields: [paymentCategoryId], references: [id], onDelete: Restrict)
+  // ===== پایان اصلاحیه =====
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ===== شروع مدل جدید =====
+model PaymentCategory {
+  id          Int                  @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  type        PaymentCategoryType? // نوع دسته‌بندی: درآمد، هزینه یا انتقال
+  parentId    Int?
+  lft         Int                  @default(0)
+  rgt         Int                  @default(0)
+  depth       Int                  @default(0)
+  parent      PaymentCategory?     @relation("PaymentCategoryToPaymentCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children    PaymentCategory[]    @relation("PaymentCategoryToPaymentCategory")
+  payments    Payment[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@unique([slug, workspaceId])
+}
+
+// ===== پایان مدل جدید =====
+
+model Review {
+  id              Int           @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Float
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RequestStatusHistory {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  changedById Int
+  changedBy   WorkspaceUser @relation(fields: [changedById], references: [id], onDelete: Cascade)
+
+  requestId   Int
+  request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  oldStatusId Int?
+  oldStatus   Status?  @relation(name: "oldStatus", fields: [oldStatusId], references: [id], onDelete: SetNull)
+  newStatusId Int
+  newStatus   Status   @relation(name: "newStatus", fields: [newStatusId], references: [id])
+  changedAt   DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RequestReview {
+  id              Int           @id @unique @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  requestId Int
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RequestCancellation {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+
+  cancelledById Int
+  cancelledBy   WorkspaceUser @relation(fields: [cancelledById], references: [id], onDelete: Cascade)
+
+  requestId   Int
+  request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  reason      String   @db.Text
+  cancelledAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Label {
+  id             Int             @id @default(autoincrement())
+  workspaceId    Int
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  color          String          @default("primary")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  workspaceUsers WorkspaceUser[] @relation("WorkspaceUserLabels")
+  TaskLabel      TaskLabel[]
+
+  @@unique([name, workspaceId])
+}
+
+model UserGroup {
+  id             Int             @id @default(autoincrement())
+  workspaceId    Int
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  workspaceUsers WorkspaceUser[] @relation("WorkspaceUserGroups")
+
+  @@unique([name, workspaceId])
+}
+
+model Product {
+  id            Int                @id @default(autoincrement())
+  workspaceId   Int
+  workspace     Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name          String
+  price         Float
+  description   String?
+  blog          Json?
+  stock         Int                @default(0)
+  warrantyId    Int?
+  isActive      Boolean            @default(false)
+  warranty      Warranty?          @relation(fields: [warrantyId], references: [id], onDelete: SetNull)
+  categoryId    Int?
+  category      Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brandId       Int?
+  brand         Brand?             @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  attributes    ProductAttribute[]
+  variants      ProductVariant[]
+  reviews       Review[]
+  expertReviews ExpertReview[]
+  images        ProductImage[]
+  InvoiceItem   InvoiceItem[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model Brand {
+  id              Int              @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name            String
+  logoUrl         String?
+  website         String?
+  description     String?
+  products        Product[]
+  receivedDevices ReceivedDevice[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([name, workspaceId])
+}
+
+model Category {
+  id          Int        @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  parentId    Int?
+  lft         Int        @default(0)
+  rgt         Int        @default(0)
+  depth       Int        @default(0)
+  parent      Category?  @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children    Category[] @relation("CategoryToCategory")
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([slug, workspaceId])
+}
+
+model Status {
+  id                      Int                    @id @unique @default(autoincrement())
+  workspaceId             Int
+  workspace               Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                    String
+  color                   String
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  requests                Request[]
+  isLock                  Boolean                @default(false)
+  RequestStatusHistoryNew RequestStatusHistory[] @relation(name: "newStatus")
+  RequestStatusHistoryOld RequestStatusHistory[] @relation(name: "oldStatus")
+
+  @@unique([name, workspaceId])
+}
+
+model DeviceType {
+  id              Int              @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  receivedDevices ReceivedDevice[]
+
+  @@unique([name, workspaceId])
+}
+
+model ServiceType {
+  id             Int             @id @unique @default(autoincrement())
+  workspaceId    Int
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?         @db.Text
+  basePrice      Float           @default(0)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  requests       Request[]
+  actualServices ActualService[]
+
+  @@unique([name, workspaceId])
+}
+
+model ActualService {
+  id            Int                      @id @default(autoincrement())
+  workspaceId   Int
+  workspace     Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name          String
+  price         Float
+  description   String?                  @db.Text
+  serviceTypeId Int
+  serviceType   ServiceType              @relation(fields: [serviceTypeId], references: [id])
+  requests      ActualServiceOnRequest[]
+  invoiceItems  InvoiceItem[]
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+}
+
+model Form {
+  id          Int              @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?          @db.Text
+  isActive    Boolean          @default(true)
+  fields      FieldOnForm[]
+  submissions FormSubmission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([name, workspaceId])
+}
+
+model Attribute {
+  id           Int                @id @default(autoincrement())
+  workspaceId  Int
+  workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name         String
+  type         String
+  options      String?
+  isComparable Boolean            @default(true)
+  products     ProductAttribute[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@unique([name, workspaceId])
+}
+
+model Warranty {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  duration    Int
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Field {
+  id           Int           @id @default(autoincrement())
+  workspaceId  Int
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name         String
+  label        String        @default("برچسپ")
+  type         FieldType     @default(text)
+  placeholder  String?
+  required     Boolean       @default(false)
+  options      FieldOption[]
+  validation   String?
+  defaultValue String?
+  order        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  forms        FieldOnForm[]
+
+  @@unique([name, workspaceId])
+}
+
+model FieldOnForm {
+  // ===== شروع اصلاحیه =====
+  id Int @id @default(autoincrement())
+  // ===== پایان اصلاحیه =====
+
+  formId    Int
+  fieldId   Int
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  field     Field    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // ===== پایان اصلاحیه =====
+
+  // ===== شروع اصلاحیه =====
+  // کلید اصلی ترکیبی به یک محدودیت یکتایی تبدیل شد
+  @@unique([formId, fieldId])
+}
+
+model FieldOption {
+  id        Int      @id @default(autoincrement())
+  fieldId   Int
+  field     Field    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  label     String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FormSubmission {
+  id          Int                   @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  formId      Int
+  form        Form                  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  values      FormSubmissionValue[]
+  data        Json
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  requests    Request[]
+}
+
+model FormSubmissionValue {
+  id           Int            @id @default(autoincrement())
+  submissionId Int
+  submission   FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  value        String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model ProductImage {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productId   Int?
+  product     Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url         String
+  alt         String?
+  isPrimary   Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ProductAttribute {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productId   Int
+  attributeId Int
+  value       String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ProductVariant {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku         String?   @unique
+  price       Float
+  stock       Int       @default(0)
+  attributes  Json
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ExpertReview {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  author      String
+  rating      Float
+  pros        Json
+  cons        Json
+  content     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model RequestAttachment {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  requestId   Int
+  request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fileUrl     String
+  fileType    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Note {
+  id          Int       @id @unique @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  requestId   Int
+  request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  content     String    @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ActualServiceOnRequest {
+  id              Int           @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: NoAction)
+  quantity        Int           @default(1)
+  price           Float
+  requestId       Int
+  request         Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actualServiceId Int
+  actualService   ActualService @relation(fields: [actualServiceId], references: [id], onDelete: Restrict)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([requestId, actualServiceId])
+}
+
+// >>>>>>>>>>>>> PROJECT MANAGEMENT MODELS (V4 - FINAL & CORRECTED) <<<<<<<<<<<<<<
+
+model Team {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+
+  parentId Int?
+  parent   Team?  @relation("TeamHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  children Team[] @relation("TeamHierarchy")
+
+  members          TeamMember[]
+  assignedProjects Project[]    @relation("AssignedTeamsToProject")
+  assignedTasks    Task[]       @relation("AssignedTeamsToTask")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, workspaceId])
+}
+
+model TeamMember {
+  teamId          Int
+  workspaceUserId Int
+  team            Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([teamId, workspaceUserId])
+}
+
+model Project {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?   @db.Text
+
+  startDate DateTime?
+  endDate   DateTime?
+
+  statusId Int
+  status   PMStatus @relation(fields: [statusId], references: [id])
+
+  tasks Task[]
+
+  assignedUsers WorkspaceUser[] @relation("AssignedWorkspaceUsersToProject")
+  assignedTeams Team[]          @relation("AssignedTeamsToProject")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Task {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title       String
+  description String?   @db.Text
+  priority    String    @default("medium")
+
+  startDate DateTime?
+  endDate   DateTime?
+
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  statusId Int
+  status   PMStatus @relation(fields: [statusId], references: [id])
+
+  orderInStatus Float?
+
+  parentId Int?
+  parent   Task?  @relation("TaskHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subTasks Task[] @relation("TaskHierarchy")
+
+  assignedUsers WorkspaceUser[] @relation("AssignedWorkspaceUsersToTask")
+  assignedTeams Team[]          @relation("AssignedTeamsToTask")
+
+  isRecurring       Boolean?  @default(false)
+  recurrenceRule    String?
+  recurrenceEndDate DateTime?
+
+  labels TaskLabel[]
+
+  relatedEntityType      String?
+  relatedRequestId       Int?
+  relatedInvoiceId       Int?
+  relatedWorkspaceUserId Int?
+  relatedRequest         Request?       @relation("TaskToRequest", fields: [relatedRequestId], references: [id], onDelete: SetNull)
+  relatedInvoice         Invoice?       @relation("TaskToInvoice", fields: [relatedInvoiceId], references: [id], onDelete: SetNull)
+  relatedWorkspaceUser   WorkspaceUser? @relation("TaskToWorkspaceUser", fields: [relatedWorkspaceUserId], references: [id], onDelete: SetNull)
+
+  statusHistory TaskStatusHistory[]
+  reminders     Reminder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskLabel {
+  taskId  Int
+  labelId Int
+  task    Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label   Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([taskId, labelId])
+}
+
+model PMStatus {
+  id                   Int                 @id @default(autoincrement())
+  workspaceId          Int
+  workspace            Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                 String
+  color                String              @default("#cccccc")
+  order                Int                 @default(0)
+  type                 PMStatusType
+  projects             Project[]
+  tasks                Task[]
+  TaskStatusHistoryNew TaskStatusHistory[] @relation(name: "newStatus")
+  TaskStatusHistoryOld TaskStatusHistory[] @relation(name: "oldStatus")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, workspaceId, type])
+}
+
+model TaskStatusHistory {
+  id                       Int           @id @unique @default(autoincrement())
+  workspaceId              Int
+  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taskId                   Int
+  task                     Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  oldStatusId              Int?
+  oldStatus                PMStatus?     @relation(name: "oldStatus", fields: [oldStatusId], references: [id], onDelete: SetNull)
+  newStatusId              Int
+  newStatus                PMStatus      @relation(name: "newStatus", fields: [newStatusId], references: [id])
+  changedByWorkspaceUserId Int
+  changedBy                WorkspaceUser @relation(fields: [changedByWorkspaceUserId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  changedAt DateTime @default(now())
+}
+
+// >>>>>>>>>>>>> WORKFLOW AUTOMATION MODELS <<<<<<<<<<<<<<
+
+model Workflow {
+  id          Int            @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  entityType  String
+  steps       WorkflowStep[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([name, workspaceId])
+}
+
+model WorkflowStep {
+  id         Int      @id @default(autoincrement())
+  workflowId Int
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  statusId   Int
+  stepOrder  Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([workflowId, stepOrder])
+}
+
+// >>>>>>>>>>>>> ENUMS <<<<<<<<<<<<<<
+enum PMStatusType {
+  PROJECT
+  TASK
+}
+
+// >>>>>>>>>>>>> ENUMS <<<<<<<<<<<<<<
+
+// ===== شروع Enum جدید =====
+enum PaymentCategoryType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+// ===== پایان Enum جدید =====
+
+enum ReminderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum NotificationChannel {
+  SMS
+  EMAIL
+  IN_APP
+  ALL
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+}
+
+enum InvoiceStatus {
+  PENDING // در انتظار تایید یا پرداخت
+  APPROVED // تایید شده
+  CANCELED // لغو شده
+  DRAFT // پیش‌نویس
+}
+
+// 3. New enum for Invoice Payment Status
+enum InvoicePaymentStatus {
+  UNPAID // پرداخت نشده
+  PARTIALLY_PAID // پرداخت ناقص
+  PAID // پرداخت کامل
+  OVERPAID // پرداخت مازاد
+}
+
+enum InvoiceType {
+  SALES // فروش
+  PURCHASE // خرید
+  PROFORMA // پیش فاکتور
+  RETURN_SALES // مرجوعی فروش
+  RETURN_PURCHASE // مرجوعی خرید
+}
+
+enum PaymentType {
+  RECEIVE
+  PAY
+}
+
+enum InvoiceItemType {
+  SERVICE
+  PRODUCT
+  ACTUALSERVICE
+  CUSTOM
+}
+
+enum FieldType {
+  text
+  number
+  boolean
+  select
+  multi_select
+  date
+  file
+}
+
+enum LabelColor {
+  primary
+  accent
+  secondary
+  warning
+  success
+  neutral
+  info
+}

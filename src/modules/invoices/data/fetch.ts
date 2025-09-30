@@ -1,0 +1,41 @@
+export const include = {
+  request: {
+    select: {
+      id: true,
+      serviceType: true,
+      status: true,
+    },
+  },
+  items: {
+    select: {
+      id: true,
+      itemName: true,
+      description: true,
+      quantity: true,
+      unitPrice: true,
+      discount: true,
+      tax: true,
+      total: true,
+    },
+  },
+  payments: {
+    select: {
+      id: true,
+      amount: true,
+      method: true,
+      type:true,
+      paidAt:true,
+      status: true,
+      createdAt: true,
+    },
+  },
+  workspaceUser: {
+    include: {
+      user: true,
+    },
+  },
+};
+
+export const searchFileds = ["name"];
+export const relations = ["items", "payments"];
+export const connect = ["workspaceUser"];

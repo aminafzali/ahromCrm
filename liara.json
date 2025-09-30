@@ -1,0 +1,17 @@
+{
+  "app": "sfu",
+  "platform": "next",
+  "port": 3000,
+  "build": {
+    "location": "iran"
+  },
+  "next": {
+    "mirror": false
+  },
+  "disks": [
+    {
+      "name": "sfuupload",
+      "mountTo": "/app/uploads"
+    }
+  ]
+}

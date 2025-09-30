@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.custom-duotone-icon {
+    font-size: 20px;
+    font-weight: 300;
+    --fa-secondary-opacity: 0.5;
+    --fa-primary-opacity: 1;
+    --fa-secondary-color: #00796B; /* Primary color */
+    --fa-primary-color: #00796B; /* Secondary color */
+  }
+
+  @font-face {
+    font-family: 'Shabnam';
+    src: url('https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font/dist/Shabnam.woff2') format('woff2');
+  }
+
+  body {
+    font-family: 'Shabnam';
+  }
+  
+  :root {
+    --primary: #00796B;
+    --accent: #C8B575;
+    --secondary: #9EFFFF;
+    --warning: #FFD63B;
+    --success: #A8FFFF;
+    --neutral: #607D8B;
+    --info: #64B5F6;
+    
+    --primary-content: #FFFFFF;
+    --info-content: #FFFFFF;
+    --accent-content: #3E2723;
+    --secondary-content: #004D40;
+    --warning-content: #795548;
+    --success-content: #004D40;
+    --neutral-content: #ECEFF1;
+    
+    --primary-focus: #00574B;
+    
+    --base-100: #ECEFF1;
+    --base-200: #CFD8DC;
+    --base-300: #B0BEC5;
+  }
+  
+  .table th, .table td {
+    padding: 8px 24px !important; /* فاصله داخلی سلول‌ها */
+    white-space: nowrap;    /* جلوگیری از شکست خط */
+           /* پنهان کردن متن اضافی */
+    text-overflow: ellipsis; 
+}
+
+
+nav
+{
+  scrollbar-width: none !important;
+}
+
+@media print {
+  body:not(.print-mode) * {
+    display: none !important;
+  }
+
+  body.print-mode .invoice-container {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+}
