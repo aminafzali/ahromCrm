@@ -33,29 +33,63 @@ const KLog = {
   e: (msg: string, obj?: any) => console.error("[KANBAN] " + msg, obj ?? ""),
 };
 
-const TaskKanbanCard = ({ item }: { item: TaskWithRelations }) => (
-  <div className="p-3 bg-white dark:bg-slate-700 rounded-lg border dark:border-slate-600 shadow-sm hover:shadow-md transition-shadow">
-    <h4 className="font-bold text-md mb-2 text-slate-800 dark:text-slate-100">
-      {item.title}
-    </h4>
-    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-      <div className="flex items-center">
-        <span className="font-semibold ml-1">پروژه:</span>
-        <span>{item.project?.name || "---"}</span>
-      </div>
-      <div className="flex items-center">
-        <span className="font-semibold ml-1">اولویت:</span>
-        <PriorityBadge priority={item.priority} />
-      </div>
-      {item.endDate && (
-        <div className="flex items-center pt-1">
-          <span className="font-semibold ml-1">تاریخ پایان:</span>
-          <span>{new Date(item.endDate).toLocaleDateString("fa-IR")}</span>
+const TaskKanbanCard = ({
+  item,
+  isDragging,
+  isActivatable,
+}: {
+  item: TaskWithRelations;
+  isDragging?: boolean;
+  isActivatable?: boolean;
+}) => {
+  // لاگ برای دیباگ (غیرفعال شده)
+  // if (isActivatable || isDragging) {
+  //   console.log("[TaskKanbanCard] 🎨 Rendering:", {
+  //     title: item.title,
+  //     isDragging,
+  //     isActivatable,
+  //   });
+  // }
+
+  // تشخیص موبایل برای اضافه کردن فضای سمت راست به عنوان
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
+  return (
+    <div
+      className={`p-3 bg-white dark:bg-slate-700 rounded-lg border transition-all ${
+        isDragging
+          ? "border-2 border-teal-600 dark:border-teal-500 shadow-2xl"
+          : isActivatable
+          ? "border-2 border-teal-500/60 dark:border-teal-400/60 shadow-lg"
+          : "border-gray-200 dark:border-slate-600 shadow-sm hover:shadow-md"
+      }`}
+    >
+      <h4
+        className={`font-bold text-md mb-2 text-slate-800 dark:text-slate-100 ${
+          isMobile ? "pr-10" : ""
+        }`}
+      >
+        {item.title}
+      </h4>
+      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+        <div className="flex items-center">
+          <span className="font-semibold ml-1">پروژه:</span>
+          <span>{item.project?.name || "---"}</span>
         </div>
-      )}
+        <div className="flex items-center">
+          <span className="font-semibold ml-1">اولویت:</span>
+          <PriorityBadge priority={item.priority} />
+        </div>
+        {item.endDate && (
+          <div className="flex items-center pt-1">
+            <span className="font-semibold ml-1">تاریخ پایان:</span>
+            <span>{new Date(item.endDate).toLocaleDateString("fa-IR")}</span>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 type GroupedTasks = Record<string, TaskWithRelations[]>;
 
@@ -540,20 +574,21 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
             color: status.color,
             order: status.order,
           })),
-          cardRender: (item) => <TaskKanbanCard item={item} />,
+          cardRender: (item, isDragging, isActivatable) => (
+            <TaskKanbanCard
+              item={item}
+              isDragging={isDragging}
+              isActivatable={isActivatable}
+            />
+          ),
           onCardDrop: handleCardDrop,
         }}
-        // پارامترهای زیر را اگر خواستی تغییر بده (برای موبایل)
         kanbanTouchConfig={{
-          // مقدار پیش‌فرض delay برای TouchSensor به میلی‌ثانیه
-          delay: 300,
-          // tolerance یا distance قابل قبول
-          tolerance: 10,
-          // فاصله PointerSensor (برای دسکتاپ) که drag را فعال می‌کند
-          pointerDistance: 8,
-          // می‌تونی این دو پارامتر رو هم تغییر بدی برای رفتار اسکرول
-          scrollEdgeThreshold: 80,
-          scrollSpeed: 18,
+          delay: 250, // ✅ متعادل برای drag و scroll
+          tolerance: 8, // ✅ متعادل - اگر بیش از 8px حرکت کرد = اسکرول
+          pointerDistance: 6, // حساس‌تر برای pointer
+          scrollEdgeThreshold: 60, // فاصله کمتر برای auto-scroll سریع‌تر
+          scrollSpeed: 20, // سرعت auto-scroll بیشتر
         }}
       />
     </div>

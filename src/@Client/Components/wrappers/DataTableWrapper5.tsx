@@ -56,7 +56,11 @@ type KanbanGroupedData<T> = Record<string, T[]>;
 
 interface KanbanOptions<T> {
   enabled: boolean;
-  cardRender: (item: T) => React.ReactNode;
+  cardRender: (
+    item: T,
+    isDragging?: boolean,
+    isActivatable?: boolean
+  ) => React.ReactNode;
   onCardDrop?: (active: any, over: any) => void;
   groupedData: KanbanGroupedData<T>;
   columns: KanbanColumnSource[];
@@ -132,9 +136,11 @@ const hexToRgba = (hex?: string, alpha = 1) => {
 const KanbanCard = <T,>({
   item,
   options,
+  activeItemId,
 }: {
   item: T & { id: string | number };
   options: KanbanOptions<T>;
+  activeItemId?: string | number | null;
 }) => {
   // useSortable با id ای که wrapper صفحه تولید می‌کند: `task-<id>`
   const {
@@ -146,19 +152,48 @@ const KanbanCard = <T,>({
     isDragging,
   } = useSortable({ id: `task-${item.id}` });
 
-  const style = {
+  const isActivatable =
+    activeItemId !== null && String(activeItemId) === String(item.id);
+
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
     zIndex: isDragging ? 9999 : "auto",
-    touchAction: "none" as const,
-    WebkitUserSelect: "none" as const,
-    userSelect: "none" as const,
+    WebkitUserSelect: "none",
+    userSelect: "none",
   };
 
+  // تشخیص موبایل یا دسکتاپ
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {options.cardRender(item)}
+    <div ref={setNodeRef} style={style} {...attributes} className="relative">
+      {/* Handle برای موبایل - فقط این بخش قابل drag است */}
+      {isMobile && (
+        <div
+          {...listeners}
+          className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center cursor-grab active:cursor-grabbing bg-gray-100 dark:bg-gray-700 rounded-md opacity-70 hover:opacity-100 transition-opacity z-10 touch-none"
+          style={{ touchAction: "none" }}
+        >
+          <svg
+            className="w-4 h-4 text-gray-600 dark:text-gray-300"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path d="M7 2a1 1 0 000 2h6a1 1 0 100-2H7zM4 6a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 10a1 1 0 011-1h14a1 1 0 110 2H3a1 1 0 01-1-1zM4 14a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM7 18a1 1 0 000 2h6a1 1 0 100-2H7z"></path>
+          </svg>
+        </div>
+      )}
+
+      {/* محتوای کارت */}
+      <div
+        {...(!isMobile ? listeners : {})}
+        className={!isMobile ? "cursor-grab active:cursor-grabbing" : ""}
+        style={{ touchAction: "manipulation" }}
+      >
+        {options.cardRender(item, isDragging, isActivatable)}
+      </div>
     </div>
   );
 };
@@ -175,12 +210,14 @@ const KanbanColumn = <T,>({
   items,
   options,
   color,
+  activeItemId,
 }: {
   id: string | number;
   title: string;
   items: (T & { id: string | number })[];
   options: KanbanOptions<T>;
   color?: string;
+  activeItemId?: string | number | null;
 }) => {
   // droppable registration برای ستون (مهم برای ستون‌های خالی)
   const droppableId = `col-${String(id)}`;
@@ -199,8 +236,10 @@ const KanbanColumn = <T,>({
           ? "bg-teal-700/10 dark:bg-teal-900/20 border-teal-700"
           : "bg-gray-100 dark:bg-slate-800 border-gray-200 dark:border-slate-700"
       }`}
-      // ensure touch scrolling is smooth
-      style={{ WebkitOverflowScrolling: "touch" }}
+      style={{
+        WebkitOverflowScrolling: "touch",
+        touchAction: "pan-y", // اجازه اسکرول عمودی
+      }}
     >
       <h3
         className="p-3 text-lg font-semibold text-gray-800 dark:text-gray-100 border-b"
@@ -217,9 +256,22 @@ const KanbanColumn = <T,>({
         items={items.map((i) => `task-${i.id}`)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="p-2 min-h-[200px] max-h-[70vh] overflow-y-auto flex flex-col gap-3">
+        <div
+          className="p-2 min-h-[200px] max-h-[70vh] overflow-y-auto flex flex-col gap-3"
+          style={{
+            WebkitOverflowScrolling: "touch",
+            overscrollBehaviorY: "contain",
+            touchAction: "pan-y manipulation", // اجازه اسکرول عمودی و manipulation
+            paddingBottom: "1.5cm", // فضای بیشتری برای اسکرول راحت
+          }}
+        >
           {items.map((item) => (
-            <KanbanCard key={`task-${item.id}`} item={item} options={options} />
+            <KanbanCard
+              key={`task-${item.id}`}
+              item={item}
+              options={options}
+              activeItemId={activeItemId}
+            />
           ))}
         </div>
       </SortableContext>
@@ -260,15 +312,20 @@ const KanbanView = <T extends { id: number | string }>(props: {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: touchConfig.pointerDistance ?? 5 },
+      activationConstraint: {
+        distance: touchConfig.pointerDistance ?? 8,
+      },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: touchConfig.delay ?? 150,
-        tolerance: touchConfig.tolerance ?? 5,
+        // delay: زمان نگه‌داری قبل از شروع drag - متعادل برای موبایل
+        delay: touchConfig.delay ?? 250,
+        // tolerance: فاصله‌ای که می‌توان حرکت کرد بدون لغو drag
+        // مقدار متعادل برای اسکرول و drag
+        tolerance: touchConfig.tolerance ?? 8,
       },
     })
   );
@@ -319,11 +376,12 @@ const KanbanView = <T extends { id: number | string }>(props: {
         left: Math.round(scrollVelocityRef.current),
         behavior: "auto",
       });
-      console.debug("[KANBAN-AUTOSCROLL] scrollBy", {
-        velocity: scrollVelocityRef.current,
-        targetVelocity,
-        clientX,
-      });
+      // لاگ فقط برای دیباگ - حذف کنید اگر لازم نبود
+      // console.debug("[KANBAN-AUTOSCROLL] scrollBy", {
+      //   velocity: scrollVelocityRef.current,
+      //   targetVelocity,
+      //   clientX,
+      // });
     }
   };
 
@@ -382,10 +440,10 @@ const KanbanView = <T extends { id: number | string }>(props: {
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    console.debug("[KANBAN-DRAG] Drag start", {
-      activeId: event.active.id,
-      rect: (event.active as any)?.rect ?? null,
-    });
+    // console.log("[KANBAN-DRAG] 🟢 Drag start", {
+    //   activeId: event.active.id,
+    //   rect: (event.active as any)?.rect ?? null,
+    // });
     const { active } = event;
     const allItems = Object.values(options.groupedData).flat();
     const rawId = String(active.id);
@@ -394,26 +452,26 @@ const KanbanView = <T extends { id: number | string }>(props: {
     );
     setActiveItem(found || null);
 
-    // enable auto-scroll listeners
+    // enable auto-scroll listeners برای همه سایزها
     draggingRef.current = true;
     enableGlobalMoveListeners();
   };
 
   // onDragOver می‌مونه ولی ما پردازش اصلی اسکرول را با globalMoveHandler + RAF انجام میدیم
   const handleDragOver = (event: DragOverEvent) => {
-    console.debug("[KANBAN-DRAG] Drag over", {
-      activeId: event.active.id,
-      overId: event.over?.id,
-      delta: event.delta,
-    });
+    // console.debug("[KANBAN-DRAG] Drag over", {
+    //   activeId: event.active.id,
+    //   overId: event.over?.id,
+    //   delta: event.delta,
+    // });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    console.debug("[KANBAN-DRAG] Drag end", {
-      activeId: event.active.id,
-      overId: event.over?.id,
-      delta: event.delta,
-    });
+    // console.debug("[KANBAN-DRAG] Drag end", {
+    //   activeId: event.active.id,
+    //   overId: event.over?.id,
+    //   delta: event.delta,
+    // });
     const { active, over } = event;
     setActiveItem(null);
 
@@ -449,7 +507,7 @@ const KanbanView = <T extends { id: number | string }>(props: {
         className="flex gap-4 overflow-x-auto p-2"
         style={{
           WebkitOverflowScrolling: "touch",
-          touchAction: "pan-y pan-x",
+          touchAction: "pan-x manipulation", // اجازه اسکرول افقی و manipulation
           overscrollBehaviorX: "contain",
         }}
       >
@@ -462,6 +520,7 @@ const KanbanView = <T extends { id: number | string }>(props: {
               items={options.groupedData[String(column.id)] || []}
               options={options}
               color={column.color}
+              activeItemId={activeItem?.id ?? null}
             />
           </div>
         ))}
@@ -471,7 +530,7 @@ const KanbanView = <T extends { id: number | string }>(props: {
         <DragOverlay>
           {activeItem ? (
             <div className="rounded-lg shadow-xl">
-              {options.cardRender(activeItem)}
+              {options.cardRender(activeItem, true, true)}
             </div>
           ) : null}
         </DragOverlay>,
