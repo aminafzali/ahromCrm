@@ -27,7 +27,6 @@ export default function CreateInvoicePage({
       if (isAdmin) {
         router.push(`/dashboard/received-devices/${result.data.id}`);
       } else {
-        // TODO: این خط نیاز به بررسی دارد
         router.push(`/panel/received-devices/${result.data.id}`);
       }
     } catch (error) {

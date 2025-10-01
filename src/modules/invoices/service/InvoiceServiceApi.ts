@@ -1,7 +1,9 @@
+import { AuthContext } from "@/@Server/Http/Controller/BaseController";
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
+import { NotificationServiceApi } from "@/modules/notifications/service/NotificationServiceApi";
 import { connect, relations, searchFileds } from "../data/fetch";
-import { createInvoiceSchema ,updateInvoiceSchema  } from "../validation/schema";
+import { createInvoiceSchema, updateInvoiceSchema } from "../validation/schema";
 
 class Repository extends BaseRepository<any> {
   constructor() {
@@ -20,7 +22,7 @@ class Repository extends BaseRepository<any> {
 }
 
 export class InvoiceServiceApi extends BaseService<any> {
-  //protected notifRepo: NotificationServiceApi;
+  protected notifRepo: NotificationServiceApi;
 
   constructor() {
     const repository = new Repository(); // یک نمونه از ریپازیتوری سفارشی خودمان می‌سازیم
@@ -33,10 +35,10 @@ export class InvoiceServiceApi extends BaseService<any> {
     );
     this.connect = connect;
     this.repository = repository;
-    // this.notifRepo = new NotificationServiceApi();
+    this.notifRepo = new NotificationServiceApi();
 
     // Initialize hooks
-    // this.afterCreate = this.handleAfterCreate;
+    this.afterCreate = this.handleAfterCreate;
     // this.afterStatusChange = this.handleAfterStatusChange;
   }
 
@@ -44,45 +46,54 @@ export class InvoiceServiceApi extends BaseService<any> {
   //  * Handle after create hook
   //  */
   private async handleAfterCreate(entity: any): Promise<void> {
+    // واکشی فاکتور با اطلاعات workspaceUser
     const invoice = await this.getById(entity.id, {
       include: {
-        request: true,
+        request: {
+          include: {
+            workspaceUser: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
       },
     });
+
+    // بررسی وجود workspaceUser
+    const customer = invoice.request?.workspaceUser;
+    if (!customer) {
+      console.warn(
+        `[InvoiceService] workspaceUser not found for invoice ${entity.id}`
+      );
+      return;
+    }
+
     let baseLink: string = process.env.NEXTAUTH_URL
       ? process.env.NEXTAUTH_URL
       : "http://localhost:3011";
     baseLink += "/panel/invoices/" + entity.id;
-    const message =
-      `یک فاکتور برای شما ثبت شد` + "\n" + "شماره پیگیری :‌ " + entity.id;
-    // Create initial status notification
-    //todo:t3 نیاز به اصلاحیه جدی
-    // await this.notifRepo.create({
-    //   userId: invoice.userId,
-    //   title: "ثبت فاکتور",
-    //   message,
-    // });
+
+    const message = `یک فاکتور برای شما ثبت شد\nشماره پیگیری: ${entity.id}\nلینک: ${baseLink}`;
+
+    // ساخت context مشابه RequestServiceApi
+    const context = {
+      workspaceId: entity.workspaceId,
+      user: customer.user,
+    } as AuthContext;
+
+    // ارسال نوتیفیکیشن به workspaceUser
+    await this.notifRepo.create(
+      {
+        workspaceUser: customer,
+        requestId: invoice.request?.id,
+        title: "ثبت فاکتور",
+        message,
+      },
+      context
+    );
   }
-  
-  
-  // /**
-  //  * دریافت شماره فاکتور بعدی
-  //  */
-  // public async getNextInvoiceNumber() {
-  //   // برای فراخوانی متد جدید findFirst، باید this.repository را به نوع Repository کَست (cast) کنیم.
-  //   const lastInvoice = await (this.repository as Repository).findFirst({
-  //     orderBy: {
-  //       invoiceNumber: "desc",
-  //     },
-  //   });
-
-  //   if (lastInvoice && lastInvoice.invoiceNumber) {
-  //     return lastInvoice.invoiceNumber + 1;
-  //   }
-
-  //   // اگر هیچ فاکتوری وجود نداشت، از ۱ شروع کن
-  //   return 1;
-  // }
 
   // /**
   //  * Handle after create hook

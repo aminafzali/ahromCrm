@@ -32,11 +32,14 @@ export class ReminderService extends BaseService<any> {
   }
 
   private async sendNotification(reminder: any) {
-    const user = await prisma.user.findUnique({
-      where: { id: reminder.userId },
+    // واکشی workspaceUser به همراه user برای ارسال نوتیفیکیشن
+    const workspaceUser = await prisma.workspaceUser.findUnique({
+      where: { id: reminder.workspaceUserId },
+      include: { user: true },
     });
-    if (!user) {
-      logger.warn(`User not found for reminder ${reminder.id}`);
+
+    if (!workspaceUser || !workspaceUser.user) {
+      logger.warn(`WorkspaceUser not found for reminder ${reminder.id}`);
       return;
     }
 
@@ -46,7 +49,7 @@ export class ReminderService extends BaseService<any> {
 
     // ساخت یک آبجکت نوتیفیکیشن پایه
     const notificationData: any = {
-      userId: reminder.userId,
+      workspaceUser, // ارسال به پروفایل ورک‌اسپیسی
       title: "یادآوری: " + reminder.title,
       message: message,
       note: reminder.description,
@@ -58,7 +61,7 @@ export class ReminderService extends BaseService<any> {
         reminder.notificationChannels === "ALL",
     };
 
-    // ++ اصلاحیه کلیدی: فیلد requestId را فقط در صورتی اضافه می‌کنیم که وجود داشته باشد ++
+    // فیلد requestId را فقط در صورت مرتبط بودن اضافه می‌کنیم
     if (reminder.entityType === "Request" && reminder.entityId) {
       notificationData.requestId = reminder.entityId;
     }
@@ -70,8 +73,11 @@ export class ReminderService extends BaseService<any> {
         2
       )}`
     );
-    // خیلی مهمه که سریغ اصلاخ بشه
-  //  await this.notificationService.create(notificationData);
+
+    await this.notificationService.create(notificationData, {
+      workspaceId: reminder.workspaceId,
+      user: workspaceUser.user,
+    } as any);
   }
 
   async checkDueReminders(batchSize = 50, offset = 0) {
@@ -174,8 +180,9 @@ export class ReminderService extends BaseService<any> {
         updatedAt: new Date(),
       };
       delete newReminder.id;
-      // todo: خیلی  مهمه که سریغ اصلاح بشه
- //     await this.create(newReminder);
+
+      // مستقیماً از ریپازیتوری برای ایجاد استفاده می‌کنیم (context نیاز نیست)
+      await this.repository.create(newReminder as any);
     }
   }
 

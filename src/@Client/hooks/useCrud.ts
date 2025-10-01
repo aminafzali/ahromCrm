@@ -78,8 +78,6 @@ export function useCrud<
     [repository, handleError, activeWorkspace]
   );
 
-  // todo:t3
-  //  getById بصورت موقت جایگزین شد  باید اصلاح شود متد گامنت شده زیری یعنی بعد از همین متد با اسم یگسان
   const getById = useCallback(
     async (id: number) => {
       setLoading(true);

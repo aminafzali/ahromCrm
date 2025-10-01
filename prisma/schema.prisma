@@ -296,7 +296,7 @@ model InvoiceItem {
   // inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
 
   itemType    InvoiceItemType @default(SERVICE)
-  // todo:t4 اصلاحات نیاز دارد در کد
+ 
   itemName    String // نام کالا/خدمت در لحظه فروش
   sku         String? // کد کالا یا شناسه انبار
   unit        String? // واحد شمارش (مثلا: عدد، ساعت، کیلوگرم)

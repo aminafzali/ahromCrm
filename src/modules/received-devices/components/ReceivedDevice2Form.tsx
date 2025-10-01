@@ -24,10 +24,7 @@ export default function ReceivedDevice2Form({
   loading = false,
 }: ReceivedDeviceFormProps) {
   const [req, setReq] = useState<any | null>(defaultValues.request || null);
-  // بنظر می آید این خط ایرادی داشته باشد TODO:
   const [user, setUser] = useState<any | null>(defaultValues.user || null);
-  // TODO: احتمالا نیاز به اصلاح دارد
-  // برای برند و برای دوایس تایپ مشابه بالا نوشته شود
   const [brand, setBrand] = useState<any | null>(defaultValues.brand || null);
   const [deviceType, setDeviceType] = useState<any | null>(
     defaultValues.deviceType || null
@@ -102,7 +99,7 @@ export default function ReceivedDevice2Form({
       setError("خطا در ثبت دستگاه های دریافتی");
     }
   };
-  // TODO: بنظر می آید این خط زیر ناقص می باشد
+
   if (loading) return <Loading />;
 
   return (
@@ -189,7 +186,6 @@ export default function ReceivedDevice2Form({
           <div className="flex justify-end mt-6">
             <Button
               type="button"
-              //TODO: خط زیر نیاز به اصلاح دارد
               disabled={loading}
               onClick={handleSubmit}
               icon={<DIcon icon="fa-check" cdi={false} classCustom="ml-2" />}
