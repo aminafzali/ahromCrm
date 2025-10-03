@@ -1,32 +1,25 @@
 "use client";
 
 import DIcon from "@/@Client/Components/common/DIcon";
-import StandaloneDateTimePicker from "@/@Client/Components/ui/StandaloneDateTimePicker";
 import { Button, Card, Input } from "ndui-ahrom";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { z } from "zod";
-import RecipientSelector from "./RecipientSelector";
+import RecipientSelector from "../../reminders/components/RecipientSelector";
 import SubjectSelector from "./SubjectSelector";
 
 /* ---------- schema (client-side reference) ---------- */
-const reminderSchema = z.object({
+const notificationSchema = z.object({
   title: z.string().min(1, "عنوان الزامی است"),
-  description: z.string().min(1, "توضیحات الزامی است"),
-  dueDate: z
-    .string()
-    .nullable()
-    .refine((val) => val !== null && val !== "", "تاریخ سررسید الزامی است"),
-  status: z.enum(["PENDING", "COMPLETED", "CANCELLED"]).default("PENDING"),
-  type: z.string().default("GENERAL"),
-  entityId: z.number().optional(),
-  entityType: z.string().optional(),
+  message: z.string().min(1, "متن پیام الزامی است"),
+  note: z.string().optional(),
+  sendSms: z.boolean().default(false),
+  sendEmail: z.boolean().default(false),
   workspaceUser: z.object({ id: z.number() }).optional(),
   requestId: z.number().optional(),
   invoiceId: z.number().optional(),
   paymentId: z.number().optional(),
-  taskId: z.number().optional(),
-  // گروهی
+  reminderId: z.number().optional(),
   recipients: z
     .array(
       z.object({
@@ -42,19 +35,10 @@ const reminderSchema = z.object({
       selectFiltered: z.boolean().optional(),
     })
     .optional(),
-  // کانال‌های اطلاع‌رسانی
-  notificationChannels: z
-    .enum(["ALL", "IN_APP", "SMS", "EMAIL"])
-    .default("IN_APP"),
-  // تکرار
-  repeatInterval: z
-    .enum(["NONE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"])
-    .default("NONE"),
-  timezone: z.string().default("Asia/Tehran"),
 });
 
-/* ---------- ReminderCreateForm ---------- */
-interface ReminderCreateFormProps {
+/* ---------- NotificationCreateForm ---------- */
+interface NotificationCreateFormProps {
   onSubmit: (data: any) => void;
   defaultValues?: any;
   loading?: boolean;
@@ -62,26 +46,22 @@ interface ReminderCreateFormProps {
   after?: () => void;
 }
 
-export default function ReminderCreateForm({
+export default function NotificationCreateForm({
   onSubmit,
   defaultValues = {},
   loading = false,
   backUrl = true,
   after,
-}: ReminderCreateFormProps) {
+}: NotificationCreateFormProps) {
   const rootId = useId();
   const router = useRouter();
 
   /* ---------- State ---------- */
   const [title, setTitle] = useState(defaultValues?.title || "");
-  const [description, setDescription] = useState(
-    defaultValues?.description || ""
-  );
-  const [dueDate, setDueDate] = useState<string | null>(
-    defaultValues?.dueDate || null
-  );
+  const [message, setMessage] = useState(defaultValues?.message || "");
+  const [note, setNote] = useState(defaultValues?.note || "");
 
-  // موضوع یادآور (اختیاری)
+  // موضوع اعلان (اختیاری)
   const [selectedSubject, setSelectedSubject] = useState<{
     type: string;
     entity: any;
@@ -96,17 +76,12 @@ export default function ReminderCreateForm({
     defaultValues?.sendSms || false
   );
 
-  // تکرار
-  const [repeatInterval, setRepeatInterval] = useState<
-    "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"
-  >(defaultValues?.repeatInterval || "NONE");
-
   const [error, setError] = useState<string | null>(null);
 
   /* ---------- Handlers ---------- */
   const handleSubjectSelect = (
     subject: {
-      type: "REQUEST" | "INVOICE" | "USER" | "TASK" | "GENERAL";
+      type: "REQUEST" | "INVOICE" | "USER" | "PAYMENT" | "REMINDER" | "GENERAL";
       entity: any;
       entityId?: number;
     } | null
@@ -123,13 +98,8 @@ export default function ReminderCreateForm({
         return;
       }
 
-      if (!description.trim()) {
-        setError("توضیحات الزامی است");
-        return;
-      }
-
-      if (!dueDate) {
-        setError("تاریخ سررسید الزامی است");
+      if (!message.trim()) {
+        setError("متن پیام الزامی است");
         return;
       }
 
@@ -140,45 +110,39 @@ export default function ReminderCreateForm({
 
       const data: any = {
         title: title.trim(),
-        description: description.trim(),
-        dueDate: dueDate,
-        status: "PENDING", // همیشه در ابتدا PENDING است
-        type: selectedSubject?.type || "GENERAL",
-        notificationChannels: sendSms ? "SMS" : "IN_APP",
-        repeatInterval,
-        timezone: "Asia/Tehran",
+        message: message.trim(),
+        note: note.trim() || undefined,
+        sendSms,
+        sendEmail: false,
       };
 
       // اضافه کردن لینک موضوع (اگر انتخاب شده)
       if (selectedSubject && selectedSubject.type !== "GENERAL") {
-        data.entityId = selectedSubject.entityId;
-        data.entityType = selectedSubject.type;
-
         if (selectedSubject.type === "REQUEST") {
           data.requestId = selectedSubject.entityId;
         } else if (selectedSubject.type === "INVOICE") {
           data.invoiceId = selectedSubject.entityId;
-        } else if (selectedSubject.type === "TASK") {
-          data.taskId = selectedSubject.entityId;
+        } else if (selectedSubject.type === "PAYMENT") {
+          data.paymentId = selectedSubject.entityId;
+        } else if (selectedSubject.type === "REMINDER") {
+          data.reminderId = selectedSubject.entityId;
         }
       }
 
       // لیست گیرندگان
       if (selectedRecipients.length > 0) {
+        // اگر فقط یک نفر هست، از workspaceUser استفاده می‌کنیم
         if (selectedRecipients.length === 1) {
-          // تکی: فقط workspaceUser
           data.workspaceUser = { id: selectedRecipients[0].id };
         } else {
-          // گروهی: recipients برای همه
+          // گروهی - فقط recipients رو ارسال می‌کنیم
           data.recipients = selectedRecipients.map((u) => ({
             workspaceUserId: u.id,
           }));
-          // اولی رو هم برای workspaceUser می‌فرستیم (الزامی در Prisma)
-          data.workspaceUser = { id: selectedRecipients[0].id };
         }
       }
 
-      const validation = reminderSchema.safeParse(data);
+      const validation = notificationSchema.safeParse(data);
       if (!validation.success) {
         console.error("validation errors", validation.error.flatten());
         setError("فرم دارای مقادیر نامعتبر است");
@@ -188,7 +152,7 @@ export default function ReminderCreateForm({
       onSubmit(validation.data);
     } catch (e) {
       console.error(e);
-      setError("خطا در ایجاد یادآور");
+      setError("خطا در ایجاد اعلان");
     }
   };
 
@@ -204,7 +168,7 @@ export default function ReminderCreateForm({
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">ایجاد یادآور جدید</h1>
+        <h1 className="text-2xl font-bold">ایجاد اعلان جدید</h1>
         {backUrl && (
           <Button variant="ghost" onClick={() => router.back()}>
             <DIcon icon="fa-arrow-right" cdi={false} classCustom="ml-2" />
@@ -222,63 +186,47 @@ export default function ReminderCreateForm({
         <div className="space-y-4">
           <Input
             name="title"
-            label="عنوان یادآور"
+            label="عنوان اعلان"
             value={title}
             onChange={(e: any) => setTitle(e.target.value)}
             required
-            placeholder="عنوان یادآور را وارد کنید..."
+            placeholder="عنوان اعلان را وارد کنید..."
           />
 
           <div className="flex flex-col">
             <label className="mb-1 text-sm font-medium">
-              توضیحات <span className="text-error">*</span>
+              متن پیام <span className="text-error">*</span>
             </label>
             <textarea
               className="textarea textarea-bordered"
-              value={description}
-              onChange={(e: any) => setDescription(e.target.value)}
+              value={message}
+              onChange={(e: any) => setMessage(e.target.value)}
               required
               rows={5}
-              placeholder="توضیحات یادآور را وارد کنید..."
+              placeholder="متن پیام را وارد کنید..."
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <StandaloneDateTimePicker
-                name="dueDate"
-                label="تاریخ و زمان سررسید"
-                value={dueDate}
-                onChange={(p: any) => setDueDate(p ? p.iso : null)}
-                placeholder="تاریخ و زمان سررسید را انتخاب کنید"
-              />
-            </div>
-
-            <div>
-              <label className="label">
-                <span className="label-text font-medium">تکرار</span>
-              </label>
-              <select
-                className="select select-bordered w-full"
-                value={repeatInterval}
-                onChange={(e: any) => setRepeatInterval(e.target.value)}
-              >
-                <option value="NONE">بدون تکرار</option>
-                <option value="DAILY">روزانه</option>
-                <option value="WEEKLY">هفتگی</option>
-                <option value="MONTHLY">ماهانه</option>
-                <option value="YEARLY">سالانه</option>
-              </select>
-            </div>
+          <div className="flex flex-col">
+            <label className="mb-1 text-sm font-medium">
+              یادداشت داخلی (اختیاری)
+            </label>
+            <textarea
+              className="textarea textarea-bordered"
+              value={note}
+              onChange={(e: any) => setNote(e.target.value)}
+              rows={3}
+              placeholder="یادداشت داخلی برای مدیران..."
+            />
           </div>
         </div>
       </Card>
 
-      {/* 2. موضوع یادآور (اختیاری) */}
+      {/* 2. موضوع اعلان (اختیاری) */}
       <Card className="p-4">
         <h3 className="text-lg font-semibold mb-4">
           <DIcon icon="fa-link" cdi={false} classCustom="ml-2" />
-          موضوع یادآور (اختیاری)
+          موضوع اعلان (اختیاری)
         </h3>
         <SubjectSelector
           onSubjectSelect={handleSubjectSelect}
@@ -345,14 +293,13 @@ export default function ReminderCreateForm({
           disabled={
             loading ||
             !title.trim() ||
-            !description.trim() ||
-            !dueDate ||
+            !message.trim() ||
             selectedRecipients.length === 0
           }
           loading={loading}
-          icon={<DIcon icon="fa-calendar-plus" cdi={false} />}
+          icon={<DIcon icon="fa-paper-plane" cdi={false} />}
         >
-          {loading ? "در حال ایجاد..." : "ایجاد یادآور"}
+          {loading ? "در حال ارسال..." : "ارسال اعلان"}
         </Button>
       </div>
     </div>

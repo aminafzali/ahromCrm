@@ -1,77 +1,105 @@
-// مسیر فایل: src/modules/reminders/views/page.tsx
-"use client";
-import Loading from "@/@Client/Components/common/Loading";
-import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper";
+import DataTableWrapper from "@/@Client/Components/wrappers/DataTableWrapper2";
 import { FilterOption } from "@/@Client/types";
+import { useLabel } from "@/modules/labels/hooks/useLabel";
+import { useUserGroup } from "@/modules/user-groups/hooks/useUserGroup";
 import { useWorkspaceUser } from "@/modules/workspace-users/hooks/useWorkspaceUser";
-import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
-import { ReminderStatus } from "@prisma/client";
 import { useEffect, useState } from "react";
 import { columns } from "../data/table";
 import { useReminder } from "../hooks/useReminder";
-import { ReminderWithDetails } from "../types";
 
 export default function RemindersModuleView() {
-  const {
-    getAll: fetchReminders,
-    remove: deleteItem,
-    loading,
-    error,
-  } = useReminder();
-  const { getAll: fetchUsers, loading: loadingUsers } = useWorkspaceUser();
-  const [users, setUsers] = useState<WorkspaceUserWithRelations[]>([]);
+  const { getAll, loading, error } = useReminder();
+  const { getAll: getAllUserGroups } = useUserGroup();
+  const { getAll: getAllLabels } = useLabel();
+  const { getAll: getAllUsers } = useWorkspaceUser();
+
+  const [userGroups, setUserGroups] = useState<any[]>([]);
+  const [labels, setLabels] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
-    const getFilterData = async () => {
-      try {
-        const usersData = await fetchUsers({ limit: 1000, page: 1 });
-        setUsers(usersData?.data || []);
-      } catch (e) {
-        console.error("Error fetching filter data:", e);
-      }
-    };
-    getFilterData();
+    (async () => {
+      const [ug, lb, us] = await Promise.all([
+        getAllUserGroups({ page: 1, limit: 1000 }).then((r) => r.data),
+        getAllLabels({ page: 1, limit: 1000 }).then((r) => r.data),
+        getAllUsers({ page: 1, limit: 1000 }).then((r) => r.data),
+      ]);
+      setUserGroups(ug || []);
+      setLabels(lb || []);
+      setUsers(us || []);
+    })();
   }, []);
 
-  if (loadingUsers) return <Loading />;
-
+  // ساخت گزینه‌های فیلتر برای DataTableWrapper2
   const filters: FilterOption[] = [];
+
+  // فیلتر کاربر
   if (users.length > 0) {
-    const userOptions = users.map((user) => ({
-      value: user.id,
-      label: user.displayName || user.phone || `کاربر ${user.id}`,
-    }));
     filters.push({
       name: "workspaceUserId",
       label: "کاربر",
-      options: [{ value: "all", label: "همه کاربران" }, ...userOptions],
+      options: [
+        { value: "all", label: "همه کاربران" },
+        ...users.map((u) => ({
+          value: u.id,
+          label: u.displayName || u.user?.name || u.user?.phone,
+        })),
+      ],
     });
   }
-  const statusOptions = Object.values(ReminderStatus).map((status) => ({
-    value: status,
-    label: {
-      PENDING: "در انتظار",
-      COMPLETED: "ارسال شده",
-      CANCELLED: "لغو شده",
-      FAILED: "ناموفق",
-    }[status],
-  }));
+
+  // فیلتر وضعیت
   filters.push({
     name: "status",
     label: "وضعیت",
-    options: [{ value: "all", label: "همه وضعیت‌ها" }, ...statusOptions],
+    options: [
+      { value: "all", label: "همه وضعیت‌ها" },
+      { value: "PENDING", label: "در انتظار" },
+      { value: "COMPLETED", label: "تکمیل شده" },
+      { value: "CANCELLED", label: "لغو شده" },
+    ],
   });
 
+  if (userGroups.length > 0) {
+    filters.push({
+      name: "groupIds",
+      label: "گروه‌ها",
+      options: [
+        { value: "all", label: "همه گروه‌ها" },
+        ...userGroups.map((g) => ({ value: g.id, label: g.name })),
+      ],
+    });
+  }
+
+  if (labels.length > 0) {
+    filters.push({
+      name: "labelIds",
+      label: "برچسب‌ها",
+      options: [
+        { value: "all", label: "همه برچسب‌ها" },
+        ...labels.map((l) => ({ value: l.id, label: l.name })),
+      ],
+    });
+  }
+
+  // فیلتر تاریخ‌ها - مطابق الگوی فاکتور
+  const dateFilters = [
+    { name: "dueDate", label: "تاریخ سررسید" },
+    { name: "createdAt", label: "تاریخ ایجاد" },
+  ];
+
   return (
-    <DataTableWrapper<ReminderWithDetails>
-      title="مدیریت یادآورها"
-      columns={columns}
-      loading={loading}
-      error={error}
-      fetcher={fetchReminders}
-      //  deleteItem={deleteItem}
-      filterOptions={filters}
-      createUrl="/dashboard/reminders/create"
-    />
+    <div>
+      <DataTableWrapper
+        title="مدیریت یادآورها"
+        columns={columns}
+        loading={loading}
+        error={error}
+        fetcher={getAll}
+        filterOptions={filters}
+        dateFilterFields={dateFilters}
+        createUrl="/dashboard/reminders/create"
+      />
+    </div>
   );
 }

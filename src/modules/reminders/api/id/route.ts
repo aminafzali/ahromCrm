@@ -12,6 +12,14 @@ class ReminderController extends BaseController<any> {
 }
 const controller = new ReminderController();
 
+export async function GET(req: NextRequest, id: number) {
+  return controller.getById(req, id);
+}
+
+export async function PATCH(req: NextRequest, id: number) {
+  return controller.update(req, id);
+}
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }

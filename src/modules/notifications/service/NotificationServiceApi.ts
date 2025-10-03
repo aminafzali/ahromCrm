@@ -2,6 +2,7 @@
 
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
+import prisma from "@/lib/prisma";
 import { SmsHelper } from "@/lib/smsHelper";
 import { connects, include, relations, searchFileds } from "../data/fetch";
 import {
@@ -12,7 +13,7 @@ import {
 // ریپازیتوری سرور به صورت داخلی تعریف می‌شود
 class Repository extends BaseRepository<any> {
   constructor() {
-    super("notification");
+    super("Notification");
   }
 }
 
@@ -30,6 +31,123 @@ export class NotificationServiceApi extends BaseService<any> {
 
     // هوک afterCreate را به متد اصلاح‌شده متصل می‌کنیم
     this.afterCreate = this.handleAfterCreate;
+  }
+
+  // ایجاد گروهی گیرندگان بر اساس filters یا recipients
+  protected beforeCreate = async (data: any): Promise<any> => {
+    const { recipients, filters, workspaceUser } = data;
+
+    // استخراج workspaceUserId از workspaceUser
+    if (workspaceUser?.id) {
+      data.workspaceUserId = workspaceUser.id;
+      delete data.workspaceUser;
+    }
+
+    // اگر workspaceUser تکی داده شده بود، اجازه بدهید مسیر فعلی کار کند
+    if (!recipients && !filters) return data;
+
+    // از داده اصلی فقط اطلاعات نوتیفیکیشن را حفظ می‌کنیم
+    const baseData: any = {
+      title: data.title,
+      message: data.message,
+      note: data.note,
+      sendSms: data.sendSms,
+      sendEmail: data.sendEmail,
+      requestId: data.requestId,
+      invoiceId: data.invoiceId,
+      reminderId: data.reminderId,
+      paymentId: data.paymentId,
+      // CRITICAL: workspaceId must be present for Prisma create
+      workspaceId: data.workspaceId,
+    };
+
+    // مسیر recipients دستی
+    if (Array.isArray(recipients) && recipients.length > 0) {
+      // ایجاد اعلان برای همه به جز اولین
+      for (let i = 1; i < recipients.length; i++) {
+        await this.repository.create({
+          ...baseData,
+          workspaceUserId: recipients[i].workspaceUserId,
+        });
+      }
+      // برگرداندن اولی تا BaseService خودش ایجاد کنه
+      return {
+        ...baseData,
+        workspaceUserId: recipients[0].workspaceUserId,
+      };
+    }
+
+    // مسیر filters: واکشی کاربران هدف و ساخت گروهی
+    if (filters) {
+      const { groupIds = [], labelIds = [], q = "", selectFiltered } = filters;
+      if (selectFiltered) {
+        // واکشی کاربران هدف با شرایط
+        const targets = await prisma.workspaceUser.findMany({
+          where: {
+            ...(groupIds.length > 0 && {
+              userGroups: { some: { id: { in: groupIds } } },
+            }),
+            ...(labelIds.length > 0 && {
+              labels: { some: { id: { in: labelIds } } },
+            }),
+            ...(q && {
+              OR: [
+                { displayName: { contains: q } },
+                { user: { name: { contains: q } } },
+                { user: { phone: { contains: q } } },
+              ],
+            }),
+          },
+          select: { id: true },
+        });
+
+        // ایجاد برای همه به جز اولی
+        for (let i = 1; i < targets.length; i++) {
+          await this.repository.create({
+            ...baseData,
+            workspaceUserId: targets[i].id,
+          });
+        }
+
+        // برگرداندن اولی
+        return {
+          ...baseData,
+          workspaceUserId: workspaceUser?.id || (targets?.[0]?.id ?? undefined),
+        };
+      }
+    }
+
+    return data;
+  };
+
+  /**
+   * ساخت متن پیامک با جزئیات موضوع
+   */
+  private buildSmsMessage(fullEntity: any): string {
+    let subjectText = "";
+
+    // اگر به درخواست متصل است
+    if (fullEntity.request) {
+      const serviceType = fullEntity.request.serviceType?.name || "نامشخص";
+      const status = fullEntity.request.status?.name || "نامشخص";
+      subjectText = `درخواست: ${serviceType} - وضعیت: ${status}\n`;
+    }
+    // اگر به فاکتور متصل است
+    else if (fullEntity.invoice) {
+      subjectText = `فاکتور: شماره ${fullEntity.invoice.id}\n`;
+    }
+    // اگر به پرداخت متصل است
+    else if (fullEntity.payment) {
+      subjectText = `پرداخت: شماره ${fullEntity.payment.id}\n`;
+    }
+    // اگر به یادآور متصل است
+    else if (fullEntity.reminder) {
+      const reminderTitle =
+        fullEntity.reminder.title || `شماره ${fullEntity.reminder.id}`;
+      subjectText = `یادآور: ${reminderTitle}\n`;
+    }
+
+    return `${subjectText}${fullEntity.title}\n${fullEntity.message}\n\nلغو11`;
   }
 
   /**
@@ -52,6 +170,15 @@ export class NotificationServiceApi extends BaseService<any> {
       // ===== شروع اصلاحیه کلیدی =====
       // ۱. به جای تکیه بر entity ورودی، ما آن را با تمام روابط مورد نیاز از دیتابیس دوباره واکشی می‌کنیم.
       const fullEntity = await this.repository.findById(entity.id, { include });
+      console.log(
+        `%c[NotificationService] 2.1. Pre-send checks:`,
+        "color: #6f42c1;",
+        {
+          workspaceId: (fullEntity as any).workspaceId,
+          sendSms: (fullEntity as any).sendSms,
+          phone: (fullEntity as any)?.workspaceUser?.user?.phone,
+        }
+      );
 
       // ===== لاگ ردیابی ۲: بررسی entity کامل =====
       console.log(
@@ -66,6 +193,13 @@ export class NotificationServiceApi extends BaseService<any> {
 
       // ۲. بررسی می‌کنیم که آیا کاربر، شماره تلفن و اجازه ارسال SMS وجود دارد یا خیر.
       if (customer && customer.phone && fullEntity.sendSms) {
+        // قبل از ارسال، اعتبار پیامکی را لاگ می‌گیریم
+        try {
+          const credit = await (SmsHelper as any).getCredit?.();
+          if (credit?.ok) {
+            console.log("[SMS] Credit before send:", credit.credit);
+          }
+        } catch {}
         // ===== لاگ ردیابی ۳: اقدام به ارسال SMS =====
         console.log(
           `%c[NotificationService] 3. ✅ Conditions met. Attempting to send SMS to: ${customer.phone}`,
@@ -73,11 +207,11 @@ export class NotificationServiceApi extends BaseService<any> {
         );
         // ==========================================
 
-        await SmsHelper.sendNotification(
-          customer.phone,
-          fullEntity.title,
-          fullEntity.message
-        );
+        // ساخت متن پیامک با جزئیات
+        const smsText = this.buildSmsMessage(fullEntity);
+
+        const sendResult = await SmsHelper.sendSmsText(customer.phone, smsText);
+        console.log("[SMS] Send result:", sendResult);
 
         console.log(
           `%c[NotificationService] 4. ✅ SMS sent successfully.`,

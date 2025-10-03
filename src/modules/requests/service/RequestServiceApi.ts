@@ -364,7 +364,6 @@ export class RequestServiceApi extends BaseService<any> {
   }
 }
 
-
 // // ما دیگر نیازی به بازنویسی کامل create نداریم و از متد قدرتمند BaseService استفاده می‌کنیم
 // // فقط هوک beforeCreate را برای منطق سفارشی خود پیاده‌سازی می‌کنیم
 // protected async beforeCreate(data: any, context: AuthContext): Promise<any> {
@@ -624,7 +623,7 @@ export class RequestServiceApi extends BaseService<any> {
 
 //     const message = `درخواست شما با موفقیت ثبت شد\nشماره پیگیری: ${entity.id}`;
 //     // با ساختار جدید NotificationServiceApi هماهنگ شده است
-//   
+//
 //     // await this.notifRepo.create({
 //     //   workspaceId: entity.workspaceId,
 //     //   workspaceUserUserId: customer.userId,
@@ -645,7 +644,7 @@ export class RequestServiceApi extends BaseService<any> {
 //     let message = `درخواست شما به روز رسانی شد از وضعیت ${data.oldStatus} به ${data.newStatus}`;
 //     if (entity.note) message += `\n\n${entity.note}`;
 //     message += `\nشماره پیگیری: ${entity.id}`;
-//    
+//
 //     // await this.notifRepo.create({
 //     //   workspaceId: entity.workspaceId,
 //     //   workspaceUserUserId: customer.userId,

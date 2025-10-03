@@ -16,7 +16,34 @@ export const include = {
   request: {
     select: {
       id: true,
-      // می‌توانید فیلدهای دیگری از درخواست را نیز در اینجا اضافه کنید
+      serviceType: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      status: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
+  invoice: {
+    select: {
+      id: true,
+    },
+  },
+  reminder: {
+    select: {
+      id: true,
+      title: true,
+    },
+  },
+  payment: {
+    select: {
+      id: true,
     },
   },
 };
@@ -25,7 +52,9 @@ export const include = {
 export const searchFileds = ["title", "message"];
 
 // ۳. این آرایه طبق الگوی شما خالی است
-export const relations = ["workspaceUser"];
+// relations فقط برای create تو در تو در BaseService استفاده می‌شود؛ نوتیفیکیشن create ساده دارد
+export const relations: string[] = [];
 
 // ۴. اضافه کردن "workspaceUser" به connects تا BaseService به درستی کار کند
-export const connects = ["workspaceUser", "request"];
+// connects برای تبدیل آبجکت به کلید خارجی؛ در این ماژول id مستقیم پاس می‌دهیم
+export const connects: string[] = [];

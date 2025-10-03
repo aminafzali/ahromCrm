@@ -131,6 +131,10 @@ export abstract class BaseService<T> {
 
     if (context.workspaceId) {
       processedData.workspaceId = context.workspaceId;
+      // جلوگیری از الزام connect به workspace توسط Prisma Client
+      if ((processedData as any).workspace) {
+        delete (processedData as any).workspace;
+      }
     }
 
     if (

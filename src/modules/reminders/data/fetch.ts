@@ -13,17 +13,31 @@
  */
 export const include = {
   workspaceUser: {
-    select: {
-      id: true,
-      displayName: true,
-      phone: true,
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+        },
+      },
     },
+  },
+  request: {
+    select: { id: true },
+  },
+  invoice: {
+    select: { id: true },
+  },
+  payment: {
+    select: { id: true },
   },
 };
 
-export const relations = ["workspaceUser"];
+// relations در BaseService برای ایجاد تو در تو استفاده می‌شود؛ در ریمایندر نیازی نیست
+export const relations: string[] = [];
 
 // فیلدهایی که در جستجوی متنی استفاده می‌شوند
 export const searchFileds = ["title", "description"];
-// این ماژول به روابط پیچیده (مانند جدول واسط) نیازی ندارد، پس connects خالی است
-export const connects = {};
+// connects فقط برای تبدیل آبجکت به کلید خارجی استفاده می‌شود؛ در این ماژول id مستقیم پاس می‌دهیم
+export const connects: string[] = [];

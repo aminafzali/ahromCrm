@@ -22,14 +22,96 @@ export class ReminderService extends BaseService<any> {
   private notificationService: NotificationServiceApi;
 
   constructor() {
-    super(
-      new Repository(),
-      createReminderSchema,
-      createReminderSchema.partial(),
-      ["title", "description"]
-    );
+    super(new Repository(), createReminderSchema, createReminderSchema, [
+      "title",
+      "description",
+    ]);
     this.notificationService = new NotificationServiceApi();
   }
+
+  // پشتیبانی از ایجاد گروهی ریمایندر بر اساس recipients یا filters
+  protected beforeCreate = async (data: any): Promise<any> => {
+    const { recipients, filters, workspaceUser } = data;
+
+    // استخراج workspaceUserId از workspaceUser
+    if (workspaceUser?.id) {
+      data.workspaceUserId = workspaceUser.id;
+      delete data.workspaceUser;
+    }
+
+    // اگر neither recipients nor filters ارائه نشده، همان مسیر قبلی
+    if (!recipients && !filters) return data;
+
+    const baseData: any = {
+      title: data.title,
+      description: data.description,
+      dueDate: data.dueDate,
+      status: data.status || "PENDING",
+      type: data.type,
+      entityId: data.entityId,
+      entityType: data.entityType,
+      requestId: data.requestId,
+      invoiceId: data.invoiceId,
+      paymentId: data.paymentId,
+      taskId: data.taskId,
+      notificationChannels: data.notificationChannels,
+      timezone: data.timezone,
+      repeatInterval: data.repeatInterval,
+      workspaceId: data.workspaceId,
+    };
+
+    // مسیر recipients دستی: برای هر گیرنده یک ریمایندر بسازیم
+    if (Array.isArray(recipients) && recipients.length > 0) {
+      await Promise.all(
+        recipients.map(async (r: any) => {
+          await this.repository.create({
+            ...baseData,
+            workspaceUserId: r.workspaceUserId,
+          });
+        })
+      );
+      // برگرداندن یک مورد نمونه برای تداوم جریان BaseService
+      return { ...baseData, workspaceUserId: recipients[0].workspaceUserId };
+    }
+
+    // مسیر filters: واکشی کاربران هدف و ساخت گروهی
+    if (filters) {
+      const { groupIds = [], labelIds = [], q = "", selectFiltered } = filters;
+      if (selectFiltered) {
+        const targets = await prisma.workspaceUser.findMany({
+          where: {
+            ...(groupIds.length > 0 && {
+              userGroups: { some: { id: { in: groupIds } } },
+            }),
+            ...(labelIds.length > 0 && {
+              labels: { some: { id: { in: labelIds } } },
+            }),
+            ...(q && {
+              OR: [
+                { displayName: { contains: q } },
+                { user: { name: { contains: q } } },
+                { user: { phone: { contains: q } } },
+              ],
+            }),
+          },
+          select: { id: true },
+        });
+
+        await Promise.all(
+          (targets || []).map(async (t: any) => {
+            await this.repository.create({
+              ...baseData,
+              workspaceUserId: t.id,
+            });
+          })
+        );
+
+        return { ...baseData, workspaceUserId: targets?.[0]?.id };
+      }
+    }
+
+    return data;
+  };
 
   private async sendNotification(reminder: any) {
     // واکشی workspaceUser به همراه user برای ارسال نوتیفیکیشن

@@ -105,11 +105,13 @@ model WorkspaceUser {
   userGroups UserGroup[] @relation("WorkspaceUserGroups")
 
   // Project Management Relations
-  teams             TeamMember[]
-  assignedProjects  Project[]           @relation("AssignedWorkspaceUsersToProject")
-  assignedTasks     Task[]              @relation("AssignedWorkspaceUsersToTask")
-  taskStatusChanges TaskStatusHistory[]
-  relatedTasks      Task[]              @relation("TaskToWorkspaceUser")
+  teams                 TeamMember[]
+  assignedProjects      Project[]               @relation("AssignedWorkspaceUsersToProject")
+  assignedTasks         Task[]                  @relation("AssignedWorkspaceUsersToTask")
+  taskStatusChanges     TaskStatusHistory[]
+  relatedTasks          Task[]                  @relation("TaskToWorkspaceUser")
+  ReminderRecipient     ReminderRecipient[]
+  NotificationRecipient NotificationRecipient[]
 
   @@unique([workspaceId, userId])
 }
@@ -222,6 +224,7 @@ model Request {
   reviews        RequestReview[]
   cancellations  RequestCancellation[]
   actualServices ActualServiceOnRequest[]
+  Reminder       Reminder[]
 }
 
 model Invoice {
@@ -271,8 +274,10 @@ model Invoice {
   // برای رابطه معکوس اگر نیاز باشد:
   referencedBy Invoice[] @relation("InvoiceReference")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  Reminder     Reminder[]
+  Notification Notification[]
 
   @@index([workspaceId, invoiceNumberName])
 }
@@ -295,8 +300,8 @@ model InvoiceItem {
   // inventoryItemId Int?
   // inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
 
-  itemType    InvoiceItemType @default(SERVICE)
- 
+  itemType InvoiceItemType @default(SERVICE)
+
   itemName    String // نام کالا/خدمت در لحظه فروش
   sku         String? // کد کالا یا شناسه انبار
   unit        String? // واحد شمارش (مثلا: عدد، ساعت، کیلوگرم)
@@ -358,6 +363,13 @@ model Reminder {
   type                 String
   entityId             Int?
   entityType           String?
+  // روابط اختیاری به موجودیت‌های مختلف برای سناریوهای لینک‌دار
+  requestId            Int?
+  request              Request?            @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  invoiceId            Int?
+  invoice              Invoice?            @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  paymentId            Int?
+  payment              Payment?            @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
   notified             Boolean             @default(false)
@@ -367,6 +379,8 @@ model Reminder {
   timezone             String              @default("UTC")
   retryCount           Int?                @default(0)
   lastRetry            DateTime?
+  Notification         Notification[]
+  ReminderRecipient    ReminderRecipient[]
 }
 
 model Notification {
@@ -377,17 +391,63 @@ model Notification {
   workspaceUserId Int
   workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
-  requestId Int?
-  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  requestId  Int?
+  request    Request?  @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  // ارجاع‌های اختیاری به سایر موجودیت‌ها
+  invoiceId  Int?
+  invoice    Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  reminderId Int?
+  reminder   Reminder? @relation(fields: [reminderId], references: [id], onDelete: SetNull)
+  paymentId  Int?
+  payment    Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
-  title     String
-  note      String?
-  message   String   @db.Text
-  isRead    Boolean  @default(false)
-  sendSms   Boolean  @default(true)
-  sendEmail Boolean  @default(false)
+  title                 String
+  note                  String?
+  message               String                  @db.Text
+  isRead                Boolean                 @default(false)
+  sendSms               Boolean                 @default(true)
+  sendEmail             Boolean                 @default(false)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  NotificationRecipient NotificationRecipient[]
+}
+
+// گیرندگان ریمایندر برای پشتیبانی از ارسال گروهی و رصد وضعیت هر گیرنده
+model ReminderRecipient {
+  id              Int                    @id @default(autoincrement())
+  reminderId      Int
+  reminder        Reminder               @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser          @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+  channel         NotificationChannel    @default(ALL)
+  deliveryStatus  ReminderDeliveryStatus @default(PENDING)
+  retryCount      Int                    @default(0)
+  lastAttempt     DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([reminderId, deliveryStatus])
+  @@index([workspaceUserId])
+}
+
+// گیرندگان اعلان برای ارسال گروهی
+model NotificationRecipient {
+  id              Int                    @id @default(autoincrement())
+  notificationId  Int
+  notification    Notification           @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser          @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+  channel         NotificationChannel    @default(ALL)
+  deliveryStatus  ReminderDeliveryStatus @default(PENDING)
+  retryCount      Int                    @default(0)
+  lastAttempt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([notificationId, deliveryStatus])
+  @@index([workspaceUserId])
 }
 
 model Payment {
@@ -412,8 +472,10 @@ model Payment {
   paymentCategory   PaymentCategory? @relation(fields: [paymentCategoryId], references: [id], onDelete: Restrict)
   // ===== پایان اصلاحیه =====
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  Reminder     Reminder[]
+  Notification Notification[]
 }
 
 // ===== شروع مدل جدید =====
@@ -1074,6 +1136,13 @@ enum NotificationChannel {
   EMAIL
   IN_APP
   ALL
+}
+
+// وضعیت تحویل در گیرندگان (برای Reminder و Notification)
+enum ReminderDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
 }
 
 enum PaymentStatus {

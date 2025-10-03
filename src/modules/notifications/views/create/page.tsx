@@ -1,37 +1,73 @@
-// مسیر فایل: src/modules/notifications/views/create/page.tsx
+import DIcon from "@/@Client/Components/common/DIcon";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import NotificationCreateForm from "../../components/NotificationCreateForm";
+import { useNotification } from "../../hooks/useNotification";
 
-"use client";
-
-import { CreateWrapper } from "@/@Client/Components/wrappers";
-import { CreatePageProps } from "@/@Client/types/crud";
-import { useWorkspaceUser } from "@/modules/workspace-users/hooks/useWorkspaceUser";
-import { getCreateFormConfig } from "../../data/form";
-import { NotificationRepository } from "../../repo/NotificationRepository";
-import { createNotificationSchema } from "../../validation/schema";
+interface CreateNotificationPageProps {
+  requestId?: number;
+  invoiceId?: number;
+  paymentId?: number;
+  reminderId?: number;
+  isAdmin?: boolean;
+  backUrl?: boolean;
+  backLabel?: string;
+}
 
 export default function CreateNotificationPage({
-  back = true,
-  after,
-}: CreatePageProps) {
-  const { getAll: getAllWorkspaceUsers } = useWorkspaceUser();
+  requestId,
+  invoiceId,
+  paymentId,
+  reminderId,
+  isAdmin = false,
+  backUrl = true,
+  backLabel = "بازگشت",
+}: CreateNotificationPageProps) {
+  const router = useRouter();
+  const { create, submitting, error } = useNotification();
+
+  const handleSubmit = async (data: any) => {
+    try {
+      const result: any = await create(data);
+
+      if (isAdmin) {
+        router.push(`/dashboard/notifications/${result.data.id}`);
+      } else {
+        router.push(`/panel/notifications/${result.data.id}`);
+      }
+    } catch (error) {
+      console.error("Error creating notification:", error);
+    }
+  };
 
   return (
-    <CreateWrapper
-      fetchers={[
-        {
-          key: "workspaceUsers",
-          fetcher: () =>
-            getAllWorkspaceUsers({ page: 1, limit: 1000 }).then(
-              (res) => res.data
-            ),
-        },
-      ]}
-      title="ارسال اطلاع‌رسانی جدید"
-      backUrl={back}
-      after={after}
-      formConfig={getCreateFormConfig}
-      repo={new NotificationRepository()}
-      schema={createNotificationSchema}
-    />
+    <div className="">
+      <h1 className="text-2xl font-bold mb-6">ایجاد اعلان جدید</h1>
+
+      {backUrl && (
+        <Link href="./" className="flex justify-start items-center mb-6">
+          <button className="btn btn-ghost">
+            <DIcon icon="fa-arrow-right" cdi={false} classCustom="ml-2" />
+            {backLabel}
+          </button>
+        </Link>
+      )}
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+
+      <NotificationCreateForm
+        onSubmit={handleSubmit}
+        loading={submitting}
+        requestId={requestId}
+        invoiceId={invoiceId}
+        paymentId={paymentId}
+        reminderId={reminderId}
+        backUrl={false}
+      />
+    </div>
   );
 }

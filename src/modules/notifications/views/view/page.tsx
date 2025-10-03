@@ -54,6 +54,18 @@ export default function DetailPage() {
         وضعیت: notification.isRead ? "خوانده شده" : "خوانده نشده",
         "ارسال پیامک": notification.sendSms ? "بله" : "خیر",
         "تاریخ ارسال": new Date(notification.createdAt).toLocaleString("fa-IR"),
+        "درخواست مرتبط": notification.request
+          ? `درخواست #${notification.request.id}`
+          : "ندارد",
+        "فاکتور مرتبط": notification.invoice
+          ? `فاکتور #${notification.invoice.id}`
+          : "ندارد",
+        "یادآوری مرتبط": notification.reminder
+          ? `یادآوری #${notification.reminder.id}`
+          : "ندارد",
+        "پرداخت مرتبط": notification.payment
+          ? `پرداخت #${notification.payment.id}`
+          : "ندارد",
       }
     : {};
 
@@ -65,6 +77,39 @@ export default function DetailPage() {
           className="text-blue-500 hover:underline"
         >
           مشاهده درخواست #{notification.request.id}
+        </Link>
+      ) : (
+        "ندارد"
+      ),
+    "فاکتور مرتبط": (value: any) =>
+      notification?.invoice ? (
+        <Link
+          href={`/dashboard/invoices/${notification.invoice.id}`}
+          className="text-blue-500 hover:underline"
+        >
+          مشاهده فاکتور #{notification.invoice.id}
+        </Link>
+      ) : (
+        "ندارد"
+      ),
+    "یادآوری مرتبط": (value: any) =>
+      notification?.reminder ? (
+        <Link
+          href={`/dashboard/reminders/${notification.reminder.id}`}
+          className="text-blue-500 hover:underline"
+        >
+          مشاهده یادآوری #{notification.reminder.id}
+        </Link>
+      ) : (
+        "ندارد"
+      ),
+    "پرداخت مرتبط": (value: any) =>
+      notification?.payment ? (
+        <Link
+          href={`/dashboard/payments/${notification.payment.id}`}
+          className="text-blue-500 hover:underline"
+        >
+          مشاهده پرداخت #{notification.payment.id}
         </Link>
       ) : (
         "ندارد"
