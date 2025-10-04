@@ -4,7 +4,7 @@ import DIcon from "@/@Client/Components/common/DIcon";
 import StandaloneDateTimePicker from "@/@Client/Components/ui/StandaloneDateTimePicker";
 import { Button, Card, Input } from "ndui-ahrom";
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { z } from "zod";
 import RecipientSelector from "./RecipientSelector";
 import SubjectSelector from "./SubjectSelector";
@@ -60,6 +60,10 @@ interface ReminderCreateFormProps {
   loading?: boolean;
   backUrl?: string | boolean;
   after?: () => void;
+  requestId?: number;
+  invoiceId?: number;
+  paymentId?: number;
+  taskId?: number;
 }
 
 export default function ReminderCreateForm({
@@ -68,6 +72,10 @@ export default function ReminderCreateForm({
   loading = false,
   backUrl = true,
   after,
+  requestId,
+  invoiceId,
+  paymentId,
+  taskId,
 }: ReminderCreateFormProps) {
   const rootId = useId();
   const router = useRouter();
@@ -91,6 +99,15 @@ export default function ReminderCreateForm({
   // لیست ارسال
   const [selectedRecipients, setSelectedRecipients] = useState<any[]>([]);
 
+  // Debug: Track when selectedRecipients changes
+  useEffect(() => {
+    console.log("🔍 [ReminderCreateForm] selectedRecipients changed:", {
+      count: selectedRecipients.length,
+      ids: selectedRecipients.map((u) => u.id),
+      users: selectedRecipients,
+    });
+  }, [selectedRecipients]);
+
   // کانال‌های اطلاع‌رسانی (اعلان داخلی همیشه فعال است)
   const [sendSms, setSendSms] = useState<boolean>(
     defaultValues?.sendSms || false
@@ -102,6 +119,8 @@ export default function ReminderCreateForm({
   >(defaultValues?.repeatInterval || "NONE");
 
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitRef = useRef(false);
 
   /* ---------- Handlers ---------- */
   const handleSubjectSelect = (
@@ -111,30 +130,52 @@ export default function ReminderCreateForm({
       entityId?: number;
     } | null
   ) => {
+    console.log("🔍 [ReminderCreateForm] handleSubjectSelect called:", {
+      subjectType: subject?.type,
+      entityId: subject?.entityId,
+      entity: subject?.entity,
+    });
     setSelectedSubject(subject);
   };
 
   const handleSubmit = () => {
+    if (isSubmitting || submitRef.current) {
+      console.log(
+        "🔍 [ReminderCreateForm] Already submitting, ignoring duplicate call"
+      );
+      return;
+    }
+
     try {
+      setIsSubmitting(true);
+      submitRef.current = true;
       setError(null);
 
       if (!title.trim()) {
         setError("عنوان الزامی است");
+        setIsSubmitting(false);
+        submitRef.current = false;
         return;
       }
 
       if (!description.trim()) {
         setError("توضیحات الزامی است");
+        setIsSubmitting(false);
+        submitRef.current = false;
         return;
       }
 
       if (!dueDate) {
         setError("تاریخ سررسید الزامی است");
+        setIsSubmitting(false);
+        submitRef.current = false;
         return;
       }
 
       if (selectedRecipients.length === 0) {
         setError("لطفاً حداقل یک مخاطب را انتخاب کنید");
+        setIsSubmitting(false);
+        submitRef.current = false;
         return;
       }
 
@@ -182,13 +223,32 @@ export default function ReminderCreateForm({
       if (!validation.success) {
         console.error("validation errors", validation.error.flatten());
         setError("فرم دارای مقادیر نامعتبر است");
+        setIsSubmitting(false);
+        submitRef.current = false;
         return;
       }
 
+      console.log("🔍 [ReminderCreateForm] FINAL DATA BEING SENT TO API:", {
+        recipients: data.recipients?.length || 0,
+        workspaceUser: data.workspaceUser?.id,
+        selectedRecipientsCount: selectedRecipients.length,
+        selectedRecipientsIds: selectedRecipients.map((u) => u.id),
+        recipientsIds: data.recipients?.map((r) => r.workspaceUserId) || [],
+        fullData: validation.data,
+      });
+
+      console.log(
+        "🔍 [ReminderCreateForm] About to call onSubmit with data:",
+        validation.data
+      );
       onSubmit(validation.data);
+      setIsSubmitting(false);
+      submitRef.current = false;
     } catch (e) {
       console.error(e);
       setError("خطا در ایجاد یادآور");
+      setIsSubmitting(false);
+      submitRef.current = false;
     }
   };
 
@@ -299,6 +359,15 @@ export default function ReminderCreateForm({
             selectedSubject?.type === "USER" ? selectedSubject.entity : null
           }
         />
+        {selectedSubject?.type === "USER" && (
+          <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+            <p className="text-blue-700">
+              کاربر انتخاب شده به‌صورت خودکار به لیست ارسال اضافه شده است:{" "}
+              {selectedSubject.entity?.displayName ||
+                selectedSubject.entity?.user?.name}
+            </p>
+          </div>
+        )}
       </Card>
 
       {/* 4. کانال‌های اطلاع‌رسانی */}
@@ -344,15 +413,16 @@ export default function ReminderCreateForm({
           onClick={handleSubmit}
           disabled={
             loading ||
+            isSubmitting ||
             !title.trim() ||
             !description.trim() ||
             !dueDate ||
             selectedRecipients.length === 0
           }
-          loading={loading}
+          loading={loading || isSubmitting}
           icon={<DIcon icon="fa-calendar-plus" cdi={false} />}
         >
-          {loading ? "در حال ایجاد..." : "ایجاد یادآور"}
+          {loading || isSubmitting ? "در حال ایجاد..." : "ایجاد یادآور"}
         </Button>
       </div>
     </div>

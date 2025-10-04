@@ -44,6 +44,15 @@ export default function RecipientSelector({
       autoAddedUser &&
       !selectedUsers.find((u) => u.id === autoAddedUser.id)
     ) {
+      console.log(
+        "🔍 [RecipientSelector] Auto-adding user:",
+        autoAddedUser.id,
+        "to selected users"
+      );
+      console.log(
+        "🔍 [RecipientSelector] Current selectedUsers before auto-add:",
+        selectedUsers.map((u) => u.id)
+      );
       onSelectedUsersChange([...selectedUsers, autoAddedUser]);
     }
   }, [autoAddedUser]);
@@ -94,10 +103,25 @@ export default function RecipientSelector({
 
   const toggleUser = (user: any) => {
     const exists = selectedUsers.find((u) => u.id === user.id);
+    console.log("🔍 [RecipientSelector] toggleUser called:", {
+      userId: user.id,
+      exists,
+      currentSelectedCount: selectedUsers.length,
+    });
     if (exists) {
-      onSelectedUsersChange(selectedUsers.filter((u) => u.id !== user.id));
+      const newUsers = selectedUsers.filter((u) => u.id !== user.id);
+      console.log(
+        "🔍 [RecipientSelector] Removing user, new count:",
+        newUsers.length
+      );
+      onSelectedUsersChange(newUsers);
     } else {
-      onSelectedUsersChange([...selectedUsers, user]);
+      const newUsers = [...selectedUsers, user];
+      console.log(
+        "🔍 [RecipientSelector] Adding user, new count:",
+        newUsers.length
+      );
+      onSelectedUsersChange(newUsers);
     }
   };
 
@@ -237,81 +261,111 @@ export default function RecipientSelector({
             placeholder="نام یا تلفن کاربر..."
           />
         </div>
-
-        {/* جدول انتخاب */}
-        <div className="overflow-x-auto border rounded-lg bg-white">
-          <table className="min-w-full text-sm">
-            <thead className="border-b bg-gray-50">
+      </div>
+      {/* جدول انتخاب */}
+      <div className="overflow-x-auto border rounded-lg bg-white">
+        <table
+          className="text-sm w-full table-fixed"
+          style={{ minWidth: 1050 }}
+        >
+          <thead className="border-b bg-gray-50">
+            <tr>
+              <th className="p-3 text-center" style={{ width: 52 }}>
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  checked={selectAll}
+                  onChange={handleSelectAll}
+                />
+              </th>
+              <th
+                className="p-3 text-right font-semibold text-gray-700"
+                style={{ width: 220 }}
+              >
+                نام
+              </th>
+              <th
+                className="p-3 text-right font-semibold text-gray-700"
+                style={{ width: 150 }}
+              >
+                تلفن
+              </th>
+              <th
+                className="p-3 text-right font-semibold text-gray-700"
+                style={{ width: 120 }}
+              >
+                نقش
+              </th>
+              <th
+                className="p-3 text-right font-semibold text-gray-700"
+                style={{ width: 280 }}
+              >
+                برچسب‌ها
+              </th>
+              <th
+                className="p-3 text-right font-semibold text-gray-700"
+                style={{ width: 280 }}
+              >
+                گروه‌ها
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
               <tr>
-                <th className="p-3 w-12 text-center">
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-sm"
-                    checked={selectAll}
-                    onChange={handleSelectAll}
-                  />
-                </th>
-                <th className="p-3 text-right font-semibold text-gray-700">
-                  نام
-                </th>
-                <th className="p-3 text-right font-semibold text-gray-700">
-                  تلفن
-                </th>
-                <th className="p-3 text-right font-semibold text-gray-700">
-                  نقش
-                </th>
+                <td colSpan={4} className="p-8 text-center">
+                  <Loading />
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center">
-                    <Loading />
+            )}
+            {!loading && filteredUsers.length === 0 && (
+              <tr>
+                <td
+                  colSpan={4}
+                  className="p-8 text-center text-base-content/60"
+                >
+                  مخاطبی یافت نشد
+                </td>
+              </tr>
+            )}
+            {!loading &&
+              filteredUsers.map((user) => (
+                <tr
+                  key={user.id}
+                  className="border-t hover:bg-gray-50 transition"
+                >
+                  <td className="p-3 text-center">
+                    <input
+                      type="checkbox"
+                      className="checkbox checkbox-sm checkbox-primary"
+                      checked={!!selectedUsers.find((su) => su.id === user.id)}
+                      onChange={() => toggleUser(user)}
+                    />
+                  </td>
+                  <td className="p-3 font-medium text-gray-900">
+                    {user.displayName || user.user?.name || "نامشخص"}
+                  </td>
+                  <td className="p-3 text-gray-600 font-mono text-xs">
+                    {user.user?.phone || "-"}
+                  </td>
+                  <td className="p-3">
+                    <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">
+                      {user.role?.name || "-"}
+                    </span>
+                  </td>
+                  <td className="p-3 text-gray-600 truncate">
+                    {(user.labels || []).map((l: any) => l.name).join("، ") ||
+                      "-"}
+                  </td>
+                  <td className="p-3 text-gray-600 truncate">
+                    {(user.userGroups || [])
+                      .map((g: any) => g.name)
+                      .join("، ") || "-"}
                   </td>
                 </tr>
-              )}
-              {!loading && filteredUsers.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="p-8 text-center text-base-content/60"
-                  >
-                    مخاطبی یافت نشد
-                  </td>
-                </tr>
-              )}
-              {!loading &&
-                filteredUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="border-t hover:bg-gray-50 transition"
-                  >
-                    <td className="p-3 text-center">
-                      <input
-                        type="checkbox"
-                        className="checkbox checkbox-sm checkbox-primary"
-                        checked={
-                          !!selectedUsers.find((su) => su.id === user.id)
-                        }
-                        onChange={() => toggleUser(user)}
-                      />
-                    </td>
-                    <td className="p-3 font-medium text-gray-900">
-                      {user.displayName || user.user?.name || "نامشخص"}
-                    </td>
-                    <td className="p-3 text-gray-600 font-mono text-xs">
-                      {user.user?.phone || "-"}
-                    </td>
-                    <td className="p-3">
-                      <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">
-                        {user.role?.name || "-"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+              ))}
+          </tbody>
+        </table>
       </div>
 
       {/* لیست مخاطبین انتخاب شده */}

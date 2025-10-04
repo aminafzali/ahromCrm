@@ -44,7 +44,7 @@ export class NotificationServiceApi extends BaseService<any> {
     }
 
     // اگر workspaceUser تکی داده شده بود، اجازه بدهید مسیر فعلی کار کند
-    if (!recipients && !filters) return data;
+    if ((!recipients || recipients.length === 0) && !filters) return data;
 
     // از داده اصلی فقط اطلاعات نوتیفیکیشن را حفظ می‌کنیم
     const baseData: any = {

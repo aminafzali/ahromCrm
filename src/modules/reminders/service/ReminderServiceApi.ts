@@ -23,10 +23,15 @@ export class ReminderServiceApi extends BaseService<any> {
     );
     this.connect = connects;
     this.repository = new Repository();
-    this.beforeCreate = this.handleBeforeCreate;
   }
 
-  protected handleBeforeCreate = async (data: any): Promise<any> => {
+  protected beforeCreate = async (data: any): Promise<any> => {
+    console.log("🔍 [ReminderServiceApi] beforeCreate called with data:", {
+      recipients: data.recipients?.length || 0,
+      filters: data.filters,
+      workspaceUser: data.workspaceUser?.id,
+    });
+
     const { recipients, filters, workspaceUser } = data;
 
     // استخراج workspaceUserId
@@ -36,7 +41,12 @@ export class ReminderServiceApi extends BaseService<any> {
     }
 
     // اگر فقط یک کاربر هست، ارسال عادی
-    if (!recipients && !filters) return data;
+    if ((!recipients || recipients.length === 0) && !filters) {
+      console.log(
+        "🔍 [ReminderServiceApi] Single user or no recipients, returning data as-is"
+      );
+      return data;
+    }
 
     // داده‌های پایه برای کپی کردن
     const baseData: any = {
@@ -60,13 +70,28 @@ export class ReminderServiceApi extends BaseService<any> {
 
     // ارسال به لیست دستی
     if (Array.isArray(recipients) && recipients.length > 0) {
+      console.log(
+        `🔍 [ReminderServiceApi] Creating ${
+          recipients.length - 1
+        } additional reminders for recipients 2-${recipients.length}`
+      );
+
       // ایجاد یادآور برای همه به جز اولین
       for (let i = 1; i < recipients.length; i++) {
+        console.log(
+          `🔍 [ReminderServiceApi] Creating reminder ${i + 1}/${
+            recipients.length
+          } for workspaceUserId: ${recipients[i].workspaceUserId}`
+        );
         await this.repository.create({
           ...baseData,
           workspaceUserId: recipients[i].workspaceUserId,
         });
       }
+
+      console.log(
+        `🔍 [ReminderServiceApi] Returning first recipient for BaseService to handle: ${recipients[0].workspaceUserId}`
+      );
       // برگرداندن اولی تا BaseService خودش ایجاد کنه
       return {
         ...baseData,
@@ -113,6 +138,9 @@ export class ReminderServiceApi extends BaseService<any> {
       }
     }
 
+    console.log(
+      "🔍 [ReminderServiceApi] No recipients or filters, returning original data"
+    );
     return data;
   };
 }

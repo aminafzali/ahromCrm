@@ -1,10 +1,10 @@
 // مسیر فایل: src/modules/reminders/api/route.ts
 import { BaseController } from "@/@Server/Http/Controller/BaseController";
 import { NextRequest } from "next/server";
-import { ReminderService } from "../../../@Server/Http/Service/ReminderService";
 import { include } from "../data/fetch";
+import { ReminderServiceApi } from "../service/ReminderServiceApi";
 
-const service = new ReminderService();
+const service = new ReminderServiceApi();
 class ReminderController extends BaseController<any> {
   constructor() {
     super(service, include, true);

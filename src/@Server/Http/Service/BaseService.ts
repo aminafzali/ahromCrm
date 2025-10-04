@@ -146,7 +146,9 @@ export abstract class BaseService<T> {
     }
 
     let dataToCreate = processedData;
+    console.log(`🔍 [BaseService] beforeCreate exists:`, !!this.beforeCreate);
     if (this.beforeCreate) {
+      console.log(`🔍 [BaseService] Calling beforeCreate hook`);
       dataToCreate = await this.beforeCreate(processedData, context);
       // ===== لاگ ردیابی ۵: داده‌ها پس از اجرای هوک beforeCreate =====
       console.log(
@@ -155,6 +157,10 @@ export abstract class BaseService<T> {
         JSON.parse(JSON.stringify(dataToCreate))
       );
       // ===========================================================
+    } else {
+      console.log(
+        `🔍 [BaseService] No beforeCreate hook, using processedData as-is`
+      );
     }
 
     // ===== لاگ ردیابی ۶: داده‌های نهایی قبل از ارسال به دیتابیس =====
@@ -166,6 +172,18 @@ export abstract class BaseService<T> {
     // ===============================================================
 
     const entity = await this.repository.create(dataToCreate);
+    console.log(
+      `🔍 [BaseService] Created entity with ID:`,
+      (entity as any).id,
+      "for workspaceUserId:",
+      dataToCreate.workspaceUserId
+    );
+    console.log(
+      `🔍 [BaseService] This is the main entity created by BaseService (not in beforeCreate)`
+    );
+    console.log(
+      `🔍 [BaseService] Total reminders created so far: 1 (this one)`
+    );
 
     if (this.afterCreate) {
       await this.afterCreate(entity, data); // به هوک afterCreate داده‌های اصلی و اعتبارسنجی شده را پاس می‌دهیم

@@ -42,7 +42,14 @@ export const columns: Column[] = [
     name: "dueDate",
     field: "dueDate",
     label: "زمان ارسال",
-    render: (row) => <DateDisplay date={row.dueDate} />,
+    render: (row) => (
+      <DateDisplay
+        date={row.dueDate}
+        customFormat="yyyy/MM/dd HH:mm"
+        short={false}
+        showTooltip={true}
+      />
+    ),
   },
   {
     name: "status",

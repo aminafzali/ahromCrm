@@ -49,7 +49,14 @@ export default function ReminderDetailPage() {
           reminder.workspaceUser?.phone,
         عنوان: reminder.title,
         توضیحات: reminder.description || "ندارد",
-        "تاریخ یادآوری": new Date(reminder.dueDate).toLocaleString("fa-IR"),
+        "تاریخ یادآوری": new Date(reminder.dueDate).toLocaleString("fa-IR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
         وضعیت:
           {
             PENDING: "در انتظار",

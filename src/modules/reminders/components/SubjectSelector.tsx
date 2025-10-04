@@ -46,6 +46,11 @@ export default function SubjectSelector({
 
   const handleEntitySelect = (entity: any) => {
     if (!subjectType || subjectType === "GENERAL") return;
+    console.log("🔍 [SubjectSelector] handleEntitySelect called:", {
+      subjectType,
+      entityId: entity.id,
+      entity,
+    });
     onSubjectSelect({
       type: subjectType,
       entity,
@@ -295,7 +300,7 @@ function EntityPicker({ isOpen, onClose, onSelect, type }: EntityPickerProps) {
                   {type === "INVOICE" || type === "REQUEST"
                     ? "مشتری"
                     : type === "TASK"
-                    ? "تاریخ"
+                    ? "پروژه"
                     : "تلفن"}
                 </th>
                 {type === "REQUEST" && (
@@ -303,9 +308,16 @@ function EntityPicker({ isOpen, onClose, onSelect, type }: EntityPickerProps) {
                     وضعیت
                   </th>
                 )}
-                <th className="p-3 w-28 text-center font-semibold text-gray-700">
-                  عملیات
-                </th>
+                {type === "INVOICE" && (
+                  <th className="p-3 text-right font-semibold text-gray-700">
+                    مبلغ
+                  </th>
+                )}
+                {type === "TASK" && (
+                  <th className="p-3 text-right font-semibold text-gray-700">
+                    تاریخ
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -333,7 +345,8 @@ function EntityPicker({ isOpen, onClose, onSelect, type }: EntityPickerProps) {
                 filteredEntities.map((entity) => (
                   <tr
                     key={entity.id}
-                    className="border-t hover:bg-gray-50 transition"
+                    className="border-t hover:bg-gray-50 transition cursor-pointer"
+                    onClick={() => onSelect(entity)}
                   >
                     <td className="p-3 text-gray-500">#{entity.id}</td>
                     <td className="p-3 font-medium text-gray-900">
@@ -351,7 +364,7 @@ function EntityPicker({ isOpen, onClose, onSelect, type }: EntityPickerProps) {
                     </td>
                     <td className="p-3 text-gray-600">
                       {type === "TASK"
-                        ? new Date(entity.dueDate).toLocaleDateString("fa-IR")
+                        ? entity.project?.name || "-"
                         : type === "INVOICE" || type === "REQUEST"
                         ? entity.workspaceUser?.displayName ||
                           entity.workspaceUser?.user?.name ||
@@ -367,15 +380,20 @@ function EntityPicker({ isOpen, onClose, onSelect, type }: EntityPickerProps) {
                         </span>
                       </td>
                     )}
-                    <td className="p-3 text-center">
-                      <Button
-                        size="sm"
-                        onClick={() => onSelect(entity)}
-                        icon={<DIcon icon="fa-check" cdi={false} />}
-                      >
-                        انتخاب
-                      </Button>
-                    </td>
+                    {type === "INVOICE" && (
+                      <td className="p-3 font-semibold text-gray-900">
+                        {typeof entity.amount === "number"
+                          ? entity.amount.toLocaleString("fa-IR") + " ریال"
+                          : "-"}
+                      </td>
+                    )}
+                    {type === "TASK" && (
+                      <td className="p-3 text-gray-600 text-xs">
+                        {entity.dueDate
+                          ? new Date(entity.dueDate).toLocaleDateString("fa-IR")
+                          : "-"}
+                      </td>
+                    )}
                   </tr>
                 ))}
             </tbody>

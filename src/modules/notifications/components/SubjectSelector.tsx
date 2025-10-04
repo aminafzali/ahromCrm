@@ -217,29 +217,13 @@ function EntityPicker({ isOpen, onClose, onSelect, type }: EntityPickerProps) {
     try {
       let result: any;
       if (type === "REQUEST") {
-        result = await getAllRequests({
-          page: 1,
-          limit: 1000,
-          include: "serviceType,status,workspaceUser.user",
-        } as any);
+        result = await getAllRequests({ page: 1, limit: 1000 } as any);
       } else if (type === "INVOICE") {
-        result = await getAllInvoices({
-          page: 1,
-          limit: 1000,
-          include: "workspaceUser.user",
-        } as any);
+        result = await getAllInvoices({ page: 1, limit: 1000 } as any);
       } else if (type === "PAYMENT") {
-        result = await getAllPayments({
-          page: 1,
-          limit: 1000,
-          include: "workspaceUser.user",
-        } as any);
+        result = await getAllPayments({ page: 1, limit: 1000 } as any);
       } else if (type === "REMINDER") {
-        result = await getAllReminders({
-          page: 1,
-          limit: 1000,
-          include: "workspaceUser.user",
-        } as any);
+        result = await getAllReminders({ page: 1, limit: 1000 } as any);
       } else if (type === "USER") {
         result = await getAllUsers({ page: 1, limit: 1000 });
       }
@@ -382,7 +366,8 @@ function EntityPicker({ isOpen, onClose, onSelect, type }: EntityPickerProps) {
                 filteredEntities.map((entity) => (
                   <tr
                     key={entity.id}
-                    className="border-t hover:bg-gray-50 transition"
+                    className="border-t hover:bg-gray-50 transition cursor-pointer"
+                    onClick={() => onSelect(entity)}
                   >
                     <td className="p-3 text-gray-500">#{entity.id}</td>
                     <td className="p-3 font-medium text-gray-900">
@@ -431,15 +416,6 @@ function EntityPicker({ isOpen, onClose, onSelect, type }: EntityPickerProps) {
                         {new Date(entity.dueDate).toLocaleDateString("fa-IR")}
                       </td>
                     )}
-                    <td className="p-3 text-center">
-                      <Button
-                        size="sm"
-                        onClick={() => onSelect(entity)}
-                        icon={<DIcon icon="fa-check" cdi={false} />}
-                      >
-                        انتخاب
-                      </Button>
-                    </td>
                   </tr>
                 ))}
             </tbody>
