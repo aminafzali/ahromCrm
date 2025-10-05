@@ -6,8 +6,11 @@ import StandaloneDateTimePicker from "@/@Client/Components/ui/StandaloneDateTime
 import IndexWrapper from "@/@Client/Components/wrappers/IndexWrapper/Index";
 import { columnsForAdmin as invoiceColumns } from "@/modules/invoices/data/table";
 import { InvoiceRepository } from "@/modules/invoices/repo/InvoiceRepository";
+import { useLabel } from "@/modules/labels/hooks/useLabel";
 import { columnsForAdmin as requestColumns } from "@/modules/requests/data/table";
 import { RequestRepository } from "@/modules/requests/repo/RequestRepository";
+import { useUserGroup } from "@/modules/user-groups/hooks/useUserGroup";
+import { useWorkspaceUser } from "@/modules/workspace-users/hooks/useWorkspaceUser";
 import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal } from "ndui-ahrom";
@@ -29,6 +32,9 @@ export default function ReminderForm() {
   // --- منطق کامپوننت (این بخش کاملاً دست‌نخورده باقی مانده است) ---
   const router = useRouter();
   const { create, submitting } = useReminder();
+  const { getAll: getAllUserGroups } = useUserGroup();
+  const { getAll: getAllLabels } = useLabel();
+  const { getAll: getAllWorkspaceUsers } = useWorkspaceUser();
 
   const [modalContent, setModalContent] = useState<{
     type: "requests" | "invoices";
@@ -38,6 +44,17 @@ export default function ReminderForm() {
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(
     null
   );
+  // گیرندگان و فیلترها برای ارسال گروهی
+  const [recipients, setRecipients] = useState<{ workspaceUserId: number }[]>(
+    []
+  );
+  const [userGroups, setUserGroups] = useState<any[]>([]);
+  const [labels, setLabels] = useState<any[]>([]);
+  const [workspaceUsers, setWorkspaceUsers] = useState<any[]>([]);
+  const [groupIds, setGroupIds] = useState<number[]>([]);
+  const [labelIds, setLabelIds] = useState<number[]>([]);
+  const [q, setQ] = useState("");
+  const [selectFiltered, setSelectFiltered] = useState(false);
 
   const {
     register,
@@ -55,6 +72,7 @@ export default function ReminderForm() {
       dueDate: undefined,
       entityId: undefined,
       entityType: undefined,
+      notificationChannels: "ALL",
     },
   });
 
@@ -62,6 +80,8 @@ export default function ReminderForm() {
     register("entityId" as const);
     register("entityType" as const);
     register("workspaceUserId" as const);
+    register("recipients" as const);
+    register("filters" as const);
   }, [register]);
 
   const handleUserSelect = (user: WorkspaceUserWithRelations | null) => {
@@ -71,6 +91,32 @@ export default function ReminderForm() {
       shouldDirty: true,
     });
   };
+
+  // واکشی داده‌های فیلتر و لیست کاربران برای انتخاب دستی گیرنده
+  useEffect(() => {
+    (async () => {
+      const [ug, lb, wu] = await Promise.all([
+        getAllUserGroups({ page: 1, limit: 1000 }).then((r) => r.data),
+        getAllLabels({ page: 1, limit: 1000 }).then((r) => r.data),
+        getAllWorkspaceUsers({ page: 1, limit: 1000 }).then((r) => r.data),
+      ]);
+      setUserGroups(ug || []);
+      setLabels(lb || []);
+      setWorkspaceUsers(wu || []);
+    })();
+  }, []); // eslint-disable-line
+
+  const addRecipient = () =>
+    setRecipients((prev) => [...prev, { workspaceUserId: 0 }]);
+  const updateRecipient = (
+    idx: number,
+    patch: Partial<{ workspaceUserId: number }>
+  ) =>
+    setRecipients((prev) =>
+      prev.map((r, i) => (i === idx ? { ...r, ...patch } : r))
+    );
+  const removeRecipient = (idx: number) =>
+    setRecipients((prev) => prev.filter((_, i) => i !== idx));
 
   const openEntitySelector = (type: "requests" | "invoices") => {
     setModalContent({ type });
@@ -134,6 +180,13 @@ export default function ReminderForm() {
 
   const handleSave = async (data: z.infer<typeof createReminderSchema>) => {
     try {
+      // ست‌کردن recipients و filters از state به فرم قبل از ارسال
+      if (recipients && recipients.length > 0) {
+        (data as any).recipients = recipients.filter((r) => r.workspaceUserId);
+      }
+      if (selectFiltered) {
+        (data as any).filters = { groupIds, labelIds, q, selectFiltered: true };
+      }
       if (data.entityId !== null && data.entityId !== undefined) {
         data.entityId = Number(data.entityId);
       }
@@ -191,7 +244,7 @@ export default function ReminderForm() {
                   اطلاعات اصلی
                 </h5>
                 <div className="p-4 sm:p-2 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
                     <div className="flex flex-col">
                       <label className="block text-sm font-medium mb-2 text-right">
                         برای کاربر <span className="text-red-500">*</span>
@@ -237,6 +290,20 @@ export default function ReminderForm() {
                           />
                         )}
                       />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="block text-sm font-medium mb-2 text-right">
+                        کانال اعلان
+                      </label>
+                      <select
+                        className="border rounded p-2"
+                        {...register("notificationChannels" as const)}
+                      >
+                        <option value="ALL">همه</option>
+                        <option value="IN_APP">داخلی</option>
+                        <option value="SMS">SMS</option>
+                        <option value="EMAIL">ایمیل</option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -300,6 +367,126 @@ export default function ReminderForm() {
                           انتخاب فاکتور
                         </button>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* --- بخش ۲.۵: گیرندگان گروهی و فیلترها (اختیاری) --- */}
+              <div>
+                <h5 className="text-lg font-medium mb-4 text-right">
+                  گیرندگان گروهی (اختیاری)
+                </h5>
+                <div className="p-4 sm:p-6 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col">
+                      <label className="mb-1 text-sm">گروه‌ها</label>
+                      <select
+                        className="border rounded p-2"
+                        multiple
+                        value={groupIds.map(String)}
+                        onChange={(e: any) =>
+                          setGroupIds(
+                            Array.from(e.target.selectedOptions).map((o: any) =>
+                              parseInt(o.value, 10)
+                            )
+                          )
+                        }
+                      >
+                        {(userGroups || []).map((g: any) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="mb-1 text-sm">برچسب‌ها</label>
+                      <select
+                        className="border rounded p-2"
+                        multiple
+                        value={labelIds.map(String)}
+                        onChange={(e: any) =>
+                          setLabelIds(
+                            Array.from(e.target.selectedOptions).map((o: any) =>
+                              parseInt(o.value, 10)
+                            )
+                          )
+                        }
+                      >
+                        {(labels || []).map((l: any) => (
+                          <option key={l.id} value={l.id}>
+                            {l.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="mb-1 text-sm">جستجو (نام/تلفن)</label>
+                      <input
+                        className="border rounded p-2"
+                        value={q}
+                        onChange={(e: any) => setQ(e.target.value)}
+                      />
+                    </div>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectFiltered}
+                        onChange={(e) => setSelectFiltered(e.target.checked)}
+                      />
+                      <span>انتخاب همه نتایج فیلتر</span>
+                    </label>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h6 className="font-medium">گیرندگان انتخابی</h6>
+                      <button
+                        type="button"
+                        className="px-3 py-1 border rounded-md"
+                        onClick={addRecipient}
+                      >
+                        افزودن گیرنده
+                      </button>
+                    </div>
+                    <div className="grid gap-3">
+                      {recipients.map((r, idx) => (
+                        <div
+                          key={idx}
+                          className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end"
+                        >
+                          <div className="flex flex-col">
+                            <label className="mb-1 text-sm">کاربر</label>
+                            <select
+                              className="border rounded p-2"
+                              value={String(r.workspaceUserId)}
+                              onChange={(e: any) =>
+                                updateRecipient(idx, {
+                                  workspaceUserId: parseInt(e.target.value, 10),
+                                })
+                              }
+                            >
+                              <option value="0">انتخاب کنید</option>
+                              {(workspaceUsers || []).map((u: any) => (
+                                <option key={u.id} value={u.id}>
+                                  {u.displayName ||
+                                    u.user?.name ||
+                                    u.user?.phone}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div></div>
+                          <button
+                            type="button"
+                            className="px-3 py-1 border rounded-md"
+                            onClick={() => removeRecipient(idx)}
+                          >
+                            حذف
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

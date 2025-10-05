@@ -46,7 +46,9 @@ const DateDisplay: React.FC<DateDisplayProps> = ({
       addSuffix: true,
     });
   } else {
-    formattedDate = format(parsedDate, customFormat);
+    formattedDate = format(parsedDate, customFormat, {
+      locale: selectedLocale,
+    });
   }
 
   return (

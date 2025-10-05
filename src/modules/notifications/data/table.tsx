@@ -54,6 +54,26 @@ export const columnsForAdmin: Column[] = [
     label: "عنوان",
   },
   {
+    name: "notificationNumber",
+    field: "notificationNumber",
+    label: "شماره اعلان",
+    render: (row) => (
+      <span className="font-mono text-sm text-gray-600">
+        {row.notificationNumber || "-"}
+      </span>
+    ),
+  },
+  {
+    name: "groupName",
+    field: "groupName",
+    label: "نام گروه",
+    render: (row) => (
+      <span className="text-sm">
+        {row.groupName || <span className="text-gray-400">فردی</span>}
+      </span>
+    ),
+  },
+  {
     name: "message",
     field: "message",
     label: "پیام",
@@ -134,30 +154,69 @@ export const listItemRender = (row: any) => (
 );
 
 export const listItemRender2 = (row: any) => (
-  <div className="flex my-1">
-    <div
-      className="px-2 rounded-full bg-white mx-1"
-      style={{ height: "min-content" }}
-    >
-      <DIcon icon="fa-bell" classCustom="!text-lg !m-0 !p-0" />
-    </div>
-    <div className="w-full bg-white rounded-xl p-4">
-      <div className="flex justify-between">
-        <h3 className="text-sm text-primary ">{row.title}</h3>
-
-        <DateDisplay
-          date={row.createdAt}
-          size="xs"
-          className=" !text-gray-400"
-        />
+  <div className="bg-white px-2 py-2 border-2 rounded-lg border-gray-400 hover:shadow-sm transition-shadow">
+    <Link href={`/dashboard/notifications/${row.id}`}>
+      <div className="flex justify-between items-center border-b-2 py-2">
+        <span
+          className={`badge ${
+            row.status === "PENDING"
+              ? "badge-warning"
+              : row.status === "SENT"
+              ? "badge-success"
+              : "badge-error"
+          }`}
+        >
+          {row.status === "PENDING"
+            ? "در انتظار"
+            : row.status === "SENT"
+            ? "ارسال شده"
+            : "ناموفق"}
+        </span>
+        <span className="text-sm text-gray-500">
+          <DIcon icon="fa-bell" cdi={false} classCustom="ml-1" />
+          <DateDisplay date={row.createdAt} />
+        </span>
       </div>
 
-      <p
-        className="text-sm text-gray-500 border-t-2 border-t-gray-300 pt-4 my-2"
-        dangerouslySetInnerHTML={{
-          __html: row.message.replace(/\n/g, "<br />"),
-        }}
-      ></p>
+      <h3 className="font-bold text-md my-2 text-gray-900">{row.title}</h3>
+      <h3 className="text-gray-800 text-sm mt-1">
+        {row.message || "بدون پیام"}
+      </h3>
+    </Link>
+    <div className="flex justify-between py-2 mt-2 rounded-lg border-[1px] border-gray-300 text-gray-800 px-2">
+      <p className="text-gray-900">
+        {row.workspaceUser?.displayName ||
+          row.workspaceUser?.user?.name ||
+          "نامشخص"}
+      </p>
+      <a
+        href={`tel:${row.workspaceUser?.user?.phone}`}
+        className="text-gray-800 text-lg flex"
+      >
+        {row.workspaceUser?.user?.phone || "نامشخص"}
+        <DIcon
+          icon="fa-phone"
+          cdi={false}
+          classCustom="!mx-4 text-gray-800 text-lg"
+        />
+      </a>
+    </div>
+
+    <div className="flex items-center mt-4 border-t-2 pt-4 gap-2 text-gray-900">
+      <Link
+        href={`/dashboard/notifications/${row.id}`}
+        className="btn btn-ghost"
+      >
+        <DIcon icon="fa-eye" cdi={false} classCustom="ml-2" />
+        <span>مشاهده</span>
+      </Link>
+      <Link
+        href={`/dashboard/notifications/${row.id}/edit`}
+        className="btn btn-ghost"
+      >
+        <DIcon icon="fa-edit" cdi={false} classCustom="ml-2" />
+        <span>ویرایش</span>
+      </Link>
     </div>
   </div>
 );

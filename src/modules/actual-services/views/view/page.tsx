@@ -39,8 +39,7 @@ export default function DetailPage({ id }: ActualServiceDetailsViewProps) {
   const fetchActualServiceDetails = async () => {
     try {
       const data = await getById(id);
-      // todo:T3 نیاز به اصلاح
-      if (data != undefined)  setActualService(data);
+      if (data != undefined) setActualService(data);
     } catch (error) {
       console.error("Error fetching actual service details:", error);
     }

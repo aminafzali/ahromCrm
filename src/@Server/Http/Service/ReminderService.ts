@@ -22,21 +22,158 @@ export class ReminderService extends BaseService<any> {
   private notificationService: NotificationServiceApi;
 
   constructor() {
-    super(
-      new Repository(),
-      createReminderSchema,
-      createReminderSchema.partial(),
-      ["title", "description"]
-    );
+    super(new Repository(), createReminderSchema, createReminderSchema, [
+      "title",
+      "description",
+    ]);
     this.notificationService = new NotificationServiceApi();
   }
 
-  private async sendNotification(reminder: any) {
-    const user = await prisma.user.findUnique({
-      where: { id: reminder.userId },
+  // پشتیبانی از ایجاد گروهی ریمایندر بر اساس recipients یا filters
+  protected beforeCreate = async (data: any): Promise<any> => {
+    const { recipients, filters, workspaceUser } = data;
+
+    // استخراج workspaceUserId از workspaceUser
+    if (workspaceUser?.id) {
+      data.workspaceUserId = workspaceUser.id;
+      delete data.workspaceUser;
+    }
+
+    // اگر neither recipients nor filters ارائه نشده، همان مسیر قبلی
+    if (!recipients && !filters) return data;
+
+    const baseData: any = {
+      title: data.title,
+      description: data.description,
+      dueDate: data.dueDate,
+      status: data.status || "PENDING",
+      type: data.type,
+      entityId: data.entityId,
+      entityType: data.entityType,
+      requestId: data.requestId,
+      invoiceId: data.invoiceId,
+      paymentId: data.paymentId,
+      taskId: data.taskId,
+      notificationChannels: data.notificationChannels,
+      timezone: data.timezone,
+      repeatInterval: data.repeatInterval,
+      workspaceId: data.workspaceId,
+    };
+
+    // مسیر recipients دستی: برای هر گیرنده یک ریمایندر بسازیم
+    if (Array.isArray(recipients) && recipients.length > 0) {
+      await Promise.all(
+        recipients.map(async (r: any) => {
+          await this.repository.create({
+            ...baseData,
+            workspaceUserId: r.workspaceUserId,
+          });
+        })
+      );
+      // برگرداندن یک مورد نمونه برای تداوم جریان BaseService
+      return { ...baseData, workspaceUserId: recipients[0].workspaceUserId };
+    }
+
+    // مسیر filters: واکشی کاربران هدف و ساخت گروهی
+    if (filters) {
+      const { groupIds = [], labelIds = [], q = "", selectFiltered } = filters;
+      if (selectFiltered) {
+        const targets = await prisma.workspaceUser.findMany({
+          where: {
+            ...(groupIds.length > 0 && {
+              userGroups: { some: { id: { in: groupIds } } },
+            }),
+            ...(labelIds.length > 0 && {
+              labels: { some: { id: { in: labelIds } } },
+            }),
+            ...(q && {
+              OR: [
+                { displayName: { contains: q } },
+                { user: { name: { contains: q } } },
+                { user: { phone: { contains: q } } },
+              ],
+            }),
+          },
+          select: { id: true },
+        });
+
+        await Promise.all(
+          (targets || []).map(async (t: any) => {
+            await this.repository.create({
+              ...baseData,
+              workspaceUserId: t.id,
+            });
+          })
+        );
+
+        return { ...baseData, workspaceUserId: targets?.[0]?.id };
+      }
+    }
+
+    return data;
+  };
+
+  private async generateSharedNotificationNumber(
+    workspaceId: number
+  ): Promise<string> {
+    try {
+      // پیدا کردن آخرین شماره اعلان برای این workspace (بدون در نظر گیری سال/ماه)
+      const lastNotification = await prisma.notification.findFirst({
+        where: {
+          workspaceId,
+          notificationNumber: { not: null },
+        },
+        orderBy: { id: "desc" },
+        select: { notificationNumber: true },
+      });
+
+      // استخراج شماره از آخرین اعلان
+      let nextNumber = 1;
+      if (lastNotification?.notificationNumber) {
+        const lastNumber = parseInt(lastNotification.notificationNumber);
+        if (!isNaN(lastNumber)) {
+          nextNumber = lastNumber + 1;
+        }
+      }
+
+      const simpleNotificationNumber = nextNumber.toString();
+
+      logger.info(
+        `[ReminderService] Generated simple notification number: ${simpleNotificationNumber} for workspace ${workspaceId}`
+      );
+
+      return simpleNotificationNumber;
+    } catch (error) {
+      logger.error(
+        "[ReminderService] Error generating shared notification number:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  private async sendGroupedNotification(
+    reminder: any,
+    sharedNotificationNumber: string
+  ) {
+    // اگر یادآور غیرفعال است، هیچ اعلانی ساخته نشود
+    if (!reminder?.isActive) {
+      logger.info(
+        `[ReminderService] Skipping grouped notification creation because reminder ${reminder?.id} is inactive.`
+      );
+      return;
+    }
+    // واکشی workspaceUser به همراه user و role برای ارسال نوتیفیکیشن
+    const workspaceUser = await prisma.workspaceUser.findUnique({
+      where: { id: reminder.workspaceUserId },
+      include: {
+        user: true,
+        role: true,
+      },
     });
-    if (!user) {
-      logger.warn(`User not found for reminder ${reminder.id}`);
+
+    if (!workspaceUser || !workspaceUser.user) {
+      logger.warn(`WorkspaceUser not found for reminder ${reminder.id}`);
       return;
     }
 
@@ -44,9 +181,9 @@ export class ReminderService extends BaseService<any> {
       reminder.entityId ? `\nمربوط به آیتم شماره: ${reminder.entityId}` : ""
     }`;
 
-    // ساخت یک آبجکت نوتیفیکیشن پایه
+    // ساخت یک آبجکت نوتیفیکیشن پایه با شماره مشترک
     const notificationData: any = {
-      userId: reminder.userId,
+      workspaceUser, // ارسال به پروفایل ورک‌اسپیسی
       title: "یادآوری: " + reminder.title,
       message: message,
       note: reminder.description,
@@ -56,9 +193,79 @@ export class ReminderService extends BaseService<any> {
       sendEmail:
         reminder.notificationChannels === "EMAIL" ||
         reminder.notificationChannels === "ALL",
+      reminderId: reminder.id, // اضافه کردن reminderId برای شناسایی اعلان‌های یادآور
+      notificationNumber: sharedNotificationNumber, // استفاده از شماره مشترک
+      notificationNumberName: sharedNotificationNumber, // استفاده از نام شماره مشترک
+      status: "SENT", // وضعیت پیش‌فرض موفق
     };
 
-    // ++ اصلاحیه کلیدی: فیلد requestId را فقط در صورتی اضافه می‌کنیم که وجود داشته باشد ++
+    // فیلد requestId را فقط در صورت مرتبط بودن اضافه می‌کنیم
+    if (reminder.entityType === "Request" && reminder.entityId) {
+      notificationData.requestId = reminder.entityId;
+    }
+
+    logger.info(
+      `[ReminderService] Creating grouped notification with shared number ${sharedNotificationNumber} for reminder ${reminder.id}`
+    );
+
+    // اضافه کردن workspaceId به notificationData
+    notificationData.workspaceId = reminder.workspaceId;
+
+    await this.notificationService.create(notificationData, {
+      workspaceId: reminder.workspaceId,
+      user: workspaceUser.user,
+      role: workspaceUser.role || {
+        name: "ADMIN",
+        id: 1,
+        description: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        workspaceId: reminder.workspaceId,
+      }, // استفاده از نقش موجود یا پیش‌فرض
+      workspaceUser: workspaceUser, // اضافه کردن workspaceUser
+    });
+  }
+
+  private async sendNotification(reminder: any) {
+    // اگر یادآور غیرفعال است، هیچ اعلانی ساخته نشود
+    if (!reminder?.isActive) {
+      logger.info(
+        `[ReminderService] Skipping notification creation because reminder ${reminder?.id} is inactive.`
+      );
+      return;
+    }
+    // واکشی workspaceUser به همراه user برای ارسال نوتیفیکیشن
+    const workspaceUser = await prisma.workspaceUser.findUnique({
+      where: { id: reminder.workspaceUserId },
+      include: { user: true },
+    });
+
+    if (!workspaceUser || !workspaceUser.user) {
+      logger.warn(`WorkspaceUser not found for reminder ${reminder.id}`);
+      return;
+    }
+
+    const message = `${reminder.title}\n${reminder.description || ""}${
+      reminder.entityId ? `\nمربوط به آیتم شماره: ${reminder.entityId}` : ""
+    }`;
+
+    // ساخت یک آبجکت نوتیفیکیشن پایه
+    const notificationData: any = {
+      workspaceUser, // ارسال به پروفایل ورک‌اسپیسی
+      title: "یادآوری: " + reminder.title,
+      message: message,
+      note: reminder.description,
+      sendSms:
+        reminder.notificationChannels === "SMS" ||
+        reminder.notificationChannels === "ALL",
+      sendEmail:
+        reminder.notificationChannels === "EMAIL" ||
+        reminder.notificationChannels === "ALL",
+      reminderId: reminder.id, // اضافه کردن reminderId برای شناسایی اعلان‌های یادآور
+      status: "SENT", // وضعیت پیش‌فرض موفق
+    };
+
+    // فیلد requestId را فقط در صورت مرتبط بودن اضافه می‌کنیم
     if (reminder.entityType === "Request" && reminder.entityId) {
       notificationData.requestId = reminder.entityId;
     }
@@ -70,8 +277,14 @@ export class ReminderService extends BaseService<any> {
         2
       )}`
     );
-    // خیلی مهمه که سریغ اصلاخ بشه
-  //  await this.notificationService.create(notificationData);
+
+    // اضافه کردن workspaceId به notificationData
+    notificationData.workspaceId = reminder.workspaceId;
+
+    await this.notificationService.create(notificationData, {
+      workspaceId: reminder.workspaceId,
+      user: workspaceUser.user,
+    } as any);
   }
 
   async checkDueReminders(batchSize = 50, offset = 0) {
@@ -82,7 +295,12 @@ export class ReminderService extends BaseService<any> {
       );
 
       const dueReminders = await this.repository.findAll({
-        filters: { dueDate: { lte: now }, notified: false, status: "PENDING" },
+        filters: {
+          dueDate: { lte: now },
+          notified: false,
+          status: "PENDING",
+          isActive: true, // فقط یادآورهای فعال
+        },
         limit: batchSize,
         page: 1 + Math.floor(offset / batchSize),
       });
@@ -92,24 +310,53 @@ export class ReminderService extends BaseService<any> {
       );
 
       let processedCount = 0;
+
+      // گروه‌بندی یادآورها بر اساس reminderNumber
+      const groupedReminders = new Map<string, any[]>();
+
       for (const reminder of dueReminders.data) {
+        const groupKey = reminder.reminderNumber || `single_${reminder.id}`;
+        if (!groupedReminders.has(groupKey)) {
+          groupedReminders.set(groupKey, []);
+        }
+        groupedReminders.get(groupKey)!.push(reminder);
+      }
+
+      // پردازش هر گروه
+      for (const [groupKey, reminders] of groupedReminders) {
         try {
-          await this.processReminder(reminder);
-          processedCount++;
+          if (reminders.length === 1) {
+            // یادآور تک‌کاربره
+            await this.processReminder(reminders[0]);
+            processedCount++;
+          } else {
+            // یادآور گروهی - همه را با یک شماره اعلان مشترک پردازش کن
+            await this.processGroupedReminders(reminders);
+            processedCount += reminders.length;
+          }
         } catch (error: any) {
           if (error instanceof ValidationException) {
             logger.error(
-              `[Validation failed] for reminder ${
-                reminder.id
-              }: ${JSON.stringify(error.errors, null, 2)}`
+              `[Validation failed] for reminder group ${groupKey}: ${JSON.stringify(
+                error.errors,
+                null,
+                2
+              )}`
             );
           } else {
             logger.error(
-              `[Error processing] reminder ${reminder.id}:`,
+              `[ReminderService] Error processing reminder group ${groupKey}:`,
               error.message || error
             );
           }
-          await this.handleReminderError(reminder);
+          // در صورت خطا، هر یادآور را جداگانه پردازش کن
+          for (const reminder of reminders) {
+            try {
+              await this.processReminder(reminder);
+            } catch (individualError) {
+              await this.handleReminderError(reminder);
+            }
+          }
         }
       }
 
@@ -148,6 +395,41 @@ export class ReminderService extends BaseService<any> {
     }
   }
 
+  private async processGroupedReminders(reminders: any[]) {
+    try {
+      // تولید یک شماره اعلان مشترک برای همه یادآورهای گروهی
+      const firstReminder = reminders[0];
+      const notificationNumber = await this.generateSharedNotificationNumber(
+        firstReminder.workspaceId
+      );
+
+      logger.info(
+        `[ReminderService] Processing ${reminders.length} grouped reminders with shared notification number: ${notificationNumber}`
+      );
+
+      // ایجاد اعلان‌ها برای همه یادآورها با شماره مشترک
+      const notificationPromises = reminders.map(async (reminder) => {
+        await this.sendGroupedNotification(reminder, notificationNumber);
+        await this.repository.update(reminder.id, {
+          notified: true,
+          lastNotified: new Date(),
+          status: "COMPLETED",
+        });
+        if (reminder.repeatInterval) {
+          await this.createNextReminder(reminder);
+        }
+      });
+
+      await Promise.all(notificationPromises);
+
+      logger.info(
+        `[ReminderService] Successfully processed ${reminders.length} grouped reminders`
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
   private async handleReminderError(reminder: any) {
     const retryCount = (reminder.retryCount || 0) + 1;
     const updateData: any = { retryCount, lastRetry: new Date() };
@@ -174,8 +456,9 @@ export class ReminderService extends BaseService<any> {
         updatedAt: new Date(),
       };
       delete newReminder.id;
-      // todo: خیلی  مهمه که سریغ اصلاح بشه
- //     await this.create(newReminder);
+
+      // مستقیماً از ریپازیتوری برای ایجاد استفاده می‌کنیم (context نیاز نیست)
+      await this.repository.create(newReminder as any);
     }
   }
 

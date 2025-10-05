@@ -6,12 +6,14 @@ import { useRequest } from "../hooks/useRequest";
 
 interface ReminderButtonProps {
   requestId: number;
-  userId: number;
+  workspaceUserId: number;
+  className?: string;
 }
 
 export default function ReminderButton({
   requestId,
-  userId,
+  workspaceUserId,
+  className = "",
 }: ReminderButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { createReminder, submitting: loading, error } = useRequest();
@@ -21,8 +23,8 @@ export default function ReminderButton({
       await createReminder({
         ...data,
         entityId: requestId,
-        entityType: "request",
-        userId,
+        entityType: "Request",
+        workspaceUserId,
       });
       setIsModalOpen(false);
     } catch (error) {
@@ -31,7 +33,7 @@ export default function ReminderButton({
   };
 
   return (
-    <>
+    <div className={className}>
       <Button
         variant="ghost"
         onClick={() => setIsModalOpen(true)}
@@ -54,6 +56,6 @@ export default function ReminderButton({
           />
         </div>
       </Modal>
-    </>
+    </div>
   );
 }

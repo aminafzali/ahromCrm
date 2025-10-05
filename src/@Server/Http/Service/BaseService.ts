@@ -131,6 +131,10 @@ export abstract class BaseService<T> {
 
     if (context.workspaceId) {
       processedData.workspaceId = context.workspaceId;
+      // جلوگیری از الزام connect به workspace توسط Prisma Client
+      if ((processedData as any).workspace) {
+        delete (processedData as any).workspace;
+      }
     }
 
     if (
@@ -142,7 +146,9 @@ export abstract class BaseService<T> {
     }
 
     let dataToCreate = processedData;
+    console.log(`🔍 [BaseService] beforeCreate exists:`, !!this.beforeCreate);
     if (this.beforeCreate) {
+      console.log(`🔍 [BaseService] Calling beforeCreate hook`);
       dataToCreate = await this.beforeCreate(processedData, context);
       // ===== لاگ ردیابی ۵: داده‌ها پس از اجرای هوک beforeCreate =====
       console.log(
@@ -151,6 +157,10 @@ export abstract class BaseService<T> {
         JSON.parse(JSON.stringify(dataToCreate))
       );
       // ===========================================================
+    } else {
+      console.log(
+        `🔍 [BaseService] No beforeCreate hook, using processedData as-is`
+      );
     }
 
     // ===== لاگ ردیابی ۶: داده‌های نهایی قبل از ارسال به دیتابیس =====
@@ -162,6 +172,18 @@ export abstract class BaseService<T> {
     // ===============================================================
 
     const entity = await this.repository.create(dataToCreate);
+    console.log(
+      `🔍 [BaseService] Created entity with ID:`,
+      (entity as any).id,
+      "for workspaceUserId:",
+      dataToCreate.workspaceUserId
+    );
+    console.log(
+      `🔍 [BaseService] This is the main entity created by BaseService (not in beforeCreate)`
+    );
+    console.log(
+      `🔍 [BaseService] Total reminders created so far: 1 (this one)`
+    );
 
     if (this.afterCreate) {
       await this.afterCreate(entity, data); // به هوک afterCreate داده‌های اصلی و اعتبارسنجی شده را پاس می‌دهیم
@@ -177,162 +199,6 @@ export abstract class BaseService<T> {
 
     return entity;
   }
-
-  // /**
-  //  * Create a new record with validation and hooks
-  //  */
-
-  // async create(data: any, context: AuthContext): Promise<T> {
-  //   // ===== لاگ ردیابی ۱: داده‌های خام ورودی از کنترلر =====
-  //   console.log(
-  //     `%c[BaseService - create] 1. Initial data received from controller:`,
-  //     "color: #6f42c1; font-weight: bold;",
-  //     JSON.parse(JSON.stringify(data))
-  //   );
-  //   // =======================================================
-
-  //   if (this.createSchema) {
-  //     data = this.validate(this.createSchema, data);
-  //     // ===== لاگ ردیابی ۲: داده‌ها پس از اعتبارسنجی Zod =====
-  //     console.log(
-  //       `%c[BaseService - create] 2. Data after Zod validation:`,
-  //       "color: #6f42c1;",
-  //       JSON.parse(JSON.stringify(data))
-  //     );
-  //     // ====================================================
-  //   }
-
-  //   const finalData = { ...data };
-  //   if (this.connect && this.connect.length > 0) {
-  //     for (const field of this.connect) {
-  //       if (
-  //         finalData[field] &&
-  //         typeof finalData[field] === "object" &&
-  //         "id" in finalData[field]
-  //       ) {
-  //         finalData[`${field}Id`] = finalData[field].id;
-  //         delete finalData[field];
-  //       }
-  //     }
-  //   }
-
-  //   // ===== لاگ ردیابی ۳: داده‌ها پس از تبدیل آبجکت به شناسه (connect) =====
-  //   console.log(
-  //     `%c[BaseService - create] 3. Data after 'connect' transformation:`,
-  //     "color: #6f42c1;",
-  //     JSON.parse(JSON.stringify(finalData))
-  //   );
-  //   // ===================================================================
-
-  //   const processedData = await this.processDynamicFields(finalData);
-
-  //   // ===== لاگ ردیابی ۴: داده‌ها پس از پردازش فیلدهای داینامیک =====
-  //   console.log(
-  //     `%c[BaseService - create] 4. Data after 'processDynamicFields':`,
-  //     "color: #6f42c1;",
-  //     JSON.parse(JSON.stringify(processedData))
-  //   );
-  //   // ===============================================================
-
-  //   if (context.workspaceId) {
-  //     processedData.workspaceId = context.workspaceId;
-  //   }
-
-  //   if (
-  //     context.user &&
-  //     this.createSchema instanceof z.ZodObject &&
-  //     "userId" in this.createSchema.shape
-  //   ) {
-  //     processedData.userId = context.user.id;
-  //   }
-
-  //   let dataToCreate = processedData;
-  //   if (this.beforeCreate) {
-  //     dataToCreate = await this.beforeCreate(processedData, context);
-  //     // ===== لاگ ردیابی ۵: داده‌ها پس از اجرای هوک beforeCreate =====
-  //     console.log(
-  //       `%c[BaseService - create] 5. Data after 'beforeCreate' hook:`,
-  //       "color: #6f42c1;",
-  //       JSON.parse(JSON.stringify(dataToCreate))
-  //     );
-  //     // ===========================================================
-  //   }
-
-  //   // ===== لاگ ردیابی ۶: داده‌های نهایی قبل از ارسال به دیتابیس =====
-  //   console.log(
-  //     `%c[BaseService - create] 6. Final data being sent to repository.create:`,
-  //     "color: #dc3545; font-weight: bold;",
-  //     JSON.parse(JSON.stringify(dataToCreate))
-  //   );
-  //   // ===============================================================
-
-  //   const entity = await this.repository.create(dataToCreate);
-
-  //   if (this.afterCreate) {
-  //     await this.afterCreate(entity, dataToCreate);
-  //   }
-
-  //   // ===== لاگ ردیابی ۷: موجودیت ساخته شده در دیتابیس =====
-  //   console.log(
-  //     `%c[BaseService - create] 7. ✅ Entity successfully created:`,
-  //     "color: #28a745; font-weight: bold;",
-  //     entity
-  //   );
-  //   // =======================================================
-
-  //   return entity;
-  // }
-
-  // async create(data: any, context: AuthContext): Promise<T> {
-  //   if (this.createSchema) {
-  //     data = this.validate(this.createSchema, data);
-  //   }
-
-  //   // ===== شروع اصلاحیه کلیدی =====
-  //   // این منطق هوشمند، آبجکت‌های رابطه (مانند serviceType: {id: 1}) را به کلید خارجی (serviceTypeId: 1) تبدیل می‌کند
-  //   // تا برای متد create در Prisma قابل فهم باشد.
-  //   const finalData = { ...data };
-  //   if (this.connect && this.connect.length > 0) {
-  //     for (const field of this.connect) {
-  //       if (
-  //         finalData[field] &&
-  //         typeof finalData[field] === "object" &&
-  //         "id" in finalData[field]
-  //       ) {
-  //         finalData[`${field}Id`] = finalData[field].id; // e.g., serviceTypeId = 1
-  //         delete finalData[field]; // آبجکت اضافی را حذف می‌کنیم
-  //       }
-  //     }
-  //   }
-  //   // ===== پایان اصلاحیه کلیدی =====
-
-  //   // حالا processDynamicFields را روی داده‌های تمیز شده اجرا می‌کنیم
-  //   const processedData = await this.processDynamicFields(finalData);
-
-  //   if (context.workspaceId) {
-  //     processedData.workspaceId = context.workspaceId;
-  //   }
-
-  //   if (
-  //     context.user &&
-  //     this.createSchema instanceof z.ZodObject &&
-  //     "userId" in this.createSchema.shape
-  //   ) {
-  //     processedData.userId = context.user.id;
-  //   }
-
-  //   let dataToCreate = processedData;
-  //   if (this.beforeCreate) {
-  //     dataToCreate = await this.beforeCreate(processedData, context);
-  //   }
-
-  //   const entity = await this.repository.create(dataToCreate);
-
-  //   if (this.afterCreate) {
-  //     await this.afterCreate(entity, dataToCreate);
-  //   }
-  //   return entity;
-  // }
 
   // ... تمام متدها و منطق‌های دیگر شما در این فایل دست‌نخورده و قدرتمند باقی می‌مانند ...
 
@@ -401,14 +267,13 @@ export abstract class BaseService<T> {
       type: this.repository.getModelName(),
       entityId: (entityData as any).id,
       entityType: this.repository.getModelName(),
-      userId: (entityData as any).userId,
+      workspaceUserId: (entityData as any).workspaceUserId,
       workspaceId: (entityData as any).workspaceId,
       notified: false,
       status: "PENDING",
     };
-    // Todo:t4 خیلی مهمه اصلاح بشه
-    // const entity = await prisma.reminder.create({ data: reminderData });
-    //  return entity;
+    const entity = await prisma.reminder.create({ data: reminderData as any });
+    return entity;
   }
 
   async updateMany(where: any, data: any): Promise<{ count: number }> {
@@ -451,266 +316,6 @@ export abstract class BaseService<T> {
     return this.repository.count(where);
   }
 
-  // async updateStatus(
-  //   id: number,
-  //   statusId: number,
-  //   note?: string,
-  //   sendSms?: boolean,
-  //   metadata: any = {}
-  // ): Promise<T> {
-  //   const entity = await this.getById(id, { include: { status: true } });
-  //   const oldStatus = (entity as any).status.name;
-  //   await this.repository.update(id, { statusId, note });
-  //   const updatedEntity = await this.getById(id, { include: { status: true } });
-  //   const newStatus = (updatedEntity as any).status.name;
-  //   if (this.afterStatusChange) {
-  //     await this.afterStatusChange(updatedEntity, {
-  //       sendSms,
-  //       note,
-  //       oldStatus,
-  //       newStatus,
-  //     });
-  //   }
-  //   return updatedEntity;
-  // }
-
-  // async updateStatus(
-  //   id: number,
-  //   statusId: number,
-  //   note?: string,
-  //   sendSms?: boolean,
-  //   metadata: any = {},
-  //   context?: AuthContext
-  // ): Promise<T> {
-  //   return prisma.$transaction(async (tx) => {
-  //     // ===== شروع اصلاحیه کلیدی =====
-  //     // به جای this.modelName، از this.repository.getModelName() برای دسترسی به نام مدل استفاده می‌کنیم
-  //     const modelDelegate = (tx as any)[this.repository.getModelName()];
-  //     // ===== پایان اصلاحیه کلیدی =====
-
-  //     const entity = await modelDelegate.findUnique({
-  //       where: { id },
-  //       include: { status: true, workspaceUser: { include: { user: true } } },
-  //     });
-
-  //     if (!entity) {
-  //       throw new NotFoundException(
-  //         `${this.repository.getModelName()} not found`
-  //       );
-  //     }
-
-  //     const oldStatus = entity.status;
-
-  //     const updatedEntity = await modelDelegate.update({
-  //       where: { id },
-  //       data: { statusId, note },
-  //       include: { status: true, workspaceUser: { include: { user: true } } },
-  //     });
-
-  //     const newStatus = updatedEntity.status;
-
-  //     if (context?.workspaceUser) {
-  //       await tx.requestStatusHistory.create({
-  //         data: {
-  //           requestId: id,
-  //           oldStatusId: oldStatus?.id,
-  //           newStatusId: newStatus.id,
-  //           changedById: context.workspaceUser.id,
-  //           workspaceId: context.workspaceId!,
-  //         },
-  //       });
-  //     }
-
-  //     if (this.afterStatusChange) {
-  //       await this.afterStatusChange(updatedEntity, {
-  //         sendSms,
-  //         note,
-  //         oldStatus: oldStatus?.name,
-  //         newStatus: newStatus.name,
-  //       });
-  //     }
-
-  //     return updatedEntity;
-  //   });
-  // }
-
-  // async updateStatus(
-  //   id: number,
-  //   statusId: number,
-  //   note?: string,
-  //   sendSms?: boolean,
-  //   metadata: any = {},
-  //   context?: AuthContext
-  // ): Promise<T> {
-  //   // ===== شروع لاگ‌های ردیابی =====
-  //   console.log(
-  //     `%c[BaseService - updateStatus] 1. Service method initiated for ID: ${id}`,
-  //     "color: #fd7e14; font-weight: bold;",
-  //     { statusId, note, sendSms }
-  //   );
-  //   // =============================
-
-  //   try {
-  //     return prisma.$transaction(async (tx) => {
-  //       console.log(
-  //         `%c[BaseService - updateStatus] 2. Starting Prisma transaction...`,
-  //         "color: #fd7e14;"
-  //       );
-
-  //       const modelName = this.repository.getModelName();
-  //       const modelDelegate = (tx as any)[modelName];
-
-  //       const entity = await modelDelegate.findUnique({
-  //         where: { id },
-  //         include: { status: true, workspaceUser: { include: { user: true } } },
-  //       });
-
-  //       if (!entity) {
-  //         throw new NotFoundException(`${modelName} not found`);
-  //       }
-  //       console.log(
-  //         `%c[BaseService - updateStatus] 3. Found initial entity:`,
-  //         "color: #fd7e14;",
-  //         entity
-  //       );
-
-  //       const oldStatus = entity.status;
-
-  //       const updatedEntity = await modelDelegate.update({
-  //         where: { id },
-  //         data: { statusId, note },
-  //         include: { status: true, workspaceUser: { include: { user: true } } },
-  //       });
-  //       console.log(
-  //         `%c[BaseService - updateStatus] 4. Entity updated successfully.`,
-  //         "color: #28a745;"
-  //       );
-
-  //       const newStatus = updatedEntity.status;
-
-  //       if (context?.workspaceUser) {
-  //         console.log(
-  //           `%c[BaseService - updateStatus] 5. Creating status history record...`,
-  //           "color: #fd7e14;"
-  //         );
-  //         await tx.requestStatusHistory.create({
-  //           data: {
-  //             requestId: id,
-  //             oldStatusId: oldStatus?.id,
-  //             newStatusId: newStatus.id,
-  //             changedById: context.workspaceUser.id,
-  //             workspaceId: context.workspaceId!,
-  //           },
-  //         });
-  //         console.log(
-  //           `%c[BaseService - updateStatus] 6. Status history created.`,
-  //           "color: #28a745;"
-  //         );
-  //       }
-
-  //       if (this.afterStatusChange) {
-  //         console.log(
-  //           `%c[BaseService - updateStatus] 7. Calling 'afterStatusChange' hook...`,
-  //           "color: #fd7e14;"
-  //         );
-  //         await this.afterStatusChange(updatedEntity, {
-  //           sendSms,
-  //           note,
-  //           oldStatus: oldStatus?.name,
-  //           newStatus: newStatus.name,
-  //         });
-  //         console.log(
-  //           `%c[BaseService - updateStatus] 8. 'afterStatusChange' hook finished.`,
-  //           "color: #28a745;"
-  //         );
-  //       }
-
-  //       console.log(
-  //         `%c[BaseService - updateStatus] 9. ✅ Transaction successful. `,
-  //         "color: #28a745; font-weight: bold;"
-  //       );
-
-  //       console.log(
-  //         `%c[BaseService - updateStatus] 9. ✅ updatedEntity is:  `,
-  //         "color: #28a745; font-weight: bold;",
-  //         updatedEntity
-  //       );
-  //       return updatedEntity;
-  //     });
-  //   } catch (error) {
-  //     // این بخش، هر خطایی که در داخل تراکنش رخ دهد را ثبت می‌کند
-  //     console.error(
-  //       `%c[BaseService - updateStatus] ❌ ERROR during transaction:`,
-  //       "color: #dc3545; font-weight: bold;",
-  //       error
-  //     );
-  //     throw error; // خطا را دوباره پرتاب می‌کنیم تا BaseController آن را مدیریت کند
-  //   }
-  // }
-
-  // async updateStatus(
-  //   id: number,
-  //   statusId: number,
-  //   note?: string,
-  //   sendSms?: boolean,
-  //   metadata: any = {},
-  //   context?: AuthContext,
-  //   include?: Record<string, boolean | object> // پارامتر include را دریافت می‌کنیم
-  // ): Promise<T> {
-  //   await prisma.$transaction(async (tx) => {
-  //     const modelName = this.repository.getModelName();
-  //     const modelDelegate = (tx as any)[modelName];
-
-  //     const entity = await modelDelegate.findUnique({
-  //       where: { id },
-  //       include: { status: true, workspaceUser: { include: { user: true } } },
-  //     });
-
-  //     if (!entity) {
-  //       throw new NotFoundException(`${modelName} not found`);
-  //     }
-
-  //     const oldStatus = entity.status;
-
-  //     const updatedEntity = await modelDelegate.update({
-  //       where: { id },
-  //       data: { statusId, note },
-  //       include: { status: true, workspaceUser: { include: { user: true } } },
-  //     });
-
-  //     const newStatus = updatedEntity.status;
-
-  //     if (context?.workspaceUser) {
-  //       await tx.requestStatusHistory.create({
-  //         data: {
-  //           requestId: id,
-  //           oldStatusId: oldStatus?.id,
-  //           newStatusId: newStatus.id,
-  //           changedById: context.workspaceUser.id,
-  //           workspaceId: context.workspaceId!,
-  //         },
-  //       });
-  //     }
-
-  //     if (this.afterStatusChange) {
-  //       await this.afterStatusChange(updatedEntity, {
-  //         sendSms,
-  //         note,
-  //         oldStatus: oldStatus?.name,
-  //         newStatus: newStatus.name,
-  //       });
-  //     }
-  //   });
-
-  //   // ===== شروع اصلاحیه کلیدی =====
-  //   // از پارامتر include که از کنترلر پاس داده شده، برای واکشی نهایی استفاده می‌کنیم
-  //   const finalInclude = include; //|| this.defaultInclude;
-  //   const cleanUpdatedEntity = await this.repository.findById(id, {
-  //     include: finalInclude,
-  //   });
-  //   return cleanUpdatedEntity;
-  //   // ===== پایان اصلاحیه کلیدی =====
-  // }
   async updateStatus(
     id: number,
     statusId: number,
@@ -846,184 +451,6 @@ export abstract class BaseService<T> {
       throw error;
     }
   }
-  // async updateStatus(
-  //   id: number,
-  //   statusId: number,
-  //   note?: string,
-  //   sendSms?: boolean,
-  //   metadata: any = {},
-  //   context?: AuthContext
-  // ): Promise<void> {
-  //   // ۱. نوع بازگشتی را به Promise<void> تغییر می‌دهیم
-
-  //   // از try...catch برای مدیریت خطاهای احتمالی استفاده می‌کنیم
-  //   try {
-  //     await prisma.$transaction(async (tx) => {
-  //       const modelName = this.repository.getModelName();
-  //       const modelDelegate = (tx as any)[modelName];
-
-  //       const entity = await modelDelegate.findUnique({
-  //         where: { id },
-  //         include: { status: true, workspaceUser: { include: { user: true } } },
-  //       });
-
-  //       if (!entity) {
-  //         throw new NotFoundException(`${modelName} not found`);
-  //       }
-
-  //       const oldStatus = entity.status;
-
-  //       const updatedEntity = await modelDelegate.update({
-  //         where: { id },
-  //         data: { statusId, note },
-  //         include: { status: true, workspaceUser: { include: { user: true } } },
-  //       });
-
-  //       const newStatus = updatedEntity.status;
-
-  //       if (context?.workspaceUser) {
-  //         await tx.requestStatusHistory.create({
-  //           data: {
-  //             requestId: id,
-  //             oldStatusId: oldStatus?.id,
-  //             newStatusId: newStatus.id,
-  //             changedById: context.workspaceUser.id,
-  //             workspaceId: context.workspaceId!,
-  //           },
-  //         });
-  //       }
-
-  //       if (this.afterStatusChange) {
-  //         await this.afterStatusChange(updatedEntity, {
-  //           sendSms,
-  //           note,
-  //           oldStatus: oldStatus?.name,
-  //           newStatus: newStatus.name,
-  //         });
-  //       }
-
-  //       // ===== شروع اصلاحیه کلیدی =====
-  //       // ۲. دیگر هیچ مقداری را از تراکنش return نمی‌کنیم
-  //       // return updatedEntity; // <-- این خط حذف می‌شود
-  //       // ===== پایان اصلاحیه کلیدی =====
-  //     });
-  //   } catch (error) {
-  //     console.error(
-  //       `%c[BaseService - updateStatus] ❌ ERROR during transaction:`,
-  //       "color: #dc3545; font-weight: bold;",
-  //       error
-  //     );
-  //     throw error;
-  //   }
-  // }
-
-  // async updateStatus(
-  //   id: number,
-  //   statusId: number,
-  //   note?: string,
-  //   sendSms?: boolean,
-  //   metadata: any = {},
-  //   context?: AuthContext
-  // ): Promise<void> {
-  //   // ۱. نوع بازگشتی را به Promise<void> تغییر می‌دهیم
-
-  //   console.log(
-  //     `%c[BaseService - updateStatus] 1. Service method initiated for ID: ${id}`,
-  //     "color: #fd7e14; font-weight: bold;",
-  //     { statusId, note, sendSms }
-  //   );
-
-  //   try {
-  //     await prisma.$transaction(async (tx) => {
-  //       // ۲. دیگر از return در اینجا استفاده نمی‌کنیم
-  //       console.log(
-  //         `%c[BaseService - updateStatus] 2. Starting Prisma transaction...`,
-  //         "color: #fd7e14;"
-  //       );
-
-  //       const modelName = this.repository.getModelName();
-  //       const modelDelegate = (tx as any)[modelName];
-
-  //       const entity = await modelDelegate.findUnique({
-  //         where: { id },
-  //         include: { status: true, workspaceUser: { include: { user: true } } },
-  //       });
-
-  //       if (!entity) {
-  //         throw new NotFoundException(`${modelName} not found`);
-  //       }
-  //       console.log(
-  //         `%c[BaseService - updateStatus] 3. Found initial entity.`,
-  //         "color: #fd7e14;"
-  //       );
-
-  //       const oldStatus = entity.status;
-
-  //       const updatedEntity = await modelDelegate.update({
-  //         where: { id },
-  //         data: { statusId, note },
-  //         include: { status: true, workspaceUser: { include: { user: true } } },
-  //       });
-  //       console.log(
-  //         `%c[BaseService - updateStatus] 4. Entity updated successfully.`,
-  //         "color: #28a745;"
-  //       );
-
-  //       const newStatus = updatedEntity.status;
-
-  //       if (context?.workspaceUser) {
-  //         console.log(
-  //           `%c[BaseService - updateStatus] 5. Creating status history record...`,
-  //           "color: #fd7e14;"
-  //         );
-  //         await tx.requestStatusHistory.create({
-  //           data: {
-  //             requestId: id,
-  //             oldStatusId: oldStatus?.id,
-  //             newStatusId: newStatus.id,
-  //             changedById: context.workspaceUser.id,
-  //             workspaceId: context.workspaceId!,
-  //           },
-  //         });
-  //         console.log(
-  //           `%c[BaseService - updateStatus] 6. Status history created.`,
-  //           "color: #28a745;"
-  //         );
-  //       }
-
-  //       if (this.afterStatusChange) {
-  //         console.log(
-  //           `%c[BaseService - updateStatus] 7. Calling 'afterStatusChange' hook...`,
-  //           "color: #fd7e14;"
-  //         );
-  //         await this.afterStatusChange(updatedEntity, {
-  //           sendSms,
-  //           note,
-  //           oldStatus: oldStatus?.name,
-  //           newStatus: newStatus.name,
-  //         });
-  //         console.log(
-  //           `%c[BaseService - updateStatus] 8. 'afterStatusChange' hook finished.`,
-  //           "color: #28a745;"
-  //         );
-  //       }
-
-  //       console.log(
-  //         `%c[BaseService - updateStatus] 9. ✅ Transaction successful. No entity will be returned.`,
-  //         "color: #28a745; font-weight: bold;"
-  //       );
-  //       // ۳. هیچ مقداری را از تراکنش return نمی‌کنیم
-  //       // return updatedEntity; // <-- این خط حذف می‌شود
-  //     });
-  //   } catch (error) {
-  //     console.error(
-  //       `%c[BaseService - updateStatus] ❌ ERROR during transaction:`,
-  //       "color: #dc3545; font-weight: bold;",
-  //       error
-  //     );
-  //     throw error;
-  //   }
-  // }
 
   async link(
     id: number | string,
@@ -1083,49 +510,4 @@ export abstract class BaseService<T> {
     }
     return data;
   }
-
-  // protected async processDynamicFields(
-  //   data: any,
-  //   update: boolean = false
-  // ): Promise<any> {
-  //   if (this.relations && this.relations.length > 0) {
-  //     for (const field of this.relations) {
-  //       if (data[field] && Array.isArray(data[field])) {
-  //         data[field] = {
-  //           create: data[field].map((item: any) => ({ ...item })),
-  //         };
-  //       } else if (data[field] && typeof data[field] === "object") {
-  //         data[field] = { create: data[field] };
-  //       }
-  //     }
-  //   }
-  //   if (this.connect && this.connect.length > 0) {
-  //     for (const field of this.connect) {
-  //       if (data[field] && Array.isArray(data[field])) {
-  //         if (update) {
-  //           data[field] = {
-  //             set: data[field].map((item: any) => ({
-  //               id: parseInt(item.id.toString()),
-  //             })),
-  //           };
-  //         } else {
-  //           data[field] = {
-  //             connect: data[field].map((item: any) => ({
-  //               id: parseInt(item.id.toString()),
-  //             })),
-  //           };
-  //         }
-  //       } else if (
-  //         data[field] &&
-  //         typeof data[field] === "object" &&
-  //         "id" in data[field]
-  //       ) {
-  //         data[field] = {
-  //           connect: { id: parseInt(data[field].id.toString()) },
-  //         };
-  //       }
-  //     }
-  //   }
-  //   return data;
-  // }
 }

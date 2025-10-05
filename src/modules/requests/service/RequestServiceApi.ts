@@ -45,23 +45,36 @@ export class RequestServiceApi extends BaseService<any> {
     const currentWorkspaceId = context.workspaceId!;
 
     return prisma.$transaction(async (tx) => {
-      // ۱. پروفایل ورک‌اسپیسی (ویزا) مشتری را در ورک‌اسپیس فعلی پیدا یا ایجاد می‌کنیم.
-      const customerWorkspaceUser = await tx.workspaceUser.upsert({
+      // ۱. بررسی یا ایجاد پروفایل ورک‌اسپیسی کاربر
+      let customerWorkspaceUser = await tx.workspaceUser.findUnique({
         where: {
           workspaceId_userId: {
             userId: userId,
             workspaceId: currentWorkspaceId,
           },
         },
-        update: {},
-        create: {
-          userId: userId,
-          workspaceId: currentWorkspaceId,
-          // نکته: این ID باید با شناسه نقش "مشتری" در دیتابیس شما مطابقت داشته باشد
-          // todo:t4 todo:t5 مورد زیر حتما باید مشکلش برطرفش شود که رول آیدی درست را بگیرد
-          roleId: 2, // <-- آیدی نقش "مشتری" را اینجا قرار دهید
-        },
       });
+
+      // اگر کاربر عضو ورک‌اسپیس نبود، پروفایل جدید با نقش پیش‌فرض بسازیم
+      if (!customerWorkspaceUser) {
+        const defaultRole = await tx.role.findFirst({
+          where: { workspaceId: currentWorkspaceId, name: "User" },
+        });
+
+        if (!defaultRole) {
+          throw new Error(
+            `هیچ نقش پیش‌فرضی (User) برای کاربران جدید در این ورک‌اسپیس تعریف نشده است.`
+          );
+        }
+
+        customerWorkspaceUser = await tx.workspaceUser.create({
+          data: {
+            userId: userId,
+            workspaceId: currentWorkspaceId,
+            roleId: defaultRole.id,
+          },
+        });
+      }
 
       // ۲. داده نهایی را برای ساخت درخواست آماده می‌کنیم
       const finalData = {
@@ -351,7 +364,6 @@ export class RequestServiceApi extends BaseService<any> {
   }
 }
 
-// todo:t3 بهتر است تست شود
 // // ما دیگر نیازی به بازنویسی کامل create نداریم و از متد قدرتمند BaseService استفاده می‌کنیم
 // // فقط هوک beforeCreate را برای منطق سفارشی خود پیاده‌سازی می‌کنیم
 // protected async beforeCreate(data: any, context: AuthContext): Promise<any> {
@@ -611,7 +623,7 @@ export class RequestServiceApi extends BaseService<any> {
 
 //     const message = `درخواست شما با موفقیت ثبت شد\nشماره پیگیری: ${entity.id}`;
 //     // با ساختار جدید NotificationServiceApi هماهنگ شده است
-//     //todo:t3 نیاز به اصلاحیه جدی
+//
 //     // await this.notifRepo.create({
 //     //   workspaceId: entity.workspaceId,
 //     //   workspaceUserUserId: customer.userId,
@@ -632,7 +644,7 @@ export class RequestServiceApi extends BaseService<any> {
 //     let message = `درخواست شما به روز رسانی شد از وضعیت ${data.oldStatus} به ${data.newStatus}`;
 //     if (entity.note) message += `\n\n${entity.note}`;
 //     message += `\nشماره پیگیری: ${entity.id}`;
-//     //todo:t3 نیاز به اصلاحیه جدی
+//
 //     // await this.notifRepo.create({
 //     //   workspaceId: entity.workspaceId,
 //     //   workspaceUserUserId: customer.userId,

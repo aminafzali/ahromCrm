@@ -11,18 +11,54 @@ export const createReminderSchema = z.object({
     required_error: "لطفاً تاریخ و زمان یادآوری را انتخاب کنید.",
     invalid_type_error: "فرمت تاریخ و زمان نامعتبر است.",
   }),
-  workspaceUserId: z.coerce.number({
-    required_error: "انتخاب کاربر الزامی است.",
-    invalid_type_error: "شناسه کاربر نامعتبر است.",
-  }),
+  workspaceUser: z
+    .object({
+      id: z.coerce.number({
+        required_error: "انتخاب کاربر الزامی است.",
+        invalid_type_error: "شناسه کاربر نامعتبر است.",
+      }),
+    })
+    .optional(),
+  // اضافه کردن workspaceUserId برای سازگاری با Prisma
+  workspaceUserId: z.coerce.number().optional(),
   // ++ اصلاحیه کلیدی: اضافه کردن فیلد type به اسکیما ++
   // ما می‌توانیم یک مقدار پیش‌فرض برای آن در نظر بگیریم.
   type: z.string().default("General"),
+  // شماره یادآور و نام آن
+  reminderNumber: z.string().optional(),
+  reminderNumberName: z.string().optional(),
+  groupName: z.string().optional(),
 
   // فیلدهای اختیاری دیگر
   entityId: z.number().optional(),
   entityType: z.string().optional(),
   notificationChannels: z
     .enum(["SMS", "EMAIL", "IN_APP", "ALL"])
-    .default("ALL"),
+    .default("IN_APP"),
+  repeatInterval: z.string().optional(),
+  timezone: z.string().optional(),
+  status: z.enum(["PENDING", "COMPLETED", "CANCELLED"]).optional(),
+  isActive: z.boolean().optional(),
+  requestId: z.number().optional(),
+  invoiceId: z.number().optional(),
+  paymentId: z.number().optional(),
+  taskId: z.number().optional(),
+  // گیرندگان گروهی و فیلترها برای ارسال گروهی
+  recipients: z
+    .array(
+      z.object({
+        workspaceUserId: z.coerce.number(),
+      })
+    )
+    .optional(),
+  filters: z
+    .object({
+      groupIds: z.array(z.coerce.number()).optional(),
+      labelIds: z.array(z.coerce.number()).optional(),
+      q: z.string().optional(),
+      selectFiltered: z.boolean().optional(),
+    })
+    .optional(),
 });
+
+export const updateReminderSchema = createReminderSchema.partial();

@@ -18,6 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import FormSubmissionView from "../../components/FormSubmissionView";
+import ReminderButton from "../../components/ReminderButton";
 import RequestServicesManager from "../../components/RequestServicesManager"; // کامپوننت زیبای ما
 import { createRequestSchema } from "../../validation/schema";
 
@@ -67,7 +68,7 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
       // ++ راه‌حل نهایی: ساخت یک آبجکت تمیز فقط با فیلدهای مورد نیاز فرم ++
       if (data != undefined) {
         const formValues = {
-          // todo:t3 نیاز به اصلاح دارد خیلی مهمه
+       
           workspaceUserId: data.workspaceUserId,
           description: data.description,
           // تبدیل null به undefined برای جلوگیری از خطا
@@ -231,12 +232,16 @@ export default function DetailPage({ id, isAdmin }: RequestDetailsViewProps) {
           excludeFields={excludeFields}
           actionButtons={getActionButtons()}
           loading={loading}
-          // todo:t3 نیاز به اصلاح دارد خیلی مهمه
-          // headerContent={
-          //   request.user && (
-          //     <ReminderButton requestId={id} userId={request.user.id} />
-          //   )
-          // }
+         
+          headerContent={
+            request.workspaceUser && (
+              <ReminderButton
+                requestId={id}
+                workspaceUserId={request.workspaceUser.id}
+                className="ml-4"
+              />
+            )
+          }
           error={error}
           success={success}
           customRenderers={customRenderers}

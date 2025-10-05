@@ -1,3 +1,4 @@
+import { AuthContext } from "@/@Server/Http/Controller/BaseController";
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
 import prisma from "@/lib/prisma";
@@ -93,22 +94,50 @@ export class PaymentServiceApi extends BaseService<any> {
     }
     // --- END: منطق آپدیت خودکار ---
 
+    // واکشی payment با workspaceUser
+    const payment = await this.getById(entity.id, {
+      include: {
+        workspaceUser: {
+          include: {
+            user: true,
+          },
+        },
+        invoice: true,
+      },
+    });
+
+    const customer = payment.workspaceUser;
+    if (!customer) {
+      console.warn(
+        `[PaymentService] workspaceUser not found for payment ${entity.id}`
+      );
+      return;
+    }
+
     let baseLink: string = process.env.NEXTAUTH_URL
       ? process.env.NEXTAUTH_URL
       : "http://localhost:3011";
     baseLink += "/panel/payments/" + entity.id;
-    const message =
-      `پرداخت شما با موفقیت انجام شد` +
-      "\n" +
-      "شماره پیگیری :‌ " +
-      entity.reference;
 
-    // Create notification
-    //todo:t3 نیاز به اصلاحیه جدی
-    // await this.notifRepo.create({
-    //   userId: entity.userId,
-    //   title: "پرداخت موفق",
-    //   message,
-    // });
+    const message = `پرداخت شما با موفقیت انجام شد\nشماره پیگیری: ${
+      entity.reference
+    }\nمبلغ: ${entity.amount.toLocaleString()} تومان`;
+
+    // ساخت context
+    const context = {
+      workspaceId: entity.workspaceId,
+      user: customer.user,
+    } as AuthContext;
+
+    // ارسال نوتیفیکیشن به workspaceUser
+    await this.notifRepo.create(
+      {
+        workspaceUser: customer,
+        requestId: payment.invoice?.requestId,
+        title: "پرداخت موفق",
+        message,
+      },
+      context
+    );
   }
 }
