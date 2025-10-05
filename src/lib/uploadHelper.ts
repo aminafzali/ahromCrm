@@ -1,10 +1,11 @@
-import { writeFile } from 'fs/promises';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import fs from "fs";
+import { unlink, writeFile } from "fs/promises";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
 
 export class UploadHelper {
-  private static UPLOAD_DIR = path.join(process.cwd(), '/uploads');
-  private static ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  private static UPLOAD_DIR = path.join(process.cwd(), "uploads");
+  private static ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
   private static MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
   /**
@@ -12,14 +13,18 @@ export class UploadHelper {
    */
   static async uploadFile(file: File): Promise<string> {
     try {
+      // Ensure upload directory exists
+      if (!fs.existsSync(this.UPLOAD_DIR)) {
+        fs.mkdirSync(this.UPLOAD_DIR, { recursive: true });
+      }
       // Validate file type
       if (!this.ALLOWED_TYPES.includes(file.type)) {
-        throw new Error('File type not allowed');
+        throw new Error("File type not allowed");
       }
 
       // Validate file size
       if (file.size > this.MAX_SIZE) {
-        throw new Error('File size too large');
+        throw new Error("File size too large");
       }
 
       // Generate unique filename
@@ -36,7 +41,7 @@ export class UploadHelper {
       // Return relative path
       return `/api/uploads/${filename}`;
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.error("Error uploading file:", error);
       throw error;
     }
   }
@@ -45,7 +50,7 @@ export class UploadHelper {
    * Upload multiple files
    */
   static async uploadFiles(files: File[]): Promise<string[]> {
-    const uploads = files.map(file => this.uploadFile(file));
+    const uploads = files.map((file) => this.uploadFile(file));
     return Promise.all(uploads);
   }
 
@@ -54,10 +59,12 @@ export class UploadHelper {
    */
   static async deleteFile(filepath: string): Promise<void> {
     try {
-      const fullPath = path.join(process.cwd(), 'public', filepath);
-      await writeFile(fullPath, '');
+      // When we store url like /api/uploads/<filename>, map it back to local uploads dir
+      const filename = path.basename(filepath);
+      const fullPath = path.join(this.UPLOAD_DIR, filename);
+      await unlink(fullPath);
     } catch (error) {
-      console.error('Error deleting file:', error);
+      console.error("Error deleting file:", error);
       throw error;
     }
   }

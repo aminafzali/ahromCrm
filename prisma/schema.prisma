@@ -363,6 +363,12 @@ model Reminder {
   type                 String
   entityId             Int?
   entityType           String?
+  // فیلدهای گروه‌بندی
+  reminderNumber       String?
+  reminderNumberName   String?
+  groupName            String?
+  // وضعیت فعال/غیرفعال
+  isActive             Boolean             @default(true)
   // روابط اختیاری به موجودیت‌های مختلف برای سناریوهای لینک‌دار
   requestId            Int?
   request              Request?            @relation(fields: [requestId], references: [id], onDelete: SetNull)
@@ -383,6 +389,32 @@ model Reminder {
   ReminderRecipient    ReminderRecipient[]
 }
 
+// شماره‌های یادآور برای شماره‌گذاری خودکار
+model ReminderNumber {
+  id          Int      @id @default(autoincrement())
+  year        Int
+  month       Int
+  number      Int      @default(1)
+  workspaceId Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([year, month, number, workspaceId])
+}
+
+// شماره‌های اعلان برای شماره‌گذاری خودکار
+model NotificationNumber {
+  id          Int      @id @default(autoincrement())
+  year        Int
+  month       Int
+  number      Int      @default(1)
+  workspaceId Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([year, month, number, workspaceId])
+}
+
 model Notification {
   id          Int       @id @unique @default(autoincrement())
   workspaceId Int
@@ -401,15 +433,23 @@ model Notification {
   paymentId  Int?
   payment    Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
-  title                 String
-  note                  String?
-  message               String                  @db.Text
-  isRead                Boolean                 @default(false)
-  sendSms               Boolean                 @default(true)
-  sendEmail             Boolean                 @default(false)
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
-  NotificationRecipient NotificationRecipient[]
+  title                  String
+  note                   String?
+  message                String                  @db.Text
+  isRead                 Boolean                 @default(false)
+  sendSms                Boolean                 @default(true)
+  sendEmail              Boolean                 @default(false)
+  // فیلدهای گروه‌بندی
+  notificationNumber     String?
+  notificationNumberName String?
+  groupName              String?
+  // وضعیت ارسال
+  status                 NotificationStatus     @default(SENT)
+  // وضعیت فعال/غیرفعال
+  isActive               Boolean                 @default(true)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  NotificationRecipient  NotificationRecipient[]
 }
 
 // گیرندگان ریمایندر برای پشتیبانی از ارسال گروهی و رصد وضعیت هر گیرنده
@@ -1171,6 +1211,12 @@ enum InvoicePaymentStatus {
   PARTIALLY_PAID // پرداخت ناقص
   PAID // پرداخت کامل
   OVERPAID // پرداخت مازاد
+}
+
+enum NotificationStatus {
+  PENDING // در انتظار ارسال
+  SENT // ارسال شده
+  FAILED // ارسال ناموفق
 }
 
 enum InvoiceType {

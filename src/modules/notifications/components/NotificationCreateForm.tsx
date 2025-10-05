@@ -1,11 +1,13 @@
 "use client";
 
 import DIcon from "@/@Client/Components/common/DIcon";
+import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 import { Button, Card, Input } from "ndui-ahrom";
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { z } from "zod";
 import RecipientSelector from "../../reminders/components/RecipientSelector";
+import { useNotification } from "../hooks/useNotification";
 import SubjectSelector from "./SubjectSelector";
 
 /* ---------- schema (client-side reference) ---------- */
@@ -16,6 +18,9 @@ const notificationSchema = z.object({
   sendSms: z.boolean().default(false),
   sendEmail: z.boolean().default(false),
   workspaceUser: z.object({ id: z.number() }).optional(),
+  workspaceId: z.number().optional(),
+  notificationNumber: z.string().optional(),
+  notificationNumberName: z.string().optional(),
   requestId: z.number().optional(),
   invoiceId: z.number().optional(),
   paymentId: z.number().optional(),
@@ -55,11 +60,21 @@ export default function NotificationCreateForm({
 }: NotificationCreateFormProps) {
   const rootId = useId();
   const router = useRouter();
+  const { activeWorkspace } = useWorkspace();
+  const { fetchNextNotificationNumber } = useNotification();
 
   /* ---------- State ---------- */
   const [title, setTitle] = useState(defaultValues?.title || "");
   const [message, setMessage] = useState(defaultValues?.message || "");
   const [note, setNote] = useState(defaultValues?.note || "");
+
+  // شماره اعلان
+  const [notificationNumber, setNotificationNumber] = useState<
+    string | undefined
+  >(defaultValues?.notificationNumber?.toString());
+  const [notificationNumberName, setNotificationNumberName] = useState(
+    defaultValues?.notificationNumberName || ""
+  );
 
   // موضوع اعلان (اختیاری)
   const [selectedSubject, setSelectedSubject] = useState<{
@@ -77,6 +92,22 @@ export default function NotificationCreateForm({
   );
 
   const [error, setError] = useState<string | null>(null);
+
+  // دریافت شماره اعلان بعدی
+  useEffect(() => {
+    if (!defaultValues?.id) {
+      const getNextNumber = async () => {
+        try {
+          const data = await fetchNextNotificationNumber();
+          setNotificationNumber(data.notificationNumber.toString());
+          setNotificationNumberName(data.notificationNumberName);
+        } catch (error) {
+          console.error("Failed to fetch next notification number:", error);
+        }
+      };
+      getNextNumber();
+    }
+  }, []); // فقط یک بار اجرا شود
 
   /* ---------- Handlers ---------- */
   const handleSubjectSelect = (
@@ -114,6 +145,9 @@ export default function NotificationCreateForm({
         note: note.trim() || undefined,
         sendSms,
         sendEmail: false,
+        workspaceId: activeWorkspace?.id, // اضافه کردن workspaceId
+        notificationNumber, // اضافه کردن شماره اعلان
+        notificationNumberName, // اضافه کردن نام شماره اعلان
       };
 
       // اضافه کردن لینک موضوع (اگر انتخاب شده)
@@ -249,7 +283,41 @@ export default function NotificationCreateForm({
         />
       </Card>
 
-      {/* 4. کانال‌های اطلاع‌رسانی */}
+      {/* 4. اطلاعات گروه */}
+      <Card className="p-4">
+        <h3 className="text-lg font-semibold mb-4">
+          <DIcon icon="fa-users" cdi={false} classCustom="ml-2" />
+          اطلاعات گروه
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+            <DIcon icon="fa-hashtag" cdi={false} />
+            <span className="font-medium">شماره اعلان:</span>
+            <span className="font-mono text-blue-600">
+              {notificationNumberName || "در حال ایجاد..."}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+            <DIcon icon="fa-tag" cdi={false} />
+            <span className="font-medium">نام گروه:</span>
+            <span className="text-green-600">
+              {title}$
+              {selectedSubject?.type && selectedSubject.type !== "GENERAL"
+                ? ` - ${selectedSubject.type}`
+                : ""}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
+            <DIcon icon="fa-user-friends" cdi={false} />
+            <span className="font-medium">تعداد گیرندگان:</span>
+            <span className="badge badge-primary">
+              {selectedRecipients.length} نفر
+            </span>
+          </div>
+        </div>
+      </Card>
+
+      {/* 5. کانال‌های اطلاع‌رسانی */}
       <Card className="p-4">
         <h3 className="text-lg font-semibold mb-4">
           <DIcon icon="fa-bell" cdi={false} classCustom="ml-2" />

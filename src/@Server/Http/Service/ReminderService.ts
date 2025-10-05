@@ -113,7 +113,127 @@ export class ReminderService extends BaseService<any> {
     return data;
   };
 
+  private async generateSharedNotificationNumber(
+    workspaceId: number
+  ): Promise<string> {
+    try {
+      // پیدا کردن آخرین شماره اعلان برای این workspace (بدون در نظر گیری سال/ماه)
+      const lastNotification = await prisma.notification.findFirst({
+        where: {
+          workspaceId,
+          notificationNumber: { not: null },
+        },
+        orderBy: { id: "desc" },
+        select: { notificationNumber: true },
+      });
+
+      // استخراج شماره از آخرین اعلان
+      let nextNumber = 1;
+      if (lastNotification?.notificationNumber) {
+        const lastNumber = parseInt(lastNotification.notificationNumber);
+        if (!isNaN(lastNumber)) {
+          nextNumber = lastNumber + 1;
+        }
+      }
+
+      const simpleNotificationNumber = nextNumber.toString();
+
+      logger.info(
+        `[ReminderService] Generated simple notification number: ${simpleNotificationNumber} for workspace ${workspaceId}`
+      );
+
+      return simpleNotificationNumber;
+    } catch (error) {
+      logger.error(
+        "[ReminderService] Error generating shared notification number:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  private async sendGroupedNotification(
+    reminder: any,
+    sharedNotificationNumber: string
+  ) {
+    // اگر یادآور غیرفعال است، هیچ اعلانی ساخته نشود
+    if (!reminder?.isActive) {
+      logger.info(
+        `[ReminderService] Skipping grouped notification creation because reminder ${reminder?.id} is inactive.`
+      );
+      return;
+    }
+    // واکشی workspaceUser به همراه user و role برای ارسال نوتیفیکیشن
+    const workspaceUser = await prisma.workspaceUser.findUnique({
+      where: { id: reminder.workspaceUserId },
+      include: {
+        user: true,
+        role: true,
+      },
+    });
+
+    if (!workspaceUser || !workspaceUser.user) {
+      logger.warn(`WorkspaceUser not found for reminder ${reminder.id}`);
+      return;
+    }
+
+    const message = `${reminder.title}\n${reminder.description || ""}${
+      reminder.entityId ? `\nمربوط به آیتم شماره: ${reminder.entityId}` : ""
+    }`;
+
+    // ساخت یک آبجکت نوتیفیکیشن پایه با شماره مشترک
+    const notificationData: any = {
+      workspaceUser, // ارسال به پروفایل ورک‌اسپیسی
+      title: "یادآوری: " + reminder.title,
+      message: message,
+      note: reminder.description,
+      sendSms:
+        reminder.notificationChannels === "SMS" ||
+        reminder.notificationChannels === "ALL",
+      sendEmail:
+        reminder.notificationChannels === "EMAIL" ||
+        reminder.notificationChannels === "ALL",
+      reminderId: reminder.id, // اضافه کردن reminderId برای شناسایی اعلان‌های یادآور
+      notificationNumber: sharedNotificationNumber, // استفاده از شماره مشترک
+      notificationNumberName: sharedNotificationNumber, // استفاده از نام شماره مشترک
+      status: "SENT", // وضعیت پیش‌فرض موفق
+    };
+
+    // فیلد requestId را فقط در صورت مرتبط بودن اضافه می‌کنیم
+    if (reminder.entityType === "Request" && reminder.entityId) {
+      notificationData.requestId = reminder.entityId;
+    }
+
+    logger.info(
+      `[ReminderService] Creating grouped notification with shared number ${sharedNotificationNumber} for reminder ${reminder.id}`
+    );
+
+    // اضافه کردن workspaceId به notificationData
+    notificationData.workspaceId = reminder.workspaceId;
+
+    await this.notificationService.create(notificationData, {
+      workspaceId: reminder.workspaceId,
+      user: workspaceUser.user,
+      role: workspaceUser.role || {
+        name: "ADMIN",
+        id: 1,
+        description: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        workspaceId: reminder.workspaceId,
+      }, // استفاده از نقش موجود یا پیش‌فرض
+      workspaceUser: workspaceUser, // اضافه کردن workspaceUser
+    });
+  }
+
   private async sendNotification(reminder: any) {
+    // اگر یادآور غیرفعال است، هیچ اعلانی ساخته نشود
+    if (!reminder?.isActive) {
+      logger.info(
+        `[ReminderService] Skipping notification creation because reminder ${reminder?.id} is inactive.`
+      );
+      return;
+    }
     // واکشی workspaceUser به همراه user برای ارسال نوتیفیکیشن
     const workspaceUser = await prisma.workspaceUser.findUnique({
       where: { id: reminder.workspaceUserId },
@@ -141,6 +261,8 @@ export class ReminderService extends BaseService<any> {
       sendEmail:
         reminder.notificationChannels === "EMAIL" ||
         reminder.notificationChannels === "ALL",
+      reminderId: reminder.id, // اضافه کردن reminderId برای شناسایی اعلان‌های یادآور
+      status: "SENT", // وضعیت پیش‌فرض موفق
     };
 
     // فیلد requestId را فقط در صورت مرتبط بودن اضافه می‌کنیم
@@ -156,6 +278,9 @@ export class ReminderService extends BaseService<any> {
       )}`
     );
 
+    // اضافه کردن workspaceId به notificationData
+    notificationData.workspaceId = reminder.workspaceId;
+
     await this.notificationService.create(notificationData, {
       workspaceId: reminder.workspaceId,
       user: workspaceUser.user,
@@ -170,7 +295,12 @@ export class ReminderService extends BaseService<any> {
       );
 
       const dueReminders = await this.repository.findAll({
-        filters: { dueDate: { lte: now }, notified: false, status: "PENDING" },
+        filters: {
+          dueDate: { lte: now },
+          notified: false,
+          status: "PENDING",
+          isActive: true, // فقط یادآورهای فعال
+        },
         limit: batchSize,
         page: 1 + Math.floor(offset / batchSize),
       });
@@ -180,24 +310,53 @@ export class ReminderService extends BaseService<any> {
       );
 
       let processedCount = 0;
+
+      // گروه‌بندی یادآورها بر اساس reminderNumber
+      const groupedReminders = new Map<string, any[]>();
+
       for (const reminder of dueReminders.data) {
+        const groupKey = reminder.reminderNumber || `single_${reminder.id}`;
+        if (!groupedReminders.has(groupKey)) {
+          groupedReminders.set(groupKey, []);
+        }
+        groupedReminders.get(groupKey)!.push(reminder);
+      }
+
+      // پردازش هر گروه
+      for (const [groupKey, reminders] of groupedReminders) {
         try {
-          await this.processReminder(reminder);
-          processedCount++;
+          if (reminders.length === 1) {
+            // یادآور تک‌کاربره
+            await this.processReminder(reminders[0]);
+            processedCount++;
+          } else {
+            // یادآور گروهی - همه را با یک شماره اعلان مشترک پردازش کن
+            await this.processGroupedReminders(reminders);
+            processedCount += reminders.length;
+          }
         } catch (error: any) {
           if (error instanceof ValidationException) {
             logger.error(
-              `[Validation failed] for reminder ${
-                reminder.id
-              }: ${JSON.stringify(error.errors, null, 2)}`
+              `[Validation failed] for reminder group ${groupKey}: ${JSON.stringify(
+                error.errors,
+                null,
+                2
+              )}`
             );
           } else {
             logger.error(
-              `[Error processing] reminder ${reminder.id}:`,
+              `[ReminderService] Error processing reminder group ${groupKey}:`,
               error.message || error
             );
           }
-          await this.handleReminderError(reminder);
+          // در صورت خطا، هر یادآور را جداگانه پردازش کن
+          for (const reminder of reminders) {
+            try {
+              await this.processReminder(reminder);
+            } catch (individualError) {
+              await this.handleReminderError(reminder);
+            }
+          }
         }
       }
 
@@ -230,6 +389,41 @@ export class ReminderService extends BaseService<any> {
       }
       logger.info(
         `[ReminderService] Successfully processed reminder ${reminder.id}`
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  private async processGroupedReminders(reminders: any[]) {
+    try {
+      // تولید یک شماره اعلان مشترک برای همه یادآورهای گروهی
+      const firstReminder = reminders[0];
+      const notificationNumber = await this.generateSharedNotificationNumber(
+        firstReminder.workspaceId
+      );
+
+      logger.info(
+        `[ReminderService] Processing ${reminders.length} grouped reminders with shared notification number: ${notificationNumber}`
+      );
+
+      // ایجاد اعلان‌ها برای همه یادآورها با شماره مشترک
+      const notificationPromises = reminders.map(async (reminder) => {
+        await this.sendGroupedNotification(reminder, notificationNumber);
+        await this.repository.update(reminder.id, {
+          notified: true,
+          lastNotified: new Date(),
+          status: "COMPLETED",
+        });
+        if (reminder.repeatInterval) {
+          await this.createNextReminder(reminder);
+        }
+      });
+
+      await Promise.all(notificationPromises);
+
+      logger.info(
+        `[ReminderService] Successfully processed ${reminders.length} grouped reminders`
       );
     } catch (error) {
       throw error;

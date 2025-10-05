@@ -38,6 +38,11 @@ export const include = {
 export const relations: string[] = [];
 
 // فیلدهایی که در جستجوی متنی استفاده می‌شوند
-export const searchFileds = ["title", "description"];
+export const searchFileds = [
+  "title",
+  "description",
+  "reminderNumber",
+  "groupName",
+];
 // connects فقط برای تبدیل آبجکت به کلید خارجی استفاده می‌شود؛ در این ماژول id مستقیم پاس می‌دهیم
 export const connects: string[] = [];

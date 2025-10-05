@@ -122,7 +122,8 @@ export interface Toast {
 export interface FilterOption {
   name: string;
   label: string;
-  options: { value: string | number; label: string }[];
+  options?: { value: string | number; label: string }[];
   defaultValue?: string;
   type?: string;
+  placeholder?: string;
 }

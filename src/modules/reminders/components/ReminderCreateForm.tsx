@@ -2,10 +2,12 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import StandaloneDateTimePicker from "@/@Client/Components/ui/StandaloneDateTimePicker";
+import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 import { Button, Card, Input } from "ndui-ahrom";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { z } from "zod";
+import { useReminder } from "../hooks/useReminder";
 import RecipientSelector from "./RecipientSelector";
 import SubjectSelector from "./SubjectSelector";
 
@@ -22,6 +24,9 @@ const reminderSchema = z.object({
   entityId: z.number().optional(),
   entityType: z.string().optional(),
   workspaceUser: z.object({ id: z.number() }).optional(),
+  workspaceId: z.number().optional(),
+  reminderNumber: z.string().optional(),
+  reminderNumberName: z.string().optional(),
   requestId: z.number().optional(),
   invoiceId: z.number().optional(),
   paymentId: z.number().optional(),
@@ -79,6 +84,8 @@ export default function ReminderCreateForm({
 }: ReminderCreateFormProps) {
   const rootId = useId();
   const router = useRouter();
+  const { activeWorkspace } = useWorkspace();
+  const { fetchNextReminderNumber } = useReminder();
 
   /* ---------- State ---------- */
   const [title, setTitle] = useState(defaultValues?.title || "");
@@ -87,6 +94,14 @@ export default function ReminderCreateForm({
   );
   const [dueDate, setDueDate] = useState<string | null>(
     defaultValues?.dueDate || null
+  );
+
+  // شماره یادآور
+  const [reminderNumber, setReminderNumber] = useState<string | undefined>(
+    defaultValues?.reminderNumber?.toString()
+  );
+  const [reminderNumberName, setReminderNumberName] = useState(
+    defaultValues?.reminderNumberName || ""
   );
 
   // موضوع یادآور (اختیاری)
@@ -98,6 +113,12 @@ export default function ReminderCreateForm({
 
   // لیست ارسال
   const [selectedRecipients, setSelectedRecipients] = useState<any[]>([]);
+
+  // اطلاعات گروه (بعد از ایجاد)
+  const [groupInfo, setGroupInfo] = useState<{
+    reminderNumber?: string;
+    groupName?: string;
+  } | null>(null);
 
   // Debug: Track when selectedRecipients changes
   useEffect(() => {
@@ -121,6 +142,22 @@ export default function ReminderCreateForm({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitRef = useRef(false);
+
+  // دریافت شماره یادآور بعدی
+  useEffect(() => {
+    if (!defaultValues?.id) {
+      const getNextNumber = async () => {
+        try {
+          const data = await fetchNextReminderNumber();
+          setReminderNumber(data.reminderNumber.toString());
+          setReminderNumberName(data.reminderNumberName);
+        } catch (error) {
+          console.error("Failed to fetch next reminder number:", error);
+        }
+      };
+      getNextNumber();
+    }
+  }, []); // فقط یک بار اجرا شود
 
   /* ---------- Handlers ---------- */
   const handleSubjectSelect = (
@@ -188,6 +225,9 @@ export default function ReminderCreateForm({
         notificationChannels: sendSms ? "SMS" : "IN_APP",
         repeatInterval,
         timezone: "Asia/Tehran",
+        workspaceId: activeWorkspace?.id, // اضافه کردن workspaceId
+        reminderNumber, // اضافه کردن شماره یادآور
+        reminderNumberName, // اضافه کردن نام شماره یادآور
       };
 
       // اضافه کردن لینک موضوع (اگر انتخاب شده)
@@ -241,6 +281,20 @@ export default function ReminderCreateForm({
         "🔍 [ReminderCreateForm] About to call onSubmit with data:",
         validation.data
       );
+
+      // نمایش اطلاعات گروه قبل از ارسال
+      if (selectedRecipients.length > 1) {
+        const previewGroupName = `${title.trim()}${
+          selectedSubject?.type && selectedSubject.type !== "GENERAL"
+            ? ` - ${selectedSubject.type}`
+            : ""
+        }`;
+        setGroupInfo({
+          reminderNumber: "در حال ایجاد...",
+          groupName: previewGroupName,
+        });
+      }
+
       onSubmit(validation.data);
       setIsSubmitting(false);
       submitRef.current = false;
@@ -370,7 +424,41 @@ export default function ReminderCreateForm({
         )}
       </Card>
 
-      {/* 4. کانال‌های اطلاع‌رسانی */}
+      {/* 4. اطلاعات گروه */}
+      <Card className="p-4">
+        <h3 className="text-lg font-semibold mb-4">
+          <DIcon icon="fa-users" cdi={false} classCustom="ml-2" />
+          اطلاعات گروه
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+            <DIcon icon="fa-hashtag" cdi={false} />
+            <span className="font-medium">شماره یادآور:</span>
+            <span className="font-mono text-blue-600">
+              {reminderNumberName || "در حال ایجاد..."}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+            <DIcon icon="fa-tag" cdi={false} />
+            <span className="font-medium">نام گروه:</span>
+            <span className="text-green-600">
+              {title}$
+              {selectedSubject?.type && selectedSubject.type !== "GENERAL"
+                ? ` - ${selectedSubject.type}`
+                : ""}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
+            <DIcon icon="fa-user-friends" cdi={false} />
+            <span className="font-medium">تعداد گیرندگان:</span>
+            <span className="badge badge-primary">
+              {selectedRecipients.length} نفر
+            </span>
+          </div>
+        </div>
+      </Card>
+
+      {/* 5. کانال‌های اطلاع‌رسانی */}
       <Card className="p-4">
         <h3 className="text-lg font-semibold mb-4">
           <DIcon icon="fa-bell" cdi={false} classCustom="ml-2" />

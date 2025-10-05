@@ -24,6 +24,10 @@ export const createReminderSchema = z.object({
   // ++ اصلاحیه کلیدی: اضافه کردن فیلد type به اسکیما ++
   // ما می‌توانیم یک مقدار پیش‌فرض برای آن در نظر بگیریم.
   type: z.string().default("General"),
+  // شماره یادآور و نام آن
+  reminderNumber: z.string().optional(),
+  reminderNumberName: z.string().optional(),
+  groupName: z.string().optional(),
 
   // فیلدهای اختیاری دیگر
   entityId: z.number().optional(),
@@ -34,6 +38,7 @@ export const createReminderSchema = z.object({
   repeatInterval: z.string().optional(),
   timezone: z.string().optional(),
   status: z.enum(["PENDING", "COMPLETED", "CANCELLED"]).optional(),
+  isActive: z.boolean().optional(),
   requestId: z.number().optional(),
   invoiceId: z.number().optional(),
   paymentId: z.number().optional(),
@@ -55,3 +60,5 @@ export const createReminderSchema = z.object({
     })
     .optional(),
 });
+
+export const updateReminderSchema = createReminderSchema.partial();

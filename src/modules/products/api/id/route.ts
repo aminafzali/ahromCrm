@@ -22,7 +22,7 @@ export async function PATCH(req: NextRequest, id: number) {
 }
 
 export async function PUT(req: NextRequest, id: number) {
-  return controller.put(req, id);
+  return controller.update(req, id);
 }
 
 export async function DELETE(req: NextRequest, id: number) {

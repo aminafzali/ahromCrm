@@ -16,6 +16,10 @@ export const createNotificationSchema = z.object({
     .nullable(),
   // اضافه کردن workspaceUserId برای سازگاری با Prisma
   workspaceUserId: z.coerce.number().optional(),
+  // شماره اعلان و نام آن
+  notificationNumber: z.string().optional(),
+  notificationNumberName: z.string().optional(),
+  groupName: z.string().optional(),
   // ===== پایان اصلاحیه کلیدی =====
   // گیرندگان گروهی اختیاری
   recipients: z

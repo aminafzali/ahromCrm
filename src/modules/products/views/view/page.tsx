@@ -41,7 +41,7 @@ export default function DetailPage({ id }: ProductDetailsViewProps) {
   const fetchProduct = async () => {
     try {
       const data = await getById(id);
-     if (data != undefined) setProduct(data);
+      if (data != undefined) setProduct(data);
     } catch (error) {
       console.error("Error fetching product:", error);
     }
@@ -81,6 +81,9 @@ export default function DetailPage({ id }: ProductDetailsViewProps) {
       const data = await uploadImages(files);
 
       await Put(id, {
+        name: product.name,
+        price: product.price,
+        stock: product.stock,
         images: data,
       });
       fetchProduct(); // Refresh product data

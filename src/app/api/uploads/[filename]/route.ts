@@ -1,10 +1,11 @@
 import fs from "fs";
-import { NextResponse } from 'next/server';
-import path from 'path';
+import { NextResponse } from "next/server";
+import path from "path";
 
-
-
-export async function GET(req: Request, { params }: { params: Promise<{ filename: string }> }) {
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ filename: string }> }
+) {
   const filePath = path.join(process.cwd(), "uploads", (await params).filename);
 
   // بررسی اینکه آیا فایل وجود دارد یا نه
@@ -13,5 +14,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ filename
   }
 
   const file = fs.readFileSync(filePath);
-  return new NextResponse(file, { headers: { "Content-Type": "image/jpeg" } });
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType =
+    ext === ".png"
+      ? "image/png"
+      : ext === ".webp"
+      ? "image/webp"
+      : "image/jpeg";
+  return new NextResponse(file, { headers: { "Content-Type": contentType } });
 }

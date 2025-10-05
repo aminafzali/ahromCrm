@@ -1,0 +1,37 @@
+"use client";
+
+import Loading from "@/@Client/Components/common/Loading";
+import NotFound from "@/@Client/Components/common/NotFound";
+import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
+import { useParams } from "next/navigation";
+import { lazy, Suspense } from "react";
+
+export default function DynamicGroupedPage() {
+  const { slug, groupNumber } = useParams();
+  const { activeWorkspace, isLoading } = useWorkspace();
+
+  const DynamicComponent = lazy(async () => {
+    try {
+      // Dynamically import the corresponding module's grouped view component
+      return await import(`@/modules/${slug}/views/grouped/[groupNumber]/page`);
+    } catch (error) {
+      console.error("Error loading grouped module:", error);
+      return {
+        default: () => <NotFound />,
+      };
+    }
+  });
+
+  return (
+    <Suspense fallback={<Loading />}>
+      {isLoading ? (
+        <Loading />
+      ) : (
+        <DynamicComponent
+          params={{ groupNumber: groupNumber as string }}
+          isAdmin={activeWorkspace?.role?.name === "Admin"}
+        />
+      )}
+    </Suspense>
+  );
+}
