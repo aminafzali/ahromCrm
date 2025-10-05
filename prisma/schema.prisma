@@ -61,14 +61,19 @@ model Workspace {
   actualServicesOnRequest ActualServiceOnRequest[]
   paymentCategories       PaymentCategory[] // رابطه متقابل برای دسته‌بندی پرداخت‌ها
 
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  Team              Team[]
-  Project           Project[]
-  Task              Task[]
-  PMStatus          PMStatus[]
-  TaskStatusHistory TaskStatusHistory[]
-  Workflow          Workflow[]
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  Team                   Team[]
+  Project                Project[]
+  Task                   Task[]
+  PMStatus               PMStatus[]
+  TaskStatusHistory      TaskStatusHistory[]
+  Workflow               Workflow[]
+  DocumentCategory       DocumentCategory[]
+  Document               Document[]
+  TeamCategoryPermission TeamCategoryPermission[]
+  TeamDocumentPermission TeamDocumentPermission[]
+  RoleDocumentPolicy     RoleDocumentPolicy[]
 }
 
 model WorkspaceUser {
@@ -117,15 +122,16 @@ model WorkspaceUser {
 }
 
 model Role {
-  id          Int              @id @default(autoincrement())
-  workspaceId Int
-  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  permissions RolePermission[]
-  users       WorkspaceUser[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id                 Int                  @id @default(autoincrement())
+  workspaceId        Int
+  workspace          Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name               String
+  description        String?
+  permissions        RolePermission[]
+  users              WorkspaceUser[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  RoleDocumentPolicy RoleDocumentPolicy[]
 
   @@unique([name, workspaceId])
 }
@@ -444,7 +450,7 @@ model Notification {
   notificationNumberName String?
   groupName              String?
   // وضعیت ارسال
-  status                 NotificationStatus     @default(SENT)
+  status                 NotificationStatus      @default(SENT)
   // وضعیت فعال/غیرفعال
   isActive               Boolean                 @default(true)
   createdAt              DateTime                @default(now())
@@ -660,6 +666,138 @@ model Product {
   InvoiceItem   InvoiceItem[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
+}
+
+// =========================
+// Document Management Models
+// =========================
+
+// دسته‌بندی اسناد به‌صورت درختی و وابسته به ورک‌اسپیس
+model DocumentCategory {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+
+  // درخت
+  parentId Int?
+  parent   DocumentCategory?  @relation("DocumentCategoryToParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children DocumentCategory[] @relation("DocumentCategoryToParent")
+
+  documents Document[]
+
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  TeamCategoryPermission TeamCategoryPermission[]
+
+  @@unique([workspaceId, name, parentId])
+  @@index([workspaceId, parentId])
+}
+
+// سند (هر نوع فایلی) با متادیتا و اتصال اختیاری به موجودیت‌ها
+model Document {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  categoryId Int?
+  category   DocumentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  originalName String
+  filename     String
+  mimeType     String
+  size         Int
+  url          String
+
+  // دسته‌بندی منطقی/نوع سند (اختیاری)
+  type String?
+
+  // اتصال چندشکلی به موجودیت‌ها (اختیاری)
+  entityType String? // e.g. project, task, user, invoice, request
+  entityId   Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // دسترسی‌ها
+  teamPermissions TeamDocumentPermission[]
+
+  @@index([workspaceId, categoryId])
+  @@index([workspaceId, entityType, entityId])
+}
+
+// سطح دسترسی‌ها به‌صورت ساده: مشاهده/ایجاد-ویرایش/حذف
+enum DocumentAccessLevel {
+  READ
+  WRITE
+  DELETE
+}
+
+// دسترسی تیم به دسته‌بندی (برای اعمال سطح دسترسی به همه اسناد زیر آن دسته)
+model TeamCategoryPermission {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  teamId Int
+  team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  categoryId Int
+  category   DocumentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  canRead   Boolean @default(true)
+  canWrite  Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, categoryId])
+  @@index([workspaceId, teamId])
+}
+
+// دسترسی تیم به یک سند خاص (در صورت نیاز به override نسبت به دسته)
+model TeamDocumentPermission {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  teamId Int
+  team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  documentId Int
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  canRead   Boolean @default(true)
+  canWrite  Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, documentId])
+  @@index([workspaceId, teamId])
+}
+
+// سیاست دسترسی کلی بر اساس نقش (ادمین/کاربر) در سطح ورک‌اسپیس
+model RoleDocumentPolicy {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  roleId Int
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  // پیش‌فرض‌ها برای کل اسناد این ورک‌اسپیس (قابل override توسط تیم/دسته/سند)
+  canRead   Boolean @default(true)
+  canWrite  Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, roleId])
 }
 
 model Brand {
@@ -982,8 +1120,10 @@ model Team {
   assignedProjects Project[]    @relation("AssignedTeamsToProject")
   assignedTasks    Task[]       @relation("AssignedTeamsToTask")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  TeamCategoryPermission TeamCategoryPermission[]
+  TeamDocumentPermission TeamDocumentPermission[]
 
   @@unique([name, workspaceId])
 }
