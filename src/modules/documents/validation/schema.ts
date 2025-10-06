@@ -11,23 +11,17 @@ export const createDocumentSchema = z.object({
   mimeType: z.string().min(1),
   size: z.coerce.number().int().nonnegative(),
   url: z.string().min(1),
-  // متادیتا
-  type: z.enum(["image", "pdf", "doc", "other"]).optional().nullable(),
+  // متادیتا: اجازه همه انواع به صورت رشته، پیش‌فرض توسط کلاینت مدیریت می‌شود
+  type: z.string().optional().nullable(),
   category: relatedEntity.optional().nullable(),
-  entityType: z
-    .enum(["project", "task", "user", "invoice", "request"])
-    .optional()
-    .nullable(),
+  entityType: z.string().optional().nullable(),
   entityId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 export const updateDocumentSchema = z.object({
   originalName: z.string().min(1).optional(),
-  type: z.enum(["image", "pdf", "doc", "other"]).optional().nullable(),
+  type: z.string().optional().nullable(),
   category: relatedEntity.optional().nullable(),
-  entityType: z
-    .enum(["project", "task", "user", "invoice", "request"])
-    .optional()
-    .nullable(),
+  entityType: z.string().optional().nullable(),
   entityId: z.coerce.number().int().positive().optional().nullable(),
 });

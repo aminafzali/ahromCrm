@@ -1,8 +1,10 @@
+// مسیر فایل: src/modules/documents/views/page.tsx
 "use client";
 
 import DataTableWrapper3 from "@/@Client/Components/wrappers/DataTableWrapper3";
+import TreeList from "@/modules/document-categories/components/TreeList";
 import { useDocumentCategory } from "@/modules/document-categories/hooks/useDocumentCategory";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { columnsForAdmin, listItemRender } from "../data/table";
 import { useDocument } from "../hooks/useDocument";
 import { DocumentWithRelations } from "../types";
@@ -14,6 +16,8 @@ export default function DocumentsPage() {
   const [categoryOptions, setCategoryOptions] = useState<
     { label: string; value: number }[]
   >([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   // محلی برای نگه داشتن داده‌ها؛ فیلترها از طریق DataTableWrapper3 اعمال می‌شوند
 
   useEffect(() => {
@@ -27,34 +31,32 @@ export default function DocumentsPage() {
     (async () => {
       try {
         const cats = await getAllCategories({ page: 1, limit: 1000 });
+        const list = cats?.data || [];
+        setCategories(list);
         setCategoryOptions(
-          (cats?.data || []).map((c: any) => ({ label: c.name, value: c.id }))
+          list.map((c: any) => ({ label: c.name, value: c.id }))
         );
       } catch {}
     })();
   }, []);
 
-  // تنظیمات فیلتر مشابه صفحهٔ وظایف
+  // فقط entityType به صورت هاردکد شده به درخواست کاربر
   const filterOptions = useMemo(
     () => [
       {
-        name: "type",
-        label: "نوع فایل",
+        name: "entityType",
+        label: "نوع موجودیت",
         options: [
           { value: "all", label: "همه" },
-          { value: "image", label: "تصویر" },
-          { value: "pdf", label: "PDF" },
-          { value: "doc", label: "سند" },
-          { value: "other", label: "سایر" },
+          { value: "Request", label: "درخواست" },
+          { value: "Invoice", label: "فاکتور" },
+          { value: "Task", label: "تسک" },
+          { value: "Project", label: "پروژه" },
+          { value: "Other", label: "سایر" },
         ],
       },
-      {
-        name: "categoryId_in",
-        label: "دسته",
-        options: [{ value: "all", label: "همه" }, ...categoryOptions],
-      },
     ],
-    [categoryOptions]
+    []
   );
 
   const dateFilterFields = useMemo(
@@ -66,25 +68,76 @@ export default function DocumentsPage() {
   );
 
   const fetcher = async (params: any) => {
-    const res = await getAll(params);
+    // نگاشت فیلتر entityType به پارامتر صحیح API
+    const mapped = { ...params };
+    if (mapped.filters?.entityType === "all") {
+      delete mapped.filters.entityType;
+    }
+    const res = await getAll(mapped);
     setItems(res.data || []);
     return res;
   };
 
+  const getDescendantIds = useCallback((categoryId: number, all: any[]) => {
+    const allIds: number[] = [categoryId];
+    const queue: number[] = [categoryId];
+    while (queue.length) {
+      const current = queue.shift()!;
+      const children = all.filter((c) => c.parentId === current);
+      for (const ch of children) {
+        allIds.push(ch.id);
+        queue.push(ch.id);
+      }
+    }
+    return allIds;
+  }, []);
+
+  const extraFilter = useMemo(() => {
+    if (!selectedCategory) return undefined;
+    const ids = getDescendantIds(selectedCategory, categories);
+    return { categoryId_in: ids.join(",") } as any;
+  }, [selectedCategory, categories, getDescendantIds]);
+
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-xl font-bold">مدیریت اسناد</h1>
-      <DataTableWrapper3
-        columns={columnsForAdmin}
-        loading={loading}
-        title="لیست اسناد"
-        createUrl="/dashboard/documents/create"
-        fetcher={fetcher}
-        defaultViewMode="list"
-        filterOptions={filterOptions}
-        dateFilterFields={dateFilterFields}
-        listItemRender={listItemRender}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1 bg-white dark:bg-slate-800/50 p-4 rounded-xl shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold">دسته‌بندی‌ها</h2>
+            {selectedCategory && (
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className="text-sm text-teal-600 hover:underline font-semibold"
+              >
+                پاک کردن
+              </button>
+            )}
+          </div>
+          <TreeList
+            items={categories as any}
+            selectedId={selectedCategory}
+            onNodeClick={(n: any) =>
+              setSelectedCategory((prev) => (prev === n.id ? null : n.id))
+            }
+          />
+        </div>
+        <div className="lg:col-span-3">
+          <DataTableWrapper3
+            columns={columnsForAdmin}
+            loading={loading}
+            title="لیست اسناد"
+            createUrl="/dashboard/documents/create"
+            fetcher={fetcher}
+            defaultViewMode="list"
+            filterOptions={filterOptions}
+            dateFilterFields={dateFilterFields}
+            listItemRender={listItemRender}
+            extraFilter={extraFilter}
+            listClassName="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"
+          />
+        </div>
+      </div>
     </div>
   );
 }

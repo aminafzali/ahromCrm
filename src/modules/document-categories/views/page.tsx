@@ -1,3 +1,4 @@
+// مسیر فایل: src/modules/document-categories/views/page.tsx
 "use client";
 
 import DataTableWrapper3 from "@/@Client/Components/wrappers/DataTableWrapper3";
@@ -11,16 +12,26 @@ export default function DocumentCategoriesPage() {
   const { getAll, loading } = useDocumentCategory();
   const [items, setItems] = useState<DocumentCategoryWithRelations[]>([]);
   const initialLoadedRef = useRef(false);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      const res = await getAll({ page: 1, limit: 100 });
-      if (mounted) {
-        setItems(res.data);
-        initialLoadedRef.current = true;
-      }
-    })();
+    const load = async () => {
+      try {
+        const res = await getAll({ page: 1, limit: 100 });
+        if (!mounted) return;
+        const next = res.data || [];
+        setItems((prev) => {
+          const prevIds = prev.map((x) => x.id).join(",");
+          const nextIds = next.map((x: any) => x.id).join(",");
+          return prevIds === nextIds && prev.length === next.length
+            ? prev
+            : next;
+        });
+        if (!initialLoadedRef.current) initialLoadedRef.current = true;
+      } catch (e) {}
+    };
+    load();
     return () => {
       mounted = false;
     };
@@ -28,24 +39,44 @@ export default function DocumentCategoriesPage() {
 
   const refresh = useCallback(async () => {
     const res = await getAll({ page: 1, limit: 100 });
-    setItems((prev) => {
-      const prevIds = prev.map((x) => x.id).join(",");
-      const next = res.data || [];
-      const nextIds = next.map((x: any) => x.id).join(",");
-      return prevIds === nextIds && prev.length === next.length ? prev : next;
-    });
-  }, []);
-
-  const fetcher = useCallback(async (params: any) => {
-    const res = await getAll(params);
     const next = res.data || [];
     setItems((prev) => {
       const prevIds = prev.map((x) => x.id).join(",");
       const nextIds = next.map((x: any) => x.id).join(",");
       return prevIds === nextIds && prev.length === next.length ? prev : next;
     });
-    return res;
-  }, []);
+  }, [getAll]);
+
+  const fetcher = useCallback(
+    async (params: any) => {
+      // فقط داده را برگردان؛ setState اینجا انجام نده تا از لوپ جلوگیری شود
+      return getAll(params);
+    },
+    [getAll]
+  );
+
+  const getDescendantIds = useCallback(
+    (categoryId: number, all: DocumentCategoryWithRelations[]) => {
+      const allIds: number[] = [categoryId];
+      const queue: number[] = [categoryId];
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        const children = all.filter((c) => c.parentId === current);
+        for (const ch of children) {
+          allIds.push(ch.id);
+          queue.push(ch.id);
+        }
+      }
+      return allIds;
+    },
+    []
+  );
+
+  const extraFilter = useMemo(() => {
+    if (!selectedCategory) return undefined;
+    const ids = getDescendantIds(selectedCategory, items);
+    return { id_in: ids.join(",") } as any;
+  }, [selectedCategory, items, getDescendantIds]);
 
   const filterOptions = useMemo(
     () => [
@@ -73,13 +104,19 @@ export default function DocumentCategoriesPage() {
         <div>در حال بارگذاری...</div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 bg-white dark:bg-slate-800/50 p-4 rounded-xl shadow-sm">
-            <TreeList items={items} />
+          <div className="lg:col-span-1 bg-white dark:bg-slate-800/50 p-4 rounded-xl shadow-sm max-h-[60vh] overflow-y-auto">
+            <TreeList
+              items={(items || []).filter((x: any) => !x.parentId) as any}
+              selectedId={selectedCategory}
+              onNodeClick={(n: any) =>
+                setSelectedCategory((prev) => (prev === n.id ? null : n.id))
+              }
+            />
           </div>
           <div className="lg:col-span-2">
             <DataTableWrapper3
               columns={columnsForAdmin}
-              loading={loading || !initialLoadedRef.current}
+              loading={!initialLoadedRef.current}
               title="لیست دسته‌ها"
               createUrl="/dashboard/document-categories/create"
               fetcher={fetcher}
@@ -87,6 +124,7 @@ export default function DocumentCategoriesPage() {
               filterOptions={filterOptions}
               dateFilterFields={dateFilterFields}
               listItemRender={listItemRender}
+              extraFilter={extraFilter}
             />
           </div>
         </div>

@@ -1,9 +1,11 @@
+// مسیر فایل: src/modules/document-categories/components/CategoryCreateForm.tsx
 "use client";
 
 import DIcon from "@/@Client/Components/common/DIcon";
-import { Button, Input, Select } from "ndui-ahrom";
+import { Button, Input } from "ndui-ahrom";
 import React, { useEffect, useState } from "react";
 import { useDocumentCategory } from "../hooks/useDocumentCategory";
+import DocumentCategorySelect from "./DocumentCategorySelect";
 
 export default function CategoryCreateForm({
   onCreated,
@@ -14,7 +16,7 @@ export default function CategoryCreateForm({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [parentId, setParentId] = useState<string>("");
-  const [options, setOptions] = useState<{ label: string; value: number }[]>(
+  const [options, setOptions] = useState<{ label: string; value: string }[]>(
     []
   );
 
@@ -22,7 +24,10 @@ export default function CategoryCreateForm({
     (async () => {
       const res = await getAll({ page: 1, limit: 1000 });
       setOptions(
-        (res?.data || []).map((c: any) => ({ label: c.name, value: c.id }))
+        (res?.data || []).map((c: any) => ({
+          label: c.name,
+          value: String(c.id),
+        }))
       );
     })();
   }, []);
@@ -57,12 +62,12 @@ export default function CategoryCreateForm({
             value={description}
             onChange={(e: any) => setDescription(e.target.value)}
           />
-          <Select
+          <DocumentCategorySelect
             name="parentId"
             label="والد (اختیاری)"
             value={parentId}
-            onChange={(e: any) => setParentId(e.target.value)}
-            options={[{ label: "بدون والد", value: "" as any }, ...options]}
+            onChange={(e) => setParentId(e.target.value)}
+            placeholder="انتخاب والد"
           />
         </div>
       </div>

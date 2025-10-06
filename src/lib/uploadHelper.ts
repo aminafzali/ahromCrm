@@ -5,8 +5,9 @@ import { v4 as uuidv4 } from "uuid";
 
 export class UploadHelper {
   private static UPLOAD_DIR = path.join(process.cwd(), "uploads");
-  private static ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-  private static MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  // اجازه همه انواع فایل؛ اعتبارسنجی را به سطح بالاتر بسپارید
+  private static ALLOWED_TYPES: string[] | null = null;
+  private static MAX_SIZE = 50 * 1024 * 1024; // 50MB
 
   /**
    * Upload a single file
@@ -17,12 +18,9 @@ export class UploadHelper {
       if (!fs.existsSync(this.UPLOAD_DIR)) {
         fs.mkdirSync(this.UPLOAD_DIR, { recursive: true });
       }
-      // Validate file type
-      if (!this.ALLOWED_TYPES.includes(file.type)) {
-        throw new Error("File type not allowed");
-      }
+      // Skip strict type validation to allow any file type
 
-      // Validate file size
+      // Validate file size (generic limit)
       if (file.size > this.MAX_SIZE) {
         throw new Error("File size too large");
       }
@@ -88,12 +86,9 @@ export class UploadHelper {
       fs.mkdirSync(this.UPLOAD_DIR, { recursive: true });
     }
 
-    // Validate file type
-    if (!this.ALLOWED_TYPES.includes(file.type)) {
-      throw new Error("File type not allowed");
-    }
+    // Skip strict type validation to allow any file type
 
-    // Validate file size
+    // Validate file size (generic limit)
     if (file.size > this.MAX_SIZE) {
       throw new Error("File size too large");
     }

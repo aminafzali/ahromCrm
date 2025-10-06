@@ -3,6 +3,12 @@
 import { BaseRepository } from "@/@Client/Http/Repository/BaseRepository";
 import { useCrud } from "@/@Client/hooks/useCrud";
 import { useMemo } from "react";
+import { z } from "zod";
+import { DocumentCategoryWithRelations } from "../types";
+import {
+  createDocumentCategorySchema,
+  updateDocumentCategorySchema,
+} from "../validation/schema";
 
 class DocumentCategoryRepository extends BaseRepository<any, number> {
   constructor() {
@@ -29,5 +35,9 @@ class DocumentCategoryRepository extends BaseRepository<any, number> {
 
 export function useDocumentCategory() {
   const repo = useMemo(() => new DocumentCategoryRepository(), []);
-  return useCrud<any>(repo);
+  return useCrud<
+    DocumentCategoryWithRelations,
+    z.infer<typeof createDocumentCategorySchema>,
+    z.infer<typeof updateDocumentCategorySchema>
+  >(repo);
 }
