@@ -162,6 +162,20 @@ export const dashboardMenuItems = [
     icon: <DIcon icon="fa-inbox-in" cdi={false}></DIcon>,
     href: "/dashboard/payments",
   },
+
+  {
+    id: "activity",
+    label: "فعالیتها",
+    divider: true,
+    href: "/activity",
+  },
+  ,
+  {
+    id: "reminders",
+    label: "یادآوری ها",
+    icon: <DIcon icon="fa-bell" cdi={false}></DIcon>,
+    href: "/dashboard/reminders",
+  },
   // برای فعالیت هاو در ابتدا یادآور نوشته شد
   {
     id: "project-management",
@@ -186,14 +200,15 @@ export const dashboardMenuItems = [
         icon: <DIcon icon="fa-list-timeline" cdi={false}></DIcon>,
         href: "/dashboard/tasks",
       },
-      {
-        id: "reminders",
-        label: "یادآوری ها",
-        icon: <DIcon icon="fa-bell" cdi={false}></DIcon>,
-        href: "/dashboard/reminders",
-      },
     ],
   },
+  {
+    id: "information",
+    label: "اطلاعات",
+    divider: true,
+    href: "/information",
+  },
+
   {
     id: "documents-group",
     label: "مدیریت اسناد",

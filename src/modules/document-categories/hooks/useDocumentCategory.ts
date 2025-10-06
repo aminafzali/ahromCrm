@@ -2,6 +2,7 @@
 
 import { BaseRepository } from "@/@Client/Http/Repository/BaseRepository";
 import { useCrud } from "@/@Client/hooks/useCrud";
+import { useMemo } from "react";
 
 class DocumentCategoryRepository extends BaseRepository<any, number> {
   constructor() {
@@ -27,6 +28,6 @@ class DocumentCategoryRepository extends BaseRepository<any, number> {
 }
 
 export function useDocumentCategory() {
-  const repo = new DocumentCategoryRepository();
+  const repo = useMemo(() => new DocumentCategoryRepository(), []);
   return useCrud<any>(repo);
 }

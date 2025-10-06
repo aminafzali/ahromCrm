@@ -22,9 +22,11 @@ function Node({ item, level = 0 }: { item: Category; level?: number }) {
 }
 
 export default function TreeList({ items }: { items: Category[] }) {
+  // جلوگیری از رندرهای غیرضروری: اگر ارجاع items تغییر نکند، map اجرا نمی‌شود
+  const list = items;
   return (
     <ul className="list-disc pr-5">
-      {items.map((c) => (
+      {list.map((c) => (
         <Node key={c.id} item={c} />
       ))}
     </ul>

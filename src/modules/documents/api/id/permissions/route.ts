@@ -7,7 +7,13 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  console.info("[DOC_PERM][POST] called", { id: params?.id });
   const context = await AuthProvider.isAuthenticated(req);
+  console.debug("[DOC_PERM][POST] auth", {
+    workspaceId: context.workspaceId,
+    role: context.role?.name,
+    userId: context.workspaceUser?.id,
+  });
   if (!context.workspaceId) {
     return NextResponse.json(
       { error: "Workspace not identified" },
@@ -40,6 +46,13 @@ export async function POST(
   if (!teamId)
     return NextResponse.json({ error: "teamId is required" }, { status: 400 });
 
+  console.debug("[DOC_PERM][POST] upsert payload", {
+    docId,
+    teamId,
+    canRead,
+    canWrite,
+    canDelete,
+  });
   const result = await (prisma as any).teamDocumentPermission.upsert({
     where: { teamId_documentId: { teamId: Number(teamId), documentId: docId } },
     update: {
@@ -56,6 +69,7 @@ export async function POST(
       canDelete: !!canDelete,
     },
   });
+  console.info("[DOC_PERM][POST] success", { id: result?.id });
   return NextResponse.json(result);
 }
 
@@ -64,7 +78,13 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  console.info("[DOC_PERM][DELETE] called", { id: params?.id });
   const context = await AuthProvider.isAuthenticated(req);
+  console.debug("[DOC_PERM][DELETE] auth", {
+    workspaceId: context.workspaceId,
+    role: context.role?.name,
+    userId: context.workspaceUser?.id,
+  });
   if (!context.workspaceId) {
     return NextResponse.json(
       { error: "Workspace not identified" },
@@ -91,8 +111,10 @@ export async function DELETE(
   if (!teamId)
     return NextResponse.json({ error: "teamId is required" }, { status: 400 });
 
+  console.debug("[DOC_PERM][DELETE] delete payload", { docId, teamId });
   await (prisma as any).teamDocumentPermission.delete({
     where: { teamId_documentId: { teamId: Number(teamId), documentId: docId } },
   });
+  console.info("[DOC_PERM][DELETE] success");
   return new NextResponse(null, { status: 204 });
 }

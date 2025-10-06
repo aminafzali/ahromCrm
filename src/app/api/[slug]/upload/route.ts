@@ -8,10 +8,10 @@ import path from "path";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: number; slug: string }> }
+  { params }: { params: { slug: string } }
 ) {
   try {
-    const { slug } = await params;
+    const { slug } = params;
     const formData = await req.formData();
 
     // شاخهٔ مخصوص اسناد: ذخیره بر اساس ورک‌اسپیس و ساخت رکورد Document

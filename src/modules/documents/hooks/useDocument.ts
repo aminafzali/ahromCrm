@@ -2,6 +2,13 @@
 
 import { BaseRepository } from "@/@Client/Http/Repository/BaseRepository";
 import { useCrud } from "@/@Client/hooks/useCrud";
+import { useMemo } from "react";
+import { z } from "zod";
+import { DocumentWithRelations } from "../types";
+import {
+  createDocumentSchema,
+  updateDocumentSchema,
+} from "../validation/schema";
 
 class DocumentRepository extends BaseRepository<any, number> {
   constructor() {
@@ -27,6 +34,11 @@ class DocumentRepository extends BaseRepository<any, number> {
 }
 
 export function useDocument() {
-  const repo = new DocumentRepository();
-  return useCrud<any>(repo);
+  const repo = useMemo(() => new DocumentRepository(), []);
+  const hook = useCrud<
+    DocumentWithRelations,
+    z.infer<typeof createDocumentSchema>,
+    z.infer<typeof updateDocumentSchema>
+  >(repo);
+  return { ...hook };
 }
