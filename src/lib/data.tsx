@@ -40,7 +40,20 @@ export const dashboardMenuItems = [
     id: "userGroups",
     label: "گروه‌های کاربری",
     icon: <DIcon icon="fa-users" cdi={false}></DIcon>,
-    href: "/dashboard/user-groups",
+    children: [
+      {
+        id: "user-groups",
+        label: "گروه‌ها",
+        icon: <DIcon icon="fa-users" cdi={false}></DIcon>,
+        href: "/dashboard/user-groups",
+      },
+      {
+        id: "teams",
+        label: "تیم ها",
+        icon: <DIcon icon="fa-people-group" cdi={false}></DIcon>,
+        href: "/dashboard/teams",
+      },
+    ],
   },
   {
     id: "labels",
@@ -149,42 +162,71 @@ export const dashboardMenuItems = [
     icon: <DIcon icon="fa-inbox-in" cdi={false}></DIcon>,
     href: "/dashboard/payments",
   },
-  // برای فعالیت هاو در ابتدا یادآور نوشته شد
+
   {
     id: "activity",
-    label: "فعالیت ها",
+    label: "فعالیتها",
     divider: true,
-    href: "/activityDivider",
+    href: "/activity",
   },
+  ,
   {
     id: "reminders",
     label: "یادآوری ها",
-    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+    icon: <DIcon icon="fa-bell" cdi={false}></DIcon>,
     href: "/dashboard/reminders",
   },
+  // برای فعالیت هاو در ابتدا یادآور نوشته شد
   {
-    id: "teams",
-    label: "تیم ها",
-    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
-    href: "/dashboard/teams",
+    id: "project-management",
+    label: "مدیریت پروژه",
+    icon: <DIcon icon="fa-diagram-project" cdi={false}></DIcon>,
+    children: [
+      {
+        id: "pm-statuses",
+        label: "وضعیت ها",
+        icon: <DIcon icon="fa-list-check" cdi={false}></DIcon>,
+        href: "/dashboard/pm-statuses",
+      },
+      {
+        id: "projects",
+        label: "پروژه ها",
+        icon: <DIcon icon="fa-diagram-project" cdi={false}></DIcon>,
+        href: "/dashboard/projects",
+      },
+      {
+        id: "tasks",
+        label: "وظایف",
+        icon: <DIcon icon="fa-list-timeline" cdi={false}></DIcon>,
+        href: "/dashboard/tasks",
+      },
+    ],
   },
   {
-    id: "pm-statuses",
-    label: "وضعیت ها",
-    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
-    href: "/dashboard/pm-statuses",
+    id: "information",
+    label: "اطلاعات",
+    divider: true,
+    href: "/information",
   },
+
   {
-    id: "projects",
-    label: "پروژه ها",
-    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
-    href: "/dashboard/projects",
-  },
-  {
-    id: "tasks",
-    label: "وظایف",
-    icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
-    href: "/dashboard/tasks",
+    id: "documents-group",
+    label: "مدیریت اسناد",
+    icon: <DIcon icon="fa-folder" cdi={false}></DIcon>,
+    children: [
+      {
+        id: "documents",
+        label: "اسناد",
+        icon: <DIcon icon="fa-file" cdi={false}></DIcon>,
+        href: "/dashboard/documents",
+      },
+      {
+        id: "document-categories",
+        label: "دسته‌های اسناد",
+        icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+        href: "/dashboard/document-categories",
+      },
+    ],
   },
 ];
 
