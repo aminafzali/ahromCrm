@@ -61,19 +61,30 @@ model Workspace {
   actualServicesOnRequest ActualServiceOnRequest[]
   paymentCategories       PaymentCategory[] // رابطه متقابل برای دسته‌بندی پرداخت‌ها
 
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  Team                   Team[]
-  Project                Project[]
-  Task                   Task[]
-  PMStatus               PMStatus[]
-  TaskStatusHistory      TaskStatusHistory[]
-  Workflow               Workflow[]
-  DocumentCategory       DocumentCategory[]
-  Document               Document[]
-  TeamCategoryPermission TeamCategoryPermission[]
-  TeamDocumentPermission TeamDocumentPermission[]
-  RoleDocumentPolicy     RoleDocumentPolicy[]
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  Team                    Team[]
+  Project                 Project[]
+  Task                    Task[]
+  PMStatus                PMStatus[]
+  TaskStatusHistory       TaskStatusHistory[]
+  Workflow                Workflow[]
+  DocumentCategory        DocumentCategory[]
+  Document                Document[]
+  TeamCategoryPermission  TeamCategoryPermission[]
+  TeamDocumentPermission  TeamDocumentPermission[]
+  RoleDocumentPolicy      RoleDocumentPolicy[]
+  // Knowledge Base & Collaboration
+  KnowledgeCategory       KnowledgeCategory[]
+  Knowledge               Knowledge[]
+  Comment                 Comment[]
+  ChatRoom                ChatRoom[]
+  KnowledgeTeamPermission KnowledgeTeamPermission[]
+  KnowledgeUserPermission KnowledgeUserPermission[]
+  // Support module back-relations
+  SupportCategory         SupportCategory[]
+  SupportTicketLabel      SupportTicketLabel[]
+  SupportTicket           SupportTicket[]
 }
 
 model WorkspaceUser {
@@ -110,13 +121,24 @@ model WorkspaceUser {
   userGroups UserGroup[] @relation("WorkspaceUserGroups")
 
   // Project Management Relations
-  teams                 TeamMember[]
-  assignedProjects      Project[]               @relation("AssignedWorkspaceUsersToProject")
-  assignedTasks         Task[]                  @relation("AssignedWorkspaceUsersToTask")
-  taskStatusChanges     TaskStatusHistory[]
-  relatedTasks          Task[]                  @relation("TaskToWorkspaceUser")
-  ReminderRecipient     ReminderRecipient[]
-  NotificationRecipient NotificationRecipient[]
+  teams                   TeamMember[]
+  assignedProjects        Project[]                 @relation("AssignedWorkspaceUsersToProject")
+  assignedTasks           Task[]                    @relation("AssignedWorkspaceUsersToTask")
+  taskStatusChanges       TaskStatusHistory[]
+  relatedTasks            Task[]                    @relation("TaskToWorkspaceUser")
+  ReminderRecipient       ReminderRecipient[]
+  NotificationRecipient   NotificationRecipient[]
+  Knowledge               Knowledge[]
+  KnowledgeAssignee       KnowledgeAssignee[]
+  KnowledgeUserPermission KnowledgeUserPermission[]
+  Comment                 Comment[]
+  CommentLike             CommentLike[]
+  ChatRoom                ChatRoom[]
+  ChatRoomMember          ChatRoomMember[]
+  ChatMessage             ChatMessage[]
+  // Support module back-relations
+  SupportTickets          SupportTicket[]           @relation("SupportTicket_user")
+  AssignedSupportTickets  SupportTicket[]           @relation("AssignedAdminToTicket")
 
   @@unique([workspaceId, userId])
 }
@@ -616,15 +638,16 @@ model RequestCancellation {
 }
 
 model Label {
-  id             Int             @id @default(autoincrement())
+  id             Int              @id @default(autoincrement())
   workspaceId    Int
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name           String
-  color          String          @default("primary")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  workspaceUsers WorkspaceUser[] @relation("WorkspaceUserLabels")
+  color          String           @default("primary")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  workspaceUsers WorkspaceUser[]  @relation("WorkspaceUserLabels")
   TaskLabel      TaskLabel[]
+  KnowledgeLabel KnowledgeLabel[]
 
   @@unique([name, workspaceId])
 }
@@ -725,6 +748,333 @@ model Document {
 
   @@index([workspaceId, categoryId])
   @@index([workspaceId, entityType, entityId])
+}
+
+// =========================
+// Knowledge Base Models
+// =========================
+
+model KnowledgeCategory {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+
+  parentId Int?
+  parent   KnowledgeCategory?  @relation("KnowledgeCategoryToParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children KnowledgeCategory[] @relation("KnowledgeCategoryToParent")
+
+  knowledges Knowledge[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, name, parentId])
+  @@index([workspaceId, parentId])
+}
+
+model Knowledge {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  title       String
+  slug        String
+  excerpt     String?         @db.Text
+  content     String          @db.LongText
+  status      KnowledgeStatus @default(DRAFT)
+  publishedAt DateTime?
+  viewsCount  Int             @default(0)
+  attachments Json?
+
+  authorId Int
+  author   WorkspaceUser @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  categoryId Int?
+  category   KnowledgeCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Relations
+  labels    KnowledgeLabel[]
+  assignees KnowledgeAssignee[]
+  teamACL   KnowledgeTeamPermission[]
+  userACL   KnowledgeUserPermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId, status])
+  @@index([workspaceId, categoryId])
+}
+
+model KnowledgeLabel {
+  knowledgeId Int
+  labelId     Int
+  knowledge   Knowledge @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+  label       Label     @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([knowledgeId, labelId])
+}
+
+model KnowledgeAssignee {
+  knowledgeId     Int
+  workspaceUserId Int
+  knowledge       Knowledge     @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([knowledgeId, workspaceUserId])
+}
+
+model KnowledgeTeamPermission {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  teamId Int
+  team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  knowledgeId Int
+  knowledge   Knowledge @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+
+  canRead   Boolean @default(true)
+  canWrite  Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, knowledgeId])
+  @@index([workspaceId, teamId])
+}
+
+model KnowledgeUserPermission {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  knowledgeId Int
+  knowledge   Knowledge @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+
+  canRead   Boolean @default(true)
+  canWrite  Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceUserId, knowledgeId])
+  @@index([workspaceId, workspaceUserId])
+}
+
+// =========================
+// Generic Comments
+// =========================
+
+model Comment {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  entityType String
+  entityId   Int
+
+  authorId Int
+  author   WorkspaceUser @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  body     String  @db.LongText
+  isEdited Boolean @default(false)
+
+  parentId Int?
+  parent   Comment?  @relation("CommentToParent", fields: [parentId], references: [id], onDelete: SetNull)
+  replies  Comment[] @relation("CommentToParent")
+
+  likeCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  likes CommentLike[]
+
+  @@index([workspaceId, entityType, entityId])
+}
+
+model CommentLike {
+  commentId       Int
+  workspaceUserId Int
+  comment         Comment       @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([commentId, workspaceUserId])
+}
+
+// =========================
+// Chat Models
+// =========================
+
+model ChatRoom {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  type       ChatRoomType
+  title      String?
+  icon       String?
+  isArchived Boolean      @default(false)
+
+  createdById Int?
+  createdBy   WorkspaceUser? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  members  ChatRoomMember[]
+  messages ChatMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, type])
+}
+
+model ChatRoomMember {
+  roomId          Int
+  workspaceUserId Int
+  role            String    @default("MEMBER")
+  lastReadAt      DateTime?
+
+  room          ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  workspaceUser WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([roomId, workspaceUserId])
+}
+
+model ChatMessage {
+  id     Int      @id @default(autoincrement())
+  roomId Int
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  senderId Int
+  sender   WorkspaceUser @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  body        String        @db.LongText
+  attachments Json?
+  replyToId   Int?
+  replyTo     ChatMessage?  @relation("ChatMessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies     ChatMessage[] @relation("ChatMessageReply")
+
+  editedAt  DateTime?
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roomId])
+}
+
+// =========================
+// Support Module Models
+// =========================
+
+model SupportCategory {
+  id          Int               @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  parentId    Int?
+  parent      SupportCategory?  @relation("SupportCategoryToChildren", fields: [parentId], references: [id])
+  children    SupportCategory[] @relation("SupportCategoryToChildren")
+  tickets     SupportTicket[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model SupportTicketLabel {
+  id          Int             @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  color       String?
+  tickets     SupportTicket[] @relation("TicketLabels")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([name, workspaceId])
+}
+
+model SupportTicket {
+  id            Int             @id @default(autoincrement())
+  workspaceId   Int
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?         @db.LongText
+  source        SupportSource
+  type          SupportType
+  priority      SupportPriority @default(MEDIUM)
+  status        String
+  contactAt     DateTime?
+  dueAt         DateTime?
+  visibleToUser Boolean         @default(true)
+
+  userId          Int?
+  user            WorkspaceUser? @relation("SupportTicket_user", fields: [userId], references: [id], onDelete: SetNull)
+  assignedAdminId Int?
+  assignedAdmin   WorkspaceUser? @relation("AssignedAdminToTicket", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  assignedTeamId  Int?
+  assignedTeam    Team?          @relation("TeamAssignedToTicket", fields: [assignedTeamId], references: [id], onDelete: SetNull)
+
+  categoryId Int?
+  category   SupportCategory? @relation(fields: [categoryId], references: [id])
+
+  labels SupportTicketLabel[] @relation("TicketLabels")
+
+  tasks     SupportTicketTask[]
+  documents SupportTicketDocument[]
+  knowledge SupportTicketKnowledge[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SupportTicketTask {
+  id        Int           @id @default(autoincrement())
+  ticketId  Int
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  taskId    Int
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model SupportTicketDocument {
+  id         Int           @id @default(autoincrement())
+  ticketId   Int
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  documentId Int
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model SupportTicketKnowledge {
+  id          Int           @id @default(autoincrement())
+  ticketId    Int
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  knowledgeId Int
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
 // سطح دسترسی‌ها به‌صورت ساده: مشاهده/ایجاد-ویرایش/حذف
@@ -1120,10 +1470,13 @@ model Team {
   assignedProjects Project[]    @relation("AssignedTeamsToProject")
   assignedTasks    Task[]       @relation("AssignedTeamsToTask")
 
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  TeamCategoryPermission TeamCategoryPermission[]
-  TeamDocumentPermission TeamDocumentPermission[]
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  TeamCategoryPermission  TeamCategoryPermission[]
+  TeamDocumentPermission  TeamDocumentPermission[]
+  KnowledgeTeamPermission KnowledgeTeamPermission[]
+  // Support
+  AssignedSupportTickets  SupportTicket[]           @relation("TeamAssignedToTicket")
 
   @@unique([name, workspaceId])
 }
@@ -1397,4 +1750,46 @@ enum LabelColor {
   success
   neutral
   info
+}
+
+// ===== New Enums =====
+enum KnowledgeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ChatRoomType {
+  DIRECT
+  TEAM
+  GROUP
+  CUSTOMER
+}
+
+// Support enums
+enum SupportSource {
+  INBOUND_CALL
+  OUTBOUND_CALL
+  USER_TICKET
+  ADMIN_TICKET
+  ONSITE_BY_USER
+  ONSITE_BY_US
+}
+
+enum SupportType {
+  SALES_ORDER
+  QUOTE
+  ORDER_FOLLOWUP
+  PURCHASE_ORDER
+  PURCHASE_QUOTE
+  COMPLAINT
+  ISSUE
+  QUESTION
+}
+
+enum SupportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }

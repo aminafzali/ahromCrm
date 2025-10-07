@@ -1,6 +1,9 @@
 "use client";
 
 import { DetailPageWrapper } from "@/@Client/Components/wrappers";
+import { useChat } from "@/modules/chat/hooks/useChat";
+import CommentsThread from "@/modules/comments/components/Thread";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import EditForm from "../../components/EditForm";
 import TeamPermissionForm from "../../components/TeamPermissionForm";
@@ -9,6 +12,8 @@ import { useDocument } from "../../hooks/useDocument";
 export default function DocumentViewPage({ id }: { id: number }) {
   const { getById, remove, loading } = useDocument();
   const [doc, setDoc] = useState<any | null>(null);
+  const { repo: chatRepo } = useChat();
+  const router = useRouter();
 
   const load = async () => {
     const data = await getById(id);
@@ -56,6 +61,32 @@ export default function DocumentViewPage({ id }: { id: number }) {
         <EditForm id={id} onSaved={load} />
         <TeamPermissionForm id={id} onChanged={load} />
       </div>
+      {doc?.id && (
+        <div className="mt-8 space-y-4">
+          <CommentsThread entityType="Document" entityId={Number(id)} />
+          <button
+            className="btn btn-outline"
+            onClick={async () => {
+              const roomName = `Document#${id}`;
+              const found: any = await chatRepo.getAll({
+                page: 1,
+                limit: 1,
+                filters: { name: roomName },
+              });
+              const existing = found?.data?.[0];
+              if (existing?.id) {
+                router.push(`/dashboard/chat/${existing.id}`);
+                return;
+              }
+              const created: any = await chatRepo.create({ name: roomName });
+              const newId = created?.data?.id || created?.id;
+              if (newId) router.push(`/dashboard/chat/${newId}`);
+            }}
+          >
+            گفتگو برای این سند
+          </button>
+        </div>
+      )}
     </div>
   );
 }

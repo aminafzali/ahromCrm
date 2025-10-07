@@ -5,6 +5,7 @@
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
 import { DetailPageWrapper } from "@/@Client/Components/wrappers";
+import ChatLinkButton from "@/modules/chat/components/ChatLinkButton";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useProject } from "../../hooks/useProject";
@@ -38,8 +39,8 @@ export default function DetailPage() {
   const displayData = project
     ? {
         "نام پروژه": project.name,
-        "توضیحات": project.description || "-",
-        "وضعیت": project.status?.name || "-",
+        توضیحات: project.description || "-",
+        وضعیت: project.status?.name || "-",
         "تعداد وظایف": project._count?.tasks || 0,
         "تاریخ شروع": project.startDate
           ? new Date(project.startDate).toLocaleDateString("fa-IR")
@@ -48,8 +49,9 @@ export default function DetailPage() {
           ? new Date(project.endDate).toLocaleDateString("fa-IR")
           : "-",
         "اعضای تخصیص یافته":
-          project.assignedUsers?.map((u) => u.displayName || u.user.name).join(", ") ||
-          "ندارد",
+          project.assignedUsers
+            ?.map((u) => u.displayName || u.user.name)
+            .join(", ") || "ندارد",
         "تیم‌های تخصیص یافته":
           project.assignedTeams?.map((t) => t.name).join(", ") || "ندارد",
       }
@@ -59,13 +61,25 @@ export default function DetailPage() {
   if (statusCode === 404) return <NotFound />;
 
   return (
-    <DetailPageWrapper
-      data={displayData}
-      title="جزئیات پروژه"
-      loading={loading}
-      error={error}
-      onDelete={() => handleDelete(project)}
-      editUrl={`/dashboard/projects/${id}/update`}
-    />
+    <>
+      <DetailPageWrapper
+        data={displayData}
+        title="جزئیات پروژه"
+        loading={loading}
+        error={error}
+        onDelete={() => handleDelete(project)}
+        editUrl={`/dashboard/projects/${id}/update`}
+      />
+      {id ? (
+        <div className="p-4">
+          <ChatLinkButton
+            roomName={`Project#${id}`}
+            className="btn btn-outline"
+          >
+            گفتگو برای این پروژه
+          </ChatLinkButton>
+        </div>
+      ) : null}
+    </>
   );
 }

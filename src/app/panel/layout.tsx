@@ -1,7 +1,10 @@
 "use client";
 
 import DIcon from "@/@Client/Components/common/DIcon";
-import { WorkspaceProvider } from "@/@Client/context/WorkspaceProvider";
+import {
+  useWorkspace,
+  WorkspaceProvider,
+} from "@/@Client/context/WorkspaceProvider";
 import { userBottomItems, userMenuItems } from "@/lib/data";
 import {
   Button,
@@ -10,6 +13,7 @@ import {
   ToastProvider,
 } from "ndui-ahrom";
 import { signOut } from "next-auth/react";
+import dynamic from "next/dynamic";
 
 const sidebarContent = (
   <div className="mb-8">
@@ -18,20 +22,35 @@ const sidebarContent = (
   </div>
 );
 
-const toolbarContent = (
-  <div className="flex gap-2 justify-between w-full">
-    <p className="text-lg font-semibold">پنل کاربری</p>
+function Toolbar() {
+  const PanelSupportButton = dynamic(
+    () => import("@/modules/chat/components/PanelSupportButton"),
+    { ssr: false }
+  );
+  const { activeWorkspace } = useWorkspace();
+  return (
+    <div className="flex gap-2 justify-between w-full">
+      <p className="text-lg font-semibold">پنل کاربری</p>
 
-    <Button
-      className="text-primary"
-      variant="ghost"
-      icon={<DIcon icon="fa-left-from-bracket" classCustom="ml-2" />}
-      onClick={() => signOut({ callbackUrl: "/" })}
-    >
-      خروج
-    </Button>
-  </div>
-);
+      <div className="flex items-center gap-2">
+        {activeWorkspace?.id ? (
+          <PanelSupportButton
+            workspaceId={activeWorkspace.id}
+            className="btn btn-ghost"
+          />
+        ) : null}
+        <Button
+          className="text-primary"
+          variant="ghost"
+          icon={<DIcon icon="fa-left-from-bracket" classCustom="ml-2" />}
+          onClick={() => signOut({ callbackUrl: "/" })}
+        >
+          خروج
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function UserDashboardLayout({
   children,
@@ -41,7 +60,7 @@ export default function UserDashboardLayout({
   return (
     <LayoutWrapper
       drawerHeader={sidebarContent}
-      toolbarContent={toolbarContent}
+      toolbarContent={<Toolbar />}
       drawerMenuItems={userMenuItems}
       bottomBarItems={userBottomItems}
       showBottomBar

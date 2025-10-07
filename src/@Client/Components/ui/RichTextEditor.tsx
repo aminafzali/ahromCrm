@@ -8,18 +8,20 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 // ===== شروع اصلاحیه: ایمپورت به صورت named انجام شد =====
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 // ===== پایان اصلاحیه =====
 import DIcon from "@/@Client/Components/common/DIcon";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
-import { $generateHtmlFromNodes } from "@lexical/html";
+import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import {
+  $getRoot,
+  $getSelection,
   $isRangeSelection,
   EditorState,
   FORMAT_TEXT_COMMAND,
@@ -36,8 +38,8 @@ function ToolbarPlugin() {
   const [isUnderline, setIsUnderline] = useState(false);
 
   useEffect(() => {
-    return editor.registerUpdateListener((listener) => {
-      const selection = getSelection();
+    return editor.registerUpdateListener(() => {
+      const selection = $getSelection();
       if ($isRangeSelection(selection)) {
         setIsBold(selection.hasFormat("bold"));
         setIsItalic(selection.hasFormat("italic"));
@@ -126,12 +128,14 @@ interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  toolbar?: string[];
 }
 
 export default function RichTextEditor({
   value,
   onChange,
   placeholder,
+  toolbar,
 }: RichTextEditorProps) {
   const onChangeHandler = (editorState: EditorState, editor: LexicalEditor) => {
     editorState.read(() => {
@@ -140,6 +144,26 @@ export default function RichTextEditor({
     });
   };
 
+  function InitialHTMLPlugin({ html }: { html: string }) {
+    const [editor] = useLexicalComposerContext();
+    const initializedRef = useRef(false);
+    useEffect(() => {
+      if (initializedRef.current) return;
+      editor.update(() => {
+        try {
+          const parser = new DOMParser();
+          const dom = parser.parseFromString(html || "", "text/html");
+          const nodes = $generateNodesFromDOM(editor, dom);
+          const root = $getRoot();
+          root.clear();
+          nodes.forEach((n: any) => root.append(n));
+        } catch {}
+      });
+      initializedRef.current = true;
+    }, [editor, html]);
+    return null;
+  }
+
   return (
     <LexicalComposer initialConfig={editorConfig}>
       <div className="border rounded-lg relative">
@@ -147,7 +171,7 @@ export default function RichTextEditor({
         <div className="relative" style={{ minHeight: "250px" }}>
           <RichTextPlugin
             contentEditable={
-              <ContentEditable className="p-4 focus:outline-none" />
+              <ContentEditable className="p-4 focus:outline-none" dir="rtl" />
             }
             placeholder={
               <div className="absolute top-4 right-4 text-gray-400 pointer-events-none">
@@ -158,6 +182,7 @@ export default function RichTextEditor({
           />
           <HistoryPlugin />
           <OnChangePlugin onChange={onChangeHandler} />
+          <InitialHTMLPlugin html={value || ""} />
         </div>
       </div>
     </LexicalComposer>
