@@ -1,5 +1,6 @@
 "use client";
 
+import { useSupportCategory } from "@/modules/supports-categories/hooks/useSupportCategory";
 import { useTeam } from "@/modules/teams/hooks/useTeam";
 import { useWorkspaceUser } from "@/modules/workspace-users/hooks/useWorkspaceUser";
 import { Button, Checkbox, Form, Input, Select } from "ndui-ahrom";
@@ -22,6 +23,16 @@ export default function SupportForm({ after }: { after?: () => void }) {
 
   const [users, setUsers] = useState<{ value: number; label: string }[]>([]);
   const [teams, setTeams] = useState<{ value: number; label: string }[]>([]);
+  const [tasks, setTasks] = useState<{ value: number; label: string }[]>([]);
+  const [documents, setDocuments] = useState<
+    { value: number; label: string }[]
+  >([]);
+  const [knowledges, setKnowledges] = useState<
+    { value: number; label: string }[]
+  >([]);
+  const [categories, setCategories] = useState<
+    { value: number; label: string }[]
+  >([]);
 
   useEffect(() => {
     (async () => {
@@ -38,6 +49,21 @@ export default function SupportForm({ after }: { after?: () => void }) {
       setTeams(
         (t?.data || []).map((x: any) => ({ value: x.id, label: x.name }))
       );
+    })();
+  }, []);
+
+  // Load Support Categories for Select
+  const { getAll: getAllSupportCategories } = useSupportCategory();
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await getAllSupportCategories({ page: 1, limit: 1000 });
+        const opts = (res?.data || []).map((c: any) => ({
+          value: c.id,
+          label: c.name,
+        }));
+        setCategories(opts);
+      } catch (e) {}
     })();
   }, []);
 
@@ -103,14 +129,31 @@ export default function SupportForm({ after }: { after?: () => void }) {
 
         <div className="md:col-span-2">
           <h3 className="text-sm font-semibold text-gray-600 mt-4 mb-2">
+            ارتباطات
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Select name="tasks" label="وظایف مرتبط" options={tasks} multiple />
+            <Select
+              name="documents"
+              label="اسناد مرتبط"
+              options={documents}
+              multiple
+            />
+            <Select
+              name="knowledge"
+              label="پایگاه دانش مرتبط"
+              options={knowledges}
+              multiple
+            />
+          </div>
+        </div>
+
+        <div className="md:col-span-2">
+          <h3 className="text-sm font-semibold text-gray-600 mt-4 mb-2">
             طبقه‌بندی
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              name="category.id"
-              label="دسته (ID)"
-              placeholder="شناسه دسته"
-            />
+            <Select name="category.id" label="دسته" options={categories} />
           </div>
         </div>
 

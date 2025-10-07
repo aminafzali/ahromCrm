@@ -5,9 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=2048 next dev -p 4010",
-    "build": "prisma migrate deploy --schema=./prisma/schema.prisma && prisma generate --schema=./prisma/schema.prisma && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "migrate:deploy": "prisma migrate deploy --schema=./prisma/schema.prisma",
     "lint": "next lint",
     "lintf": "next lint --fix",
     "elint": "eslint --fix \"src/**/*.{js,jsx,ts,tsx}\"",

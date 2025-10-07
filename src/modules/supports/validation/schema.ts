@@ -43,6 +43,9 @@ export const createSupportsSchema = z.object({
   assignedTeam: z.object({ id: z.coerce.number() }).optional(),
   category: z.object({ id: z.coerce.number() }).optional(),
   labels: z.array(z.object({ id: z.number() })).optional(),
+  tasks: z.array(z.object({ id: z.number() })).optional(),
+  documents: z.array(z.object({ id: z.number() })).optional(),
+  knowledge: z.array(z.object({ id: z.number() })).optional(),
 });
 
 export const updateSupportsSchema = createSupportsSchema.partial();
