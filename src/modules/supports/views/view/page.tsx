@@ -56,7 +56,7 @@ export default function SupportsDetailPage() {
     : {};
 
   return (
-    <>
+    <div className="p-2 md:p-4">
       <DetailPageWrapper
         data={display}
         title="جزئیات تیکت"
@@ -66,7 +66,7 @@ export default function SupportsDetailPage() {
         editUrl={`/dashboard/supports/${id}/update`}
       />
       {id ? (
-        <div className="p-4">
+        <div className="mt-4 flex justify-end">
           <ChatLinkButton
             roomName={`SupportTicket#${id}`}
             className="btn btn-outline"
@@ -75,6 +75,6 @@ export default function SupportsDetailPage() {
           </ChatLinkButton>
         </div>
       ) : null}
-    </>
+    </div>
   );
 }

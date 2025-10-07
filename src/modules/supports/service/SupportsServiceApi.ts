@@ -27,11 +27,29 @@ export class SupportsServiceApi extends BaseService<any> {
     this.connect = connects;
   }
 
+  async getAll(params: any, context: AuthContext) {
+    if (!params.filters) params.filters = {};
+    if (params.filters.user === "me" && context.workspaceUser) {
+      delete params.filters.user;
+      params.filters.userId = context.workspaceUser.id;
+    }
+    return super.getAll(params, context);
+  }
+
   async create(data: any, context: AuthContext): Promise<any> {
     const validated = this.validate(this.createSchema, data);
-    const { user, assignedAdmin, assignedTeam, category, labels, ...rest } =
-      validated as any;
-    return prisma.supportTicket.create({
+    const {
+      user,
+      assignedAdmin,
+      assignedTeam,
+      category,
+      labels,
+      tasks,
+      documents,
+      knowledge,
+      ...rest
+    } = validated as any;
+    const ticket = await prisma.supportTicket.create({
       data: {
         ...rest,
         workspaceId: context.workspaceId,
@@ -45,13 +63,52 @@ export class SupportsServiceApi extends BaseService<any> {
       },
       include,
     });
+    const ops: any[] = [];
+    if (Array.isArray(tasks) && tasks.length) {
+      ops.push(
+        prisma.supportTicketTask.createMany({
+          data: tasks.map((t: any) => ({ ticketId: ticket.id, taskId: t.id })),
+        })
+      );
+    }
+    if (Array.isArray(documents) && documents.length) {
+      ops.push(
+        prisma.supportTicketDocument.createMany({
+          data: documents.map((d: any) => ({
+            ticketId: ticket.id,
+            documentId: d.id,
+          })),
+        })
+      );
+    }
+    if (Array.isArray(knowledge) && knowledge.length) {
+      ops.push(
+        prisma.supportTicketKnowledge.createMany({
+          data: knowledge.map((k: any) => ({
+            ticketId: ticket.id,
+            knowledgeId: k.id,
+          })),
+        })
+      );
+    }
+    if (ops.length) await prisma.$transaction(ops);
+    return ticket;
   }
 
   async update(id: number, data: any): Promise<any> {
     const validated = this.validate(this.updateSchema, data);
-    const { user, assignedAdmin, assignedTeam, category, labels, ...rest } =
-      validated as any;
-    return prisma.supportTicket.update({
+    const {
+      user,
+      assignedAdmin,
+      assignedTeam,
+      category,
+      labels,
+      tasks,
+      documents,
+      knowledge,
+      ...rest
+    } = validated as any;
+    const ticket = await prisma.supportTicket.update({
       where: { id },
       data: {
         ...rest,
@@ -65,5 +122,36 @@ export class SupportsServiceApi extends BaseService<any> {
       },
       include,
     });
+    const ops: any[] = [
+      prisma.supportTicketTask.deleteMany({ where: { ticketId: id } }),
+      prisma.supportTicketDocument.deleteMany({ where: { ticketId: id } }),
+      prisma.supportTicketKnowledge.deleteMany({ where: { ticketId: id } }),
+    ];
+    if (Array.isArray(tasks) && tasks.length) {
+      ops.push(
+        prisma.supportTicketTask.createMany({
+          data: tasks.map((t: any) => ({ ticketId: id, taskId: t.id })),
+        })
+      );
+    }
+    if (Array.isArray(documents) && documents.length) {
+      ops.push(
+        prisma.supportTicketDocument.createMany({
+          data: documents.map((d: any) => ({ ticketId: id, documentId: d.id })),
+        })
+      );
+    }
+    if (Array.isArray(knowledge) && knowledge.length) {
+      ops.push(
+        prisma.supportTicketKnowledge.createMany({
+          data: knowledge.map((k: any) => ({
+            ticketId: id,
+            knowledgeId: k.id,
+          })),
+        })
+      );
+    }
+    if (ops.length) await prisma.$transaction(ops);
+    return ticket;
   }
 }

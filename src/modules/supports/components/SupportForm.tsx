@@ -62,7 +62,12 @@ export default function SupportForm({ after }: { after?: () => void }) {
   return (
     <Form schema={createSupportsSchema} onSubmit={handleSubmit}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input name="title" label="عنوان" placeholder="عنوان تیکت" required />
+        <div className="md:col-span-2">
+          <h3 className="text-sm font-semibold text-gray-600 mb-2">
+            اطلاعات اصلی
+          </h3>
+          <Input name="title" label="عنوان" placeholder="عنوان تیکت" required />
+        </div>
         <Select
           name="source"
           label="نوع ارتباط"
@@ -81,16 +86,45 @@ export default function SupportForm({ after }: { after?: () => void }) {
         <Input name="dueAt" label="زمان موعد" type="datetime-local" />
         <Checkbox name="visibleToUser" label="نمایش به کاربر" />
 
-        <Select name="user.id" label="کاربر" options={users} />
-        <Select name="assignedAdmin.id" label="ادمین پیگیر" options={users} />
-        <Select name="assignedTeam.id" label="تیم" options={teams} />
+        <div className="md:col-span-2">
+          <h3 className="text-sm font-semibold text-gray-600 mt-4 mb-2">
+            اختصاص
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Select name="user.id" label="کاربر" options={users} />
+            <Select
+              name="assignedAdmin.id"
+              label="ادمین پیگیر"
+              options={users}
+            />
+            <Select name="assignedTeam.id" label="تیم" options={teams} />
+          </div>
+        </div>
 
-        <Input name="category.id" label="دسته (ID)" placeholder="شناسه دسته" />
-        <Input
-          name="description"
-          label="توضیحات"
-          placeholder="شرح مشکل یا درخواست"
-        />
+        <div className="md:col-span-2">
+          <h3 className="text-sm font-semibold text-gray-600 mt-4 mb-2">
+            طبقه‌بندی
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              name="category.id"
+              label="دسته (ID)"
+              placeholder="شناسه دسته"
+            />
+          </div>
+        </div>
+
+        <div className="md:col-span-2">
+          <h3 className="text-sm font-semibold text-gray-600 mt-4 mb-2">
+            توضیحات
+          </h3>
+          <Input
+            name="description"
+            label="توضیحات"
+            placeholder="شرح مشکل یا درخواست"
+            className="min-h-24"
+          />
+        </div>
       </div>
 
       {error && <div className="alert alert-error my-4">{error}</div>}
