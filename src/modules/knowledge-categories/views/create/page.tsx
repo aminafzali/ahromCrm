@@ -1,7 +1,10 @@
 import { CreateWrapper } from "@/@Client/Components/wrappers";
 import { BaseRepository } from "@/@Client/Http/Repository/BaseRepository";
 import { CreatePageProps } from "@/@Client/types/crud";
-import { getCategoryFormConfig } from "../../data/form";
+import {
+  createKnowledgeCategorySchema,
+  getCategoryFormConfig,
+} from "../../data/form";
 import { useKnowledgeCategory } from "../../hooks/useKnowledgeCategory";
 
 class Repo extends BaseRepository<any, number> {
@@ -29,7 +32,7 @@ export default function CreateCategoryPage({
       after={after}
       formConfig={getCategoryFormConfig}
       repo={new Repo()}
-      schema={{} as any}
+      schema={createKnowledgeCategorySchema}
     />
   );
 }

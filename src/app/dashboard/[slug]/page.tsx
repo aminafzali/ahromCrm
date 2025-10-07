@@ -7,7 +7,8 @@ import { useParams } from "next/navigation";
 import { lazy, Suspense } from "react";
 
 export default function DynamicIndexPage() {
-  const { slug } = useParams();
+  const params = useParams();
+  const slug = params?.slug;
   const { activeWorkspace, isLoading } = useWorkspace();
 
   const DynamicComponent = lazy(async () => {

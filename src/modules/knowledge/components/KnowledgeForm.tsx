@@ -88,22 +88,6 @@ export default function KnowledgeForm({
             value={content}
             onChange={setContent}
             placeholder="محتوای دانش را اینجا بنویسید..."
-            toolbar={[
-              "bold",
-              "italic",
-              "underline",
-              "strike",
-              "link",
-              "code",
-              "h1",
-              "h2",
-              "ul",
-              "ol",
-              "blockquote",
-              "codeblock",
-              "table",
-              "image",
-            ]}
           />
         </div>
         <div className="grid md:grid-cols-2 gap-4">

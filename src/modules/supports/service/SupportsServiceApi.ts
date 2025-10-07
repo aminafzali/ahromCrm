@@ -37,7 +37,12 @@ export class SupportsServiceApi extends BaseService<any> {
   }
 
   async create(data: any, context: AuthContext): Promise<any> {
+    console.log("🚀 SupportsServiceApi: Starting create with data:", data);
+    console.log("🚀 SupportsServiceApi: Context:", context);
+
     const validated = this.validate(this.createSchema, data);
+    console.log("✅ SupportsServiceApi: Validation passed:", validated);
+
     const {
       user,
       assignedAdmin,
@@ -49,6 +54,15 @@ export class SupportsServiceApi extends BaseService<any> {
       knowledge,
       ...rest
     } = validated as any;
+    console.log("🚀 SupportsServiceApi: Creating ticket with data:", {
+      ...rest,
+      workspaceId: context.workspaceId,
+      userId: user?.id,
+      assignedAdminId: assignedAdmin?.id,
+      assignedTeamId: assignedTeam?.id,
+      categoryId: category?.id,
+    });
+
     const ticket = await prisma.supportTicket.create({
       data: {
         ...rest,
@@ -63,6 +77,8 @@ export class SupportsServiceApi extends BaseService<any> {
       },
       include,
     });
+
+    console.log("✅ SupportsServiceApi: Ticket created:", ticket);
     const ops: any[] = [];
     if (Array.isArray(tasks) && tasks.length) {
       ops.push(
@@ -91,7 +107,11 @@ export class SupportsServiceApi extends BaseService<any> {
         })
       );
     }
-    if (ops.length) await prisma.$transaction(ops);
+    if (ops.length) {
+      console.log("🚀 SupportsServiceApi: Creating relations:", ops.length);
+      await prisma.$transaction(ops);
+    }
+    console.log("✅ SupportsServiceApi: All operations completed successfully");
     return ticket;
   }
 

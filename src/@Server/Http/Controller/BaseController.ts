@@ -188,12 +188,28 @@ export abstract class BaseController<T> {
       );
       // =============================================================
 
-      // ۴. حالا با اطمینان کامل، workspaceId را به فیلترها اضافه می‌کنیم
+      // ۴. پاکسازی ورودی فیلترها (برخی کلاینت‌ها filters را به‌صورت رشته می‌فرستند)
+      try {
+        if (typeof params.filters === "string") {
+          params.filters = JSON.parse(params.filters as unknown as string);
+        }
+        if (
+          params.filters &&
+          typeof params.filters === "object" &&
+          "filters" in params.filters
+        ) {
+          // اگر اشتباهاً filters داخل filters آمده باشد، حذفش می‌کنیم
+
+          delete params.filters.filters;
+        }
+      } catch {}
+
+      // ۵. حالا با اطمینان کامل، workspaceId را به فیلترها اضافه می‌کنیم
       if (context.workspaceId) {
         params.filters.workspaceId = context.workspaceId;
       }
 
-      // ۵. منطق فیلتر بر اساس مالکیت (own) را نیز در اینجا اعمال می‌کنیم
+      // ۶. منطق فیلتر بر اساس مالکیت (own) را نیز در اینجا اعمال می‌کنیم
       if (this.own && context.role?.name === "USER") {
         if (!context.user)
           throw new UnauthorizedException("User context is required.");

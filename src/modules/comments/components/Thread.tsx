@@ -16,12 +16,19 @@ export default function CommentsThread({
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
 
   const load = async () => {
-    const res = await getAll({
-      page: 1,
-      limit: 100,
-      filters: { entityType, entityId },
-    });
-    setItems(res?.data || []);
+    try {
+      console.debug("[COMMENTS] load =>", { entityType, entityId });
+      const res = await getAll({
+        page: 1,
+        limit: 100,
+        filters: { entityType, entityId },
+      });
+      console.debug("[COMMENTS] response =>", res?.data?.length || 0);
+      setItems(res?.data || []);
+    } catch (e) {
+      console.error("[COMMENTS] load error", e);
+      setItems([]);
+    }
   };
 
   useEffect(() => {
@@ -32,6 +39,7 @@ export default function CommentsThread({
   const submit = async () => {
     const txt = body.trim();
     if (!txt) return;
+    console.debug("[COMMENTS] create =>", { entityType, entityId, body: txt });
     await create({ entityType, entityId, body: txt } as any);
     setBody("");
     load();
@@ -53,6 +61,7 @@ export default function CommentsThread({
   const submitReply = async (parentId: number) => {
     const txt = (replyMap[parentId] || "").trim();
     if (!txt) return;
+    console.debug("[COMMENTS] reply =>", { parentId, entityType, entityId });
     await create({
       entityType,
       entityId,

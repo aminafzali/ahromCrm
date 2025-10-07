@@ -1,15 +1,27 @@
 export const include = {
   category: { select: { id: true, name: true } },
-  labels: { select: { id: true, name: true, color: true } },
-  assignees: {
+  labels: {
     select: {
-      id: true,
-      displayName: true,
-      user: { select: { name: true } },
+      label: { select: { id: true, name: true, color: true } },
     },
   },
-  assigneesTeams: {
-    select: { id: true, name: true },
+  assignees: {
+    select: {
+      workspaceUser: {
+        select: {
+          id: true,
+          displayName: true,
+          user: { select: { name: true } },
+        },
+      },
+    },
+  },
+  teamACL: {
+    select: {
+      team: {
+        select: { id: true, name: true },
+      },
+    },
   },
 } as any;
 

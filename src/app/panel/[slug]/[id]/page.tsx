@@ -7,7 +7,9 @@ import { useParams } from "next/navigation";
 import { lazy, Suspense } from "react";
 
 export default function DynamicDashboardPage() {
-  const { slug, id } = useParams();
+  const params = useParams();
+  const slug = params?.slug as string;
+  const id = params?.id as string;
   const { data: session, status } = useSession();
 
   const DynamicComponent = lazy(async () => {

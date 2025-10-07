@@ -72,7 +72,8 @@ export default function DetailPage() {
         onDelete={() => handleDelete(task)}
         editUrl={`/dashboard/tasks/${id}/update`}
       />
-      <div className="p-4">
+      <div className="p-4 space-y-4">
+        <CommentsThread entityType="Task" entityId={Number(id)} />
         <button
           className="btn btn-outline"
           onClick={async () => {
@@ -105,11 +106,6 @@ export function TaskDetailWithComments() {
   return (
     <div>
       <DetailPage />
-      {id && (
-        <div className="p-4">
-          <CommentsThread entityType="Task" entityId={Number(id)} />
-        </div>
-      )}
     </div>
   );
 }

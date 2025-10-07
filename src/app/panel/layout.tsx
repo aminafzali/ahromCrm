@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import DIcon from "@/@Client/Components/common/DIcon";
 import {
   useWorkspace,
@@ -13,7 +15,7 @@ import {
   ToastProvider,
 } from "ndui-ahrom";
 import { signOut } from "next-auth/react";
-import dynamic from "next/dynamic";
+import NextDynamic from "next/dynamic";
 
 const sidebarContent = (
   <div className="mb-8">
@@ -23,7 +25,7 @@ const sidebarContent = (
 );
 
 function Toolbar() {
-  const PanelSupportButton = dynamic(
+  const PanelSupportButton = NextDynamic(
     () => import("@/modules/chat/components/PanelSupportButton"),
     { ssr: false }
   );
@@ -58,26 +60,26 @@ export default function UserDashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <LayoutWrapper
-      drawerHeader={sidebarContent}
-      toolbarContent={<Toolbar />}
-      drawerMenuItems={userMenuItems}
-      bottomBarItems={userBottomItems}
-      showBottomBar
-      rtl
-      activeClass="bg-primary text-white"
-      breakpoint={1024}
-      className="bg-white"
-    >
-      <div className="px-4 pt-2 min-h-screen md:p-6 bg-base-100  pb-20">
-        {/* AuthProvider در root layout وجود دارد، فقط WorkspaceProvider و ToastProvider نیاز است */}
-        <WorkspaceProvider>
+    <WorkspaceProvider>
+      <LayoutWrapper
+        drawerHeader={sidebarContent}
+        toolbarContent={<Toolbar />}
+        drawerMenuItems={userMenuItems}
+        bottomBarItems={userBottomItems}
+        showBottomBar
+        rtl
+        activeClass="bg-primary text-white"
+        breakpoint={1024}
+        className="bg-white"
+      >
+        <div className="px-4 pt-2 min-h-screen md:p-6 bg-base-100  pb-20">
+          {/* AuthProvider در root layout وجود دارد، فقط ToastProvider نیاز است */}
           <ToastProvider>
             {children}
             <ToastContainer position="top-center" />
           </ToastProvider>
-        </WorkspaceProvider>
-      </div>
-    </LayoutWrapper>
+        </div>
+      </LayoutWrapper>
+    </WorkspaceProvider>
   );
 }

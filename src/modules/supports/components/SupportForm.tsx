@@ -1,9 +1,14 @@
 "use client";
 
+import Select3 from "@/@Client/Components/ui/Select3";
+import { useDocument } from "@/modules/documents/hooks/useDocument";
+import { useKnowledge } from "@/modules/knowledge/hooks/useKnowledge";
+import StandaloneDatePicker from "@/modules/payments/components/StandaloneDatePicker";
 import { useSupportCategory } from "@/modules/supports-categories/hooks/useSupportCategory";
+import { useTask } from "@/modules/tasks/hooks/useTask";
 import { useTeam } from "@/modules/teams/hooks/useTeam";
 import { useWorkspaceUser } from "@/modules/workspace-users/hooks/useWorkspaceUser";
-import { Button, Checkbox, Form, Input, Select } from "ndui-ahrom";
+import { Button, Checkbox, Form, Input } from "ndui-ahrom";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { useSupports } from "../hooks/useSupports";
@@ -20,6 +25,9 @@ export default function SupportForm({ after }: { after?: () => void }) {
   const { create, submitting, error, success } = useSupports();
   const { getAll: getAllWorkspaceUsers } = useWorkspaceUser();
   const { getAll: getAllTeams } = useTeam();
+  const { getAll: getAllTasks } = useTask();
+  const { getAll: getAllDocuments } = useDocument();
+  const { getAll: getAllKnowledge } = useKnowledge();
 
   const [users, setUsers] = useState<{ value: number; label: string }[]>([]);
   const [teams, setTeams] = useState<{ value: number; label: string }[]>([]);
@@ -33,6 +41,8 @@ export default function SupportForm({ after }: { after?: () => void }) {
   const [categories, setCategories] = useState<
     { value: number; label: string }[]
   >([]);
+  const [contactAt, setContactAt] = useState<string | null>(null);
+  const [dueAt, setDueAt] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -52,6 +62,31 @@ export default function SupportForm({ after }: { after?: () => void }) {
     })();
   }, []);
 
+  // load relations options (simple selectable lists)
+  useEffect(() => {
+    (async () => {
+      try {
+        const [ts, ds, ks] = await Promise.all([
+          getAllTasks({ page: 1, limit: 1000 }),
+          getAllDocuments({ page: 1, limit: 1000 }),
+          getAllKnowledge({ page: 1, limit: 1000 }),
+        ]);
+        setTasks(
+          (ts?.data || []).map((x: any) => ({ value: x.id, label: x.title }))
+        );
+        setDocuments(
+          (ds?.data || []).map((x: any) => ({
+            value: x.id,
+            label: x.title || `#${x.id}`,
+          }))
+        );
+        setKnowledges(
+          (ks?.data || []).map((x: any) => ({ value: x.id, label: x.title }))
+        );
+      } catch {}
+    })();
+  }, []);
+
   // Load Support Categories for Select
   const { getAll: getAllSupportCategories } = useSupportCategory();
   useEffect(() => {
@@ -68,78 +103,187 @@ export default function SupportForm({ after }: { after?: () => void }) {
   }, []);
 
   const handleSubmit = async (data: FormData) => {
-    await create(data as any);
-    after?.();
+    console.log("🚀 SupportForm: Starting form submission", data);
+
+    // Manual validation test
+    const validationResult = createSupportsSchema.safeParse(data);
+    console.log("🔍 SupportForm: Manual validation result:", validationResult);
+
+    if (!validationResult.success) {
+      console.error(
+        "❌ SupportForm: Validation failed:",
+        validationResult.error.issues
+      );
+      return;
+    }
+
+    try {
+      const result = await create(validationResult.data as any);
+      console.log(
+        "✅ SupportForm: Successfully created support ticket",
+        result
+      );
+      after?.();
+    } catch (error) {
+      console.error("❌ SupportForm: Error creating support ticket", error);
+    }
   };
 
   const sourceOptions = supportSourceEnum.options.map((v) => ({
     value: v,
-    label: v,
+    label:
+      v === "INBOUND_CALL"
+        ? "تماس ورودی"
+        : v === "OUTBOUND_CALL"
+        ? "تماس خروجی"
+        : v === "USER_TICKET"
+        ? "تیکت کاربر"
+        : v === "ADMIN_TICKET"
+        ? "تیکت ادمین"
+        : v === "ONSITE_BY_USER"
+        ? "حضوری توسط کاربر"
+        : v === "ONSITE_BY_US"
+        ? "حضوری توسط ما"
+        : v,
   }));
   const typeOptions = supportTypeEnum.options.map((v) => ({
     value: v,
-    label: v,
+    label:
+      v === "SALES_ORDER"
+        ? "سفارش فروش"
+        : v === "QUOTE"
+        ? "پیش‌فاکتور"
+        : v === "ORDER_FOLLOWUP"
+        ? "پیگیری سفارش"
+        : v === "PURCHASE_ORDER"
+        ? "سفارش خرید"
+        : v === "PURCHASE_QUOTE"
+        ? "استعلام خرید"
+        : v === "COMPLAINT"
+        ? "شکایت"
+        : v === "ISSUE"
+        ? "مشکل"
+        : v === "QUESTION"
+        ? "سوال"
+        : v,
   }));
   const priorityOptions = supportPriorityEnum.options.map((v) => ({
     value: v,
-    label: v,
+    label:
+      v === "LOW"
+        ? "کم"
+        : v === "MEDIUM"
+        ? "متوسط"
+        : v === "HIGH"
+        ? "زیاد"
+        : v === "CRITICAL"
+        ? "بحرانی"
+        : v,
   }));
 
+  const statusOptions = [
+    { value: "NEW", label: "جدید" },
+    { value: "OPEN", label: "باز" },
+    { value: "IN_PROGRESS", label: "در حال پیگیری" },
+    { value: "RESOLVED", label: "حل شده" },
+    { value: "CLOSED", label: "بسته" },
+  ];
+
   return (
-    <Form schema={createSupportsSchema} onSubmit={handleSubmit}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="md:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-600 mb-2">
+    <Form
+      schema={createSupportsSchema}
+      onSubmit={(data) => {
+        console.log("🎯 Form onSubmit called with data:", data);
+        handleSubmit(data);
+      }}
+    >
+      <div className="grid grid-cols-1 gap-6">
+        {/* اطلاعات اصلی */}
+        <div className="bg-white rounded-lg p-4 shadow border">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
             اطلاعات اصلی
           </h3>
-          <Input name="title" label="عنوان" placeholder="عنوان تیکت" required />
-        </div>
-        <Select
-          name="source"
-          label="نوع ارتباط"
-          options={sourceOptions}
-          required
-        />
-        <Select
-          name="type"
-          label="نوع پشتیبانی"
-          options={typeOptions}
-          required
-        />
-        <Select name="priority" label="اولویت" options={priorityOptions} />
-        <Input name="status" label="وضعیت" placeholder="مثلاً جدید" required />
-        <Input name="contactAt" label="تاریخ تماس" type="datetime-local" />
-        <Input name="dueAt" label="زمان موعد" type="datetime-local" />
-        <Checkbox name="visibleToUser" label="نمایش به کاربر" />
-
-        <div className="md:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-600 mt-4 mb-2">
-            اختصاص
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Select name="user.id" label="کاربر" options={users} />
-            <Select
-              name="assignedAdmin.id"
-              label="ادمین پیگیر"
-              options={users}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              name="title"
+              label="عنوان"
+              placeholder="عنوان تیکت"
+              required
             />
-            <Select name="assignedTeam.id" label="تیم" options={teams} />
+            <Select3
+              name="source"
+              label="نوع ارتباط"
+              options={sourceOptions}
+              required
+            />
+            <Select3
+              name="type"
+              label="نوع پشتیبانی"
+              options={typeOptions}
+              required
+            />
+            <Select3 name="priority" label="اولویت" options={priorityOptions} />
+            <Select3
+              name="status"
+              label="وضعیت"
+              options={statusOptions}
+              required
+            />
+            <div>
+              <label className="label">
+                <span className="label-text">تاریخ تماس</span>
+              </label>
+              <StandaloneDatePicker
+                name="contactAt"
+                value={contactAt}
+                onChange={(payload: any) =>
+                  setContactAt(payload ? payload.iso : null)
+                }
+              />
+            </div>
+            <div>
+              <label className="label">
+                <span className="label-text">زمان موعد</span>
+              </label>
+              <StandaloneDatePicker
+                name="dueAt"
+                value={dueAt}
+                onChange={(payload: any) =>
+                  setDueAt(payload ? payload.iso : null)
+                }
+              />
+            </div>
+            <Checkbox name="visibleToUser" label="نمایش به کاربر" />
           </div>
         </div>
 
-        <div className="md:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-600 mt-4 mb-2">
-            ارتباطات
-          </h3>
+        {/* اختصاص */}
+        <div className="bg-white rounded-lg p-4 shadow border">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">اختصاص</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Select name="tasks" label="وظایف مرتبط" options={tasks} multiple />
-            <Select
+            <Select3 name="user" label="کاربر" options={users} />
+            <Select3 name="assignedAdmin" label="ادمین پیگیر" options={users} />
+            <Select3 name="assignedTeam" label="تیم" options={teams} />
+          </div>
+        </div>
+
+        {/* ارتباطات */}
+        <div className="bg-white rounded-lg p-4 shadow border">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">ارتباطات</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Select3
+              name="tasks"
+              label="وظایف مرتبط"
+              options={tasks}
+              multiple
+            />
+            <Select3
               name="documents"
               label="اسناد مرتبط"
               options={documents}
               multiple
             />
-            <Select
+            <Select3
               name="knowledge"
               label="پایگاه دانش مرتبط"
               options={knowledges}
@@ -148,19 +292,19 @@ export default function SupportForm({ after }: { after?: () => void }) {
           </div>
         </div>
 
-        <div className="md:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-600 mt-4 mb-2">
+        {/* طبقه‌بندی */}
+        <div className="bg-white rounded-lg p-4 shadow border">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
             طبقه‌بندی
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select name="category.id" label="دسته" options={categories} />
+            <Select3 name="category" label="دسته" options={categories} />
           </div>
         </div>
 
-        <div className="md:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-600 mt-4 mb-2">
-            توضیحات
-          </h3>
+        {/* توضیحات */}
+        <div className="bg-white rounded-lg p-4 shadow border">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">توضیحات</h3>
           <Input
             name="description"
             label="توضیحات"
@@ -168,20 +312,45 @@ export default function SupportForm({ after }: { after?: () => void }) {
             className="min-h-24"
           />
         </div>
-      </div>
 
-      {error && <div className="alert alert-error my-4">{error}</div>}
-      {success && <div className="alert alert-success my-4">{success}</div>}
+        {error && <div className="alert alert-error">{error}</div>}
+        {success && <div className="alert alert-success">{success}</div>}
 
-      <div className="flex justify-end mt-4">
-        <Button
-          type="submit"
-          variant="primary"
-          loading={submitting}
-          disabled={submitting}
-        >
-          ثبت تیکت
-        </Button>
+        <div className="flex justify-end space-x-2 space-x-reverse">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              console.log("🔍 Debug: Manual form test");
+              const testData = {
+                title: "تست تیکت",
+                source: "USER_TICKET",
+                type: "QUESTION",
+                priority: "MEDIUM",
+                status: "NEW",
+                description: "این یک تست است",
+              };
+              console.log("🧪 Test data:", testData);
+              const validation = createSupportsSchema.safeParse(testData);
+              console.log("🧪 Validation result:", validation);
+              if (validation.success) {
+                handleSubmit(validation.data as any);
+              } else {
+                console.error("🧪 Validation failed:", validation.error.issues);
+              }
+            }}
+          >
+            تست دستی
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            loading={submitting}
+            disabled={submitting}
+          >
+            ثبت تیکت
+          </Button>
+        </div>
       </div>
     </Form>
   );

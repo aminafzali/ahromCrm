@@ -1,6 +1,9 @@
 import { CreateWrapper } from "@/@Client/Components/wrappers";
 import { CreatePageProps } from "@/@Client/types/crud";
-import { getCategoryFormConfig } from "../../data/form";
+import {
+  createSupportCategorySchema,
+  getCategoryFormConfig,
+} from "../../data/form";
 import { useSupportCategory } from "../../hooks/useSupportCategory";
 import { SupportCategoryRepository } from "../../repo/SupportCategoryRepository";
 
@@ -23,7 +26,7 @@ export default function CreateCategoryPage({
       after={after}
       formConfig={getCategoryFormConfig}
       repo={new SupportCategoryRepository()}
-      schema={{} as any}
+      schema={createSupportCategorySchema}
     />
   );
 }

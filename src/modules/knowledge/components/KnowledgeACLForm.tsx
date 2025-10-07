@@ -25,10 +25,10 @@ export default function KnowledgeACLForm({
     { label: string; value: number }[]
   >([]);
   const [teamIds, setTeamIds] = useState<number[]>(
-    initial?.assigneesTeams?.map((t: any) => t.id) || []
+    initial?.teamACL?.map((t: any) => t.team.id) || []
   );
   const [userIds, setUserIds] = useState<number[]>(
-    initial?.assignees?.map((u: any) => u.id) || []
+    initial?.assignees?.map((u: any) => u.workspaceUser.id) || []
   );
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function KnowledgeACLForm({
   const submit = async () => {
     await update(id, {
       assignees: userIds.map((v) => ({ id: v })),
-      assigneesTeams: teamIds.map((v) => ({ id: v })),
+      teamACL: teamIds.map((v) => ({ id: v })),
     } as any);
   };
 
@@ -59,7 +59,7 @@ export default function KnowledgeACLForm({
       <h3 className="font-bold">دسترسی و اختصاص</h3>
       <div className="grid md:grid-cols-2 gap-4">
         <Select3
-          name="assigneesTeams"
+          name="teamACL"
           label="تیم‌ها"
           options={teamOptions}
           value={teamIds.map(String)}
