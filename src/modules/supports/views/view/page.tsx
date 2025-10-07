@@ -9,8 +9,8 @@ import { useEffect, useState } from "react";
 import { useSupports } from "../../hooks/useSupports";
 
 export default function SupportsDetailPage() {
-  const params = useParams();
-  const id = parseInt(params.id as string);
+  const params = useParams() as { id?: string } | null;
+  const id = Number(params?.id);
   const router = useRouter();
   const { getById, loading, error, statusCode, remove } = useSupports();
   const [ticket, setTicket] = useState<any | null>(null);
@@ -29,6 +29,7 @@ export default function SupportsDetailPage() {
     router.push("/dashboard/supports");
   };
 
+  if (!id) return <NotFound />;
   if (loading) return <Loading />;
   if (statusCode === 404) return <NotFound />;
 

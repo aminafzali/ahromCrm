@@ -13,8 +13,8 @@ import { useTask } from "../../hooks/useTask";
 import { TaskWithRelations } from "../../types";
 
 export default function DetailPage() {
-  const params = useParams();
-  const id = parseInt(params.id as string);
+  const params = useParams() as { id?: string } | null;
+  const id = Number(params?.id);
   const router = useRouter();
   const { getById, loading, error, statusCode, remove } = useTask();
   const [task, setTask] = useState<TaskWithRelations | null>(null);
@@ -58,6 +58,7 @@ export default function DetailPage() {
       }
     : {};
 
+  if (!id) return <NotFound />;
   if (loading) return <Loading />;
   if (statusCode === 404) return <NotFound />;
 
@@ -99,8 +100,8 @@ export default function DetailPage() {
 }
 
 export function TaskDetailWithComments() {
-  const params = useParams();
-  const id = parseInt(params.id as string);
+  const params = useParams() as unknown as { id?: string };
+  const id = Number(params?.id);
   return (
     <div>
       <DetailPage />

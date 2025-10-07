@@ -12,8 +12,8 @@ import { useProject } from "../../hooks/useProject";
 import { ProjectWithRelations } from "../../types";
 
 export default function DetailPage() {
-  const params = useParams();
-  const id = parseInt(params.id as string);
+  const params = useParams() as { id?: string } | null;
+  const id = Number(params?.id);
   const router = useRouter();
   const { getById, loading, error, statusCode, remove } = useProject();
   const [project, setProject] = useState<ProjectWithRelations | null>(null);
@@ -57,6 +57,7 @@ export default function DetailPage() {
       }
     : {};
 
+  if (!id) return <NotFound />;
   if (loading) return <Loading />;
   if (statusCode === 404) return <NotFound />;
 

@@ -8,8 +8,8 @@ import { useEffect, useState } from "react";
 import { useKnowledgeCategory } from "../../hooks/useKnowledgeCategory";
 
 export default function DetailPage() {
-  const params = useParams();
-  const id = parseInt(params.id as string);
+  const params = useParams() as { id?: string } | null;
+  const id = Number(params?.id);
   const { getById, loading, error, success, statusCode, remove } =
     useKnowledgeCategory();
   const [category, setCategory] = useState<any>(null);
@@ -39,6 +39,7 @@ export default function DetailPage() {
       }
     : {};
 
+  if (!id) return <NotFound />;
   if (loading) return <Loading />;
   if (statusCode === 404) return <NotFound />;
 

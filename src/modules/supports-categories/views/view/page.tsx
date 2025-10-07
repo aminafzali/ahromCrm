@@ -9,8 +9,8 @@ import { useSupportCategory } from "../../hooks/useSupportCategory";
 import { SupportCategoryWithRelations } from "../../types";
 
 export default function DetailPage() {
-  const params = useParams();
-  const id = parseInt(params.id as string);
+  const params = useParams() as { id?: string } | null;
+  const id = Number(params?.id);
   const { getById, loading, error, success, statusCode, remove } =
     useSupportCategory();
   const [category, setCategory] = useState<SupportCategoryWithRelations | null>(
@@ -44,6 +44,7 @@ export default function DetailPage() {
       }
     : {};
 
+  if (!id) return <NotFound />;
   if (loading) return <Loading />;
   if (statusCode === 404) return <NotFound />;
 

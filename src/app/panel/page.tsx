@@ -18,6 +18,8 @@
 
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import DIcon from "@/@Client/Components/common/DIcon";
 import { useRequest } from "@/modules/requests/hooks/useRequest";
 import { Button, Card } from "ndui-ahrom";
