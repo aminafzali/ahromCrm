@@ -114,8 +114,8 @@ export default async function WorkspacePage({ params }: Props) {
   // ===== پایان بخش سئو ۲ =====
 
   const WorkspaceSupportButton = dynamic(
-    () => import("@/modules/chat/components/WorkspaceSupportButton"),
-    { ssr: false }
+    () => import("@/modules/chat/components/WorkspaceSupportButtonClient"),
+    { ssr: true }
   );
 
   return (

@@ -12,8 +12,8 @@ export default async function SupportPage({
   if (!workspace) return notFound();
 
   const SupportChatPublic = dynamic(
-    () => import("@/modules/chat/components/SupportChatPublic"),
-    { ssr: false }
+    () => import("@/modules/chat/components/SupportChatPublicClient"),
+    { ssr: true }
   );
 
   return <SupportChatPublic workspaceId={workspace.id} slug={slug} />;
