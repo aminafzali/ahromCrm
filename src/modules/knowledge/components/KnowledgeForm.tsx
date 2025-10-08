@@ -1,6 +1,6 @@
 "use client";
 
-import RichTextEditor from "@/@Client/Components/ui/RichTextEditor";
+import RichTextEditor from "@/@Client/Components/ui/RichTextEditor2";
 import Select3 from "@/@Client/Components/ui/Select3";
 import { useKnowledgeCategory } from "@/modules/knowledge-categories/hooks/useKnowledgeCategory";
 import { Button, Input } from "ndui-ahrom";

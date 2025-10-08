@@ -14,7 +14,7 @@ import { createTaskSchema } from "../validation/schema";
 import { Button, Form, Input } from "ndui-ahrom";
 // از کامپوننت Select3 استفاده نمی‌کنیم و از Select اصلی شما استفاده می‌کنیم
 // همچنین DatePicker مورد استفاده در الگو، StandaloneDatePicker است
-import RichTextEditor from "@/@Client/Components/ui/RichTextEditor";
+import RichTextEditor from "@/@Client/Components/ui/RichTextEditor2";
 import Select3 from "@/@Client/Components/ui/Select3";
 import StandaloneDatePicker from "@/modules/invoices/components/StandaloneDatePicker";
 // ===== پایان اصلاحیه ۱ =====

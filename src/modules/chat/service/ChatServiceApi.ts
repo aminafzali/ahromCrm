@@ -69,7 +69,7 @@ export class ChatServiceApi extends BaseService<any> {
     const [items, total] = await Promise.all([
       (prisma as any).chatMessage.findMany({
         where: { roomId },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: "asc" },
         skip,
         take: limit,
         include: {

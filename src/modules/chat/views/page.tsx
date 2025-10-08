@@ -2,7 +2,7 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import { Button } from "ndui-ahrom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ChatInterface from "../components/ChatInterface";
 import { useChat } from "../hooks/useChat";
 
@@ -12,6 +12,9 @@ export default function ChatIndexPage() {
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const autoSelectedRef = useRef(false);
+
+  const repoRef = useRef(repo);
 
   useEffect(() => {
     const loadRooms = async () => {
@@ -20,7 +23,7 @@ export default function ChatIndexPage() {
         setError(null);
         console.log("🚀 ChatIndexPage: Loading chat rooms...");
 
-        const res: any = await repo.getAll({ page: 1, limit: 100 });
+        const res: any = await repoRef.current.getAll({ page: 1, limit: 100 });
         console.log("📡 ChatIndexPage: API response:", res);
 
         const roomsData = res?.data || res || [];
@@ -28,9 +31,10 @@ export default function ChatIndexPage() {
         console.log("📋 ChatIndexPage: Rooms loaded:", roomsData.length);
 
         // Auto-select first room if available
-        if (roomsData.length > 0 && !selectedRoom) {
+        if (roomsData.length > 0 && !autoSelectedRef.current) {
           setSelectedRoom(roomsData[0]);
           console.log("✅ ChatIndexPage: Auto-selected room:", roomsData[0]);
+          autoSelectedRef.current = true;
         }
       } catch (err) {
         console.error("❌ ChatIndexPage: Error loading rooms:", err);
@@ -41,7 +45,8 @@ export default function ChatIndexPage() {
     };
 
     loadRooms();
-  }, [repo, selectedRoom]);
+    // run once on mount
+  }, []);
 
   // Show loading state
   if (loading) {

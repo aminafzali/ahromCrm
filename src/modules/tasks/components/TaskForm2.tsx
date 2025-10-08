@@ -4,7 +4,7 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import Loading from "@/@Client/Components/common/Loading";
-import RichTextEditor from "@/@Client/Components/ui/RichTextEditor";
+import RichTextEditor from "@/@Client/Components/ui/RichTextEditor2";
 import Select3 from "@/@Client/Components/ui/Select3";
 import StandaloneDatePicker from "@/@Client/Components/ui/StandaloneDatePicker2";
 import { usePMStatus } from "@/modules/pm-statuses/hooks/usePMStatus";
@@ -193,7 +193,6 @@ export default function TaskForm({
       // مهم: این صدا فقط یک‌بار در mount/initialData اجرا می‌شود
       fetchProjectAssignments(initialData.project.id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally run once on mount for initialData
 
   // --- مشتقات memoized ---

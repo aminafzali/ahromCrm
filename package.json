@@ -51,6 +51,7 @@
     "ndui-ahrom": "0.1.49",
     "next": "15.1.7",
     "next-auth": "^4.24.11",
+    "pdfjs-dist": "^5.4.296",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^15.4.1",

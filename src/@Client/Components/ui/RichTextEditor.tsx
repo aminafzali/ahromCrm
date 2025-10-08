@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 // Lexical imports
 import {
   $createParagraphNode,
+  $createTextNode,
   $getRoot,
   $getSelection,
   $isRangeSelection,
@@ -43,11 +44,18 @@ import {
   REMOVE_LIST_COMMAND,
 } from "@lexical/list";
 
-import { AutoLinkNode, LinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
+import { $createLinkNode, AutoLinkNode, LinkNode } from "@lexical/link";
 
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 
-import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
+import {
+  INSERT_TABLE_COMMAND,
+  TableCellNode,
+  TableNode,
+  TableRowNode,
+} from "@lexical/table";
+
+// Image node will be handled differently
 
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html";
 
@@ -62,6 +70,7 @@ function ToolbarPlugin() {
   const [isStrikethrough, setIsStrikethrough] = useState(false);
   const [isCode, setIsCode] = useState(false);
   const [currentBlock, setCurrentBlock] = useState<string>("paragraph");
+  const [fontSize, setFontSize] = useState<string>("medium");
 
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
@@ -103,20 +112,90 @@ function ToolbarPlugin() {
     });
   };
 
+  const changeFontSize = (size: string) => {
+    setFontSize(size);
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        // Apply font size styling using format
+        const format =
+          size === "small"
+            ? "font-size: 12px;"
+            : size === "medium"
+            ? "font-size: 14px;"
+            : "font-size: 18px;";
+        // For now, we'll just store the size preference
+        // The actual styling will be handled by CSS classes
+      }
+    });
+  };
+
   const insertLink = () => {
     const url = window.prompt("آدرس لینک را وارد کنید");
-    if (url !== null) {
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, url || null);
+    const linkText = window.prompt("متن لینک (اختیاری)");
+    if (url !== null && url.trim()) {
+      editor.update(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          const linkNode = $createLinkNode(url.trim());
+          const textNode = $createTextNode(linkText || url.trim());
+          const arrowNode = $createTextNode(" ↗");
+          linkNode.append(textNode);
+          linkNode.append(arrowNode);
+          selection.insertNodes([linkNode]);
+        }
+      });
+    }
+  };
+
+  const insertTable = () => {
+    editor.dispatchCommand(INSERT_TABLE_COMMAND, {
+      columns: "3",
+      rows: "3",
+      includeHeaders: true,
+    });
+  };
+
+  const insertImage = () => {
+    const url = window.prompt("آدرس تصویر را وارد کنید");
+    if (url !== null && url.trim()) {
+      editor.update(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          // Insert image as HTML
+          const imageHtml = `<img src="${url.trim()}" alt="تصویر" style="max-width: 100%; height: auto; border-radius: 8px;" />`;
+          const parser = new DOMParser();
+          const dom = parser.parseFromString(imageHtml, "text/html");
+          const nodes = $generateNodesFromDOM(editor, dom);
+          selection.insertNodes(nodes);
+        }
+      });
+    }
+  };
+
+  const insertFile = () => {
+    const url = window.prompt("آدرس فایل را وارد کنید");
+    const fileName = window.prompt("نام فایل (اختیاری)");
+    if (url !== null && url.trim()) {
+      editor.update(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          const linkNode = $createLinkNode(url.trim());
+          const textNode = $createTextNode(fileName || "دانلود فایل");
+          linkNode.append(textNode);
+          selection.insertNodes([linkNode]);
+        }
+      });
     }
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 p-3 border-b bg-gray-50 rounded-t-lg">
-      {/* Undo/Redo */}
+    <div className="flex flex-wrap items-center gap-1 p-2 border-b bg-white">
+      {/* Undo/Redo - Leftmost */}
       <button
         type="button"
         onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
-        className="p-2 rounded hover:bg-gray-200 transition-colors"
+        className="p-2 rounded hover:bg-gray-100 transition-colors"
         title="بازگردانی"
       >
         <DIcon icon="fa-rotate-left" cdi={false} />
@@ -124,7 +203,7 @@ function ToolbarPlugin() {
       <button
         type="button"
         onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
-        className="p-2 rounded hover:bg-gray-200 transition-colors"
+        className="p-2 rounded hover:bg-gray-100 transition-colors"
         title="تکرار"
       >
         <DIcon icon="fa-rotate-right" cdi={false} />
@@ -132,9 +211,56 @@ function ToolbarPlugin() {
 
       <div className="w-px h-6 bg-gray-300 mx-1" />
 
+      {/* Text Align */}
+      <button
+        type="button"
+        onClick={() => {
+          editor.update(() => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection)) {
+              selection.getNodes().forEach((node) => {
+                if (node.getType() === "text") {
+                  (node as any).setStyle("text-align: justify");
+                }
+              });
+            }
+          });
+        }}
+        className="p-2 rounded hover:bg-gray-100 transition-colors"
+        title="تراز متن"
+      >
+        <DIcon icon="fa-align-justify" cdi={false} />
+      </button>
+
+      {/* Text Color */}
+      <button
+        type="button"
+        onClick={() => {
+          const color = window.prompt(
+            "رنگ متن را وارد کنید (مثل: #ff0000 یا red)"
+          );
+          if (color) {
+            editor.update(() => {
+              const selection = $getSelection();
+              if ($isRangeSelection(selection)) {
+                selection.getNodes().forEach((node) => {
+                  if (node.getType() === "text") {
+                    (node as any).setStyle(`color: ${color}`);
+                  }
+                });
+              }
+            });
+          }
+        }}
+        className="p-2 rounded hover:bg-gray-100 transition-colors"
+        title="رنگ متن"
+      >
+        <DIcon icon="fa-palette" cdi={false} />
+      </button>
+
       {/* Block Type Selector */}
       <select
-        className="select select-bordered select-sm"
+        className="select select-bordered select-sm min-w-[120px]"
         value={currentBlock.startsWith("heading") ? currentBlock : "paragraph"}
         onChange={(e) => formatBlock(e.target.value)}
       >
@@ -144,58 +270,109 @@ function ToolbarPlugin() {
         <option value="quote">نقل قول</option>
       </select>
 
-      <div className="w-px h-6 bg-gray-300 mx-1" />
+      {/* Link */}
+      <button
+        type="button"
+        onClick={insertLink}
+        className="p-2 rounded hover:bg-gray-100 transition-colors"
+        title="لینک"
+      >
+        <DIcon icon="fa-link" cdi={false} />
+      </button>
+
+      {/* Table */}
+      <button
+        type="button"
+        onClick={insertTable}
+        className="p-2 rounded hover:bg-gray-100 transition-colors"
+        title="جدول"
+      >
+        <DIcon icon="fa-table" cdi={false} />
+      </button>
+
+      {/* Image */}
+      <button
+        type="button"
+        onClick={insertImage}
+        className="p-2 rounded hover:bg-gray-100 transition-colors"
+        title="تصویر"
+      >
+        <DIcon icon="fa-image" cdi={false} />
+      </button>
+
+      {/* File */}
+      <button
+        type="button"
+        onClick={insertFile}
+        className="p-2 rounded hover:bg-gray-100 transition-colors"
+        title="فایل"
+      >
+        <DIcon icon="fa-paperclip" cdi={false} />
+      </button>
 
       {/* Text Formatting */}
       <button
         type="button"
         onClick={() => formatText("bold")}
-        className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-          isBold ? "bg-gray-300" : ""
+        className={`p-2 rounded hover:bg-gray-100 transition-colors ${
+          isBold ? "bg-gray-200" : ""
         }`}
         title="ضخیم"
       >
-        <DIcon icon="fa-bold" cdi={false} />
+        <span className="font-bold text-sm">B</span>
       </button>
       <button
         type="button"
         onClick={() => formatText("italic")}
-        className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-          isItalic ? "bg-gray-300" : ""
+        className={`p-2 rounded hover:bg-gray-100 transition-colors ${
+          isItalic ? "bg-gray-200" : ""
         }`}
         title="کج"
       >
-        <DIcon icon="fa-italic" cdi={false} />
+        <span className="italic text-sm">I</span>
       </button>
       <button
         type="button"
         onClick={() => formatText("underline")}
-        className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-          isUnderline ? "bg-gray-300" : ""
+        className={`p-2 rounded hover:bg-gray-100 transition-colors ${
+          isUnderline ? "bg-gray-200" : ""
         }`}
         title="زیرخط"
       >
-        <DIcon icon="fa-underline" cdi={false} />
-      </button>
-      <button
-        type="button"
-        onClick={() => formatText("strikethrough")}
-        className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-          isStrikethrough ? "bg-gray-300" : ""
-        }`}
-        title="خط خوردن"
-      >
-        <DIcon icon="fa-strikethrough" cdi={false} />
+        <span className="underline text-sm">U</span>
       </button>
       <button
         type="button"
         onClick={() => formatText("code")}
-        className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-          isCode ? "bg-gray-300" : ""
+        className={`p-2 rounded hover:bg-gray-100 transition-colors ${
+          isCode ? "bg-gray-200" : ""
         }`}
         title="کد"
       >
         <DIcon icon="fa-code" cdi={false} />
+      </button>
+
+      {/* Font Size Selector */}
+      <select
+        className="select select-bordered select-sm min-w-[100px]"
+        value={fontSize}
+        onChange={(e) => changeFontSize(e.target.value)}
+      >
+        <option value="small">کوچک</option>
+        <option value="medium">متوسط</option>
+        <option value="large">بزرگ</option>
+      </select>
+
+      {/* Quote as separate button */}
+      <button
+        type="button"
+        onClick={() => formatBlock("quote")}
+        className={`p-2 rounded hover:bg-gray-100 transition-colors ${
+          currentBlock === "quote" ? "bg-gray-200" : ""
+        }`}
+        title="نقل قول"
+      >
+        <DIcon icon="fa-quote-left" cdi={false} />
       </button>
 
       <div className="w-px h-6 bg-gray-300 mx-1" />
@@ -206,7 +383,7 @@ function ToolbarPlugin() {
         onClick={() =>
           editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
         }
-        className="p-2 rounded hover:bg-gray-200 transition-colors"
+        className="p-2 rounded hover:bg-gray-100 transition-colors"
         title="لیست نشانه‌دار"
       >
         <DIcon icon="fa-list-ul" cdi={false} />
@@ -216,7 +393,7 @@ function ToolbarPlugin() {
         onClick={() =>
           editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
         }
-        className="p-2 rounded hover:bg-gray-200 transition-colors"
+        className="p-2 rounded hover:bg-gray-100 transition-colors"
         title="لیست شماره‌دار"
       >
         <DIcon icon="fa-list-ol" cdi={false} />
@@ -224,22 +401,10 @@ function ToolbarPlugin() {
       <button
         type="button"
         onClick={() => editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined)}
-        className="p-2 rounded hover:bg-gray-200 transition-colors"
+        className="p-2 rounded hover:bg-gray-100 transition-colors"
         title="حذف لیست"
       >
         <DIcon icon="fa-list" cdi={false} />
-      </button>
-
-      <div className="w-px h-6 bg-gray-300 mx-1" />
-
-      {/* Link */}
-      <button
-        type="button"
-        onClick={insertLink}
-        className="p-2 rounded hover:bg-gray-200 transition-colors"
-        title="لینک"
-      >
-        <DIcon icon="fa-link" cdi={false} />
       </button>
     </div>
   );
@@ -306,11 +471,12 @@ export default function RichTextEditor({
       theme: {
         ltr: "text-left",
         rtl: "text-right",
-        paragraph: "mb-4",
-        quote: "border-r-4 border-gray-300 pr-4 italic text-gray-600",
+        paragraph: "mb-4 text-sm",
+        quote:
+          "border-r-4 border-gray-300 pr-4 italic text-gray-600 bg-gray-50 p-3 rounded",
         heading: {
-          h1: "text-2xl font-bold mb-4",
-          h2: "text-xl font-bold mb-3",
+          h1: "text-2xl font-bold mb-4 text-gray-800",
+          h2: "text-xl font-bold mb-3 text-gray-800",
         },
         list: {
           nested: {
@@ -319,7 +485,7 @@ export default function RichTextEditor({
           ol: "list-decimal mr-8",
           ul: "list-disc mr-8",
         },
-        link: "text-blue-500 hover:underline",
+        link: "text-blue-600 hover:text-blue-800 underline decoration-blue-400 hover:decoration-blue-600 inline-flex items-center gap-1",
         code: "bg-gray-100 px-1 py-0.5 rounded text-sm font-mono",
         codeHighlight: {
           atrule: "text-purple-600",
@@ -353,6 +519,11 @@ export default function RichTextEditor({
           url: "text-blue-600",
           variable: "text-red-600",
         },
+        image: "max-w-full h-auto rounded-lg shadow-sm",
+        table: "border-collapse border border-gray-300 w-full",
+        tableCell: "border border-gray-300 px-2 py-1",
+        tableCellHeader:
+          "border border-gray-300 px-2 py-1 bg-gray-100 font-semibold",
       },
     }),
     []
@@ -386,19 +557,19 @@ export default function RichTextEditor({
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
-      <div className="border rounded-lg bg-white">
+      <div className="border rounded-lg bg-white shadow-sm">
         <ToolbarPlugin />
         <div className="relative" style={{ minHeight: "200px" }}>
           <RichTextPlugin
             contentEditable={
               <ContentEditable
-                className="p-4 focus:outline-none min-h-[200px]"
+                className="p-4 focus:outline-none min-h-[200px] text-sm leading-relaxed"
                 dir="rtl"
                 style={{ minHeight: "200px" }}
               />
             }
             placeholder={
-              <div className="absolute top-4 right-4 text-gray-400 pointer-events-none">
+              <div className="absolute top-4 right-4 text-gray-400 pointer-events-none text-sm">
                 {placeholder}
               </div>
             }

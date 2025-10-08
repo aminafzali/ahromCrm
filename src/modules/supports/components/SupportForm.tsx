@@ -343,10 +343,47 @@ export default function SupportForm({ after }: { after?: () => void }) {
             تست دستی
           </Button>
           <Button
-            type="submit"
+            type="button"
             variant="primary"
             loading={submitting}
             disabled={submitting}
+            onClick={async () => {
+              console.log("🎯 Submit button clicked");
+
+              // Get form data manually
+              const form = document.querySelector("form");
+              if (!form) {
+                console.error("❌ No form found");
+                return;
+              }
+
+              const formData = new FormData(form);
+              const data: any = {};
+
+              // Extract all form fields
+              for (const [key, value] of formData.entries()) {
+                if (value) {
+                  data[key] = value;
+                }
+              }
+
+              // Add date fields
+              if (contactAt) data.contactAt = contactAt;
+              if (dueAt) data.dueAt = dueAt;
+
+              console.log("🎯 Extracted form data:", data);
+
+              // Validate and submit
+              const validation = createSupportsSchema.safeParse(data);
+              console.log("🎯 Validation result:", validation);
+
+              if (validation.success) {
+                await handleSubmit(validation.data);
+              } else {
+                console.error("🎯 Validation failed:", validation.error.issues);
+                alert("لطفاً تمام فیلدهای الزامی را پر کنید");
+              }
+            }}
           >
             ثبت تیکت
           </Button>

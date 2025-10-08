@@ -94,7 +94,17 @@ export const createSupportsSchema = z.object({
   status: z.string().min(1, "وضعیت الزامی است"),
   contactAt: dateOptional,
   dueAt: dateOptional,
-  visibleToUser: z.boolean().default(true).optional(),
+  visibleToUser: z.preprocess((value) => {
+    if (value === "on" || value === true) return true;
+    if (
+      value === "" ||
+      value === false ||
+      value === null ||
+      value === undefined
+    )
+      return false;
+    return Boolean(value);
+  }, z.boolean().default(true).optional()),
 
   // All relations are optional
   user: toIdObjectOptional(z.object({ id: z.coerce.number() })),

@@ -3,9 +3,7 @@
 import DIcon from "@/@Client/Components/common/DIcon";
 import { useChat } from "@/modules/chat/hooks/useChat";
 import CommentsThread from "@/modules/comments/components/Thread";
-import DocumentCreateForm from "@/modules/documents/components/DocumentCreateForm";
-import { listItemRender as docCard } from "@/modules/documents/data/table";
-import { useDocument } from "@/modules/documents/hooks/useDocument";
+// Documents temporarily disabled per request
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -15,10 +13,11 @@ import { useKnowledge } from "../../hooks/useKnowledge";
 export default function KnowledgeViewPage({ id }: { id: number }) {
   const { getById, remove, loading, error } = useKnowledge();
   const [item, setItem] = useState<any | null>(null);
-  const { getAll: getAllDocs } = useDocument();
-  const [attachments, setAttachments] = useState<any[]>([]);
+  // documents disabled
   const { repo: chatRepo } = useChat();
   const router = useRouter();
+
+  // documents disabled
 
   const load = async () => {
     const data = await getById(id);
@@ -27,14 +26,14 @@ export default function KnowledgeViewPage({ id }: { id: number }) {
 
   useEffect(() => {
     load();
-    getAllDocs({
-      page: 1,
-      limit: 100,
-      filters: { entityType: "Knowledge", entityId: id },
-    }).then((res) => {
-      setAttachments(res?.data || []);
-    });
+    // documents disabled
   }, []);
+
+  // documents disabled
+
+  // documents disabled
+
+  // documents disabled
 
   const display = useMemo(() => {
     if (!item) return {} as any;
@@ -129,26 +128,9 @@ export default function KnowledgeViewPage({ id }: { id: number }) {
           <CommentsThread entityType="Knowledge" entityId={Number(item.id)} />
         </div>
       )}
-      <div className="mt-10 space-y-4">
-        <h2 className="text-lg font-bold">پیوست‌ها</h2>
-        <DocumentCreateForm
-          defaultValues={{ entityType: "Knowledge", entityId: id }}
-          onCreated={() =>
-            getAllDocs({
-              page: 1,
-              limit: 100,
-              filters: { entityType: "Knowledge", entityId: id },
-            }).then((res) => setAttachments(res?.data || []))
-          }
-        />
-        {attachments?.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-            {attachments.map((a) => (
-              <div key={a.id}>{docCard(a)}</div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* attachments disabled */}
+
+      {/* documents modals disabled */}
       <div className="mt-8">
         <button
           className="btn btn-outline"
