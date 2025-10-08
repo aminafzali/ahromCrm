@@ -10,7 +10,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   $createParagraphNode,
@@ -58,72 +58,129 @@ import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html";
 
 import DIcon from "@/@Client/Components/common/DIcon";
 
-type Props = {
+// Types and Interfaces
+type BlockType = "paragraph" | "h1" | "h2" | "quote";
+type FontSize = "small" | "medium" | "large";
+
+interface ToolbarState {
+  isBold: boolean;
+  isItalic: boolean;
+  isUnderline: boolean;
+  isStrikethrough: boolean;
+  isCode: boolean;
+  currentBlock: BlockType;
+  fontSize: FontSize;
+}
+
+interface UploadResponse {
+  success: boolean;
+  url?: string;
+  error?: string;
+  filename?: string;
+  size?: number;
+  type?: string;
+}
+
+interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-};
+  disabled?: boolean;
+  className?: string;
+}
 
-function escapeHtml(str: string) {
+// Utility functions
+function escapeHtml(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-/* -------------- ToolbarPlugin -------------- */
-function ToolbarPlugin() {
-  const [editor] = useLexicalComposerContext();
-  const [isBold, setIsBold] = useState(false);
-  const [isItalic, setIsItalic] = useState(false);
-  const [isUnderline, setIsUnderline] = useState(false);
-  const [isStrikethrough, setIsStrikethrough] = useState(false);
-  const [isCode, setIsCode] = useState(false);
-  const [currentBlock, setCurrentBlock] = useState<string>("paragraph");
-  const [fontSize, setFontSize] = useState<string>("medium");
+function isValidUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-  // unregister properly and protect reader
+function getFontSizeValue(size: FontSize): string {
+  switch (size) {
+    case "small":
+      return "12px";
+    case "large":
+      return "18px";
+    default:
+      return "14px";
+  }
+}
+
+/* -------------- ToolbarPlugin -------------- */
+interface ToolbarPluginProps {
+  disabled?: boolean;
+}
+
+function ToolbarPlugin({ disabled = false }: ToolbarPluginProps) {
+  const [editor] = useLexicalComposerContext();
+  const [toolbarState, setToolbarState] = useState<ToolbarState>({
+    isBold: false,
+    isItalic: false,
+    isUnderline: false,
+    isStrikethrough: false,
+    isCode: false,
+    currentBlock: "paragraph",
+    fontSize: "medium",
+  });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update toolbar state based on selection
   useEffect(() => {
     const unregister = editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
         try {
           const selection = $getSelection();
           if (!$isRangeSelection(selection)) {
-            setIsBold(false);
-            setIsItalic(false);
-            setIsUnderline(false);
-            setIsStrikethrough(false);
-            setIsCode(false);
-            setCurrentBlock("paragraph");
+            setToolbarState((prev) => ({
+              ...prev,
+              isBold: false,
+              isItalic: false,
+              isUnderline: false,
+              isStrikethrough: false,
+              isCode: false,
+              currentBlock: "paragraph",
+            }));
             return;
           }
 
-          setIsBold(selection.hasFormat("bold"));
-          setIsItalic(selection.hasFormat("italic"));
-          setIsUnderline(selection.hasFormat("underline"));
-          setIsStrikethrough(selection.hasFormat("strikethrough"));
-          setIsCode(selection.hasFormat("code"));
+          const newState: Partial<ToolbarState> = {
+            isBold: selection.hasFormat("bold"),
+            isItalic: selection.hasFormat("italic"),
+            isUnderline: selection.hasFormat("underline"),
+            isStrikethrough: selection.hasFormat("strikethrough"),
+            isCode: selection.hasFormat("code"),
+          };
 
+          // Determine block type
           const anchor = selection.anchor.getNode();
-          if (!anchor) {
-            setCurrentBlock("paragraph");
-            return;
+          if (anchor) {
+            const element = anchor.getTopLevelElementOrThrow();
+            const type = element.getType();
+
+            if (type === "heading") {
+              const headingNode = element as HeadingNode;
+              const tag = headingNode.getTag ? headingNode.getTag() : "1";
+              newState.currentBlock = `h${tag}` as BlockType;
+            } else if (type === "quote") {
+              newState.currentBlock = "quote";
+            } else {
+              newState.currentBlock = "paragraph";
+            }
           }
 
-          // determine block type (heading/quote/paragraph)
-          const element = anchor.getTopLevelElementOrThrow();
-          const type = element.getType();
-          if (type === "heading") {
-            // HeadingNode has getTag() typically
-            const tag = (element as HeadingNode).getTag
-              ? (element as HeadingNode).getTag()
-              : "1";
-            setCurrentBlock(`h${tag}`);
-          } else if (type === "quote") {
-            setCurrentBlock("quote");
-          } else {
-            setCurrentBlock("paragraph");
-          }
-        } catch (e) {
-          // prevent crashing UI
-          // console.warn("Toolbar update failed", e);
+          setToolbarState((prev) => ({ ...prev, ...newState }));
+        } catch (error) {
+          console.warn("Toolbar update failed:", error);
         }
       });
     });
@@ -131,194 +188,247 @@ function ToolbarPlugin() {
     return () => unregister();
   }, [editor]);
 
-  const formatText = (format: TextFormatType) => {
-    editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
-  };
-
-  const formatBlock = (blockType: string) => {
-    editor.update(() => {
-      const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
-        if (blockType === "paragraph") {
-          $setBlocksType(selection, () => $createParagraphNode());
-        } else if (blockType === "h1") {
-          $setBlocksType(selection, () => $createHeadingNode("h1"));
-        } else if (blockType === "h2") {
-          $setBlocksType(selection, () => $createHeadingNode("h2"));
-        } else if (blockType === "quote") {
-          $setBlocksType(selection, () => $createQuoteNode());
-        }
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
-    });
-  };
+    };
+  }, []);
 
-  // apply inline style by wrapping selection with styled span (preserves formatting)
-  const applyInlineStyleToSelection = (style: string) => {
-    editor.update(() => {
-      const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
-        // Get the selected content as HTML to preserve formatting
-        const selectedNodes = selection.getNodes();
-        if (selectedNodes.length === 0) return;
+  const formatText = useCallback(
+    (format: TextFormatType) => {
+      editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
+    },
+    [editor]
+  );
 
-        // Create a temporary container to serialize the selection
-        const tempDiv = document.createElement("div");
-        selectedNodes.forEach((node) => {
-          if (node.getType() === "text") {
-            const textNode = document.createTextNode(node.getTextContent());
-            tempDiv.appendChild(textNode);
-          } else {
-            // For other node types, we'll handle them differently
-            const textNode = document.createTextNode(node.getTextContent());
-            tempDiv.appendChild(textNode);
+  const formatBlock = useCallback(
+    (blockType: BlockType) => {
+      editor.update(() => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) return;
+
+        try {
+          switch (blockType) {
+            case "paragraph":
+              $setBlocksType(selection, () => $createParagraphNode());
+              break;
+            case "h1":
+              $setBlocksType(selection, () => $createHeadingNode("h1"));
+              break;
+            case "h2":
+              $setBlocksType(selection, () => $createHeadingNode("h2"));
+              break;
+            case "quote":
+              $setBlocksType(selection, () => $createQuoteNode());
+              break;
           }
-        });
+        } catch (error) {
+          console.warn("Failed to format block:", error);
+        }
+      });
+    },
+    [editor]
+  );
 
-        const content = tempDiv.innerHTML || tempDiv.textContent || "";
-        const wrappedHtml = `<span style="${style}">${content}</span>`;
+  // Apply inline style to selection
+  const applyInlineStyleToSelection = useCallback(
+    (style: string) => {
+      editor.update(() => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) return;
 
-        const parser = new DOMParser();
-        const dom = parser.parseFromString(wrappedHtml, "text/html");
-        const nodes = $generateNodesFromDOM(editor, dom);
-        selection.insertNodes(nodes);
-      }
-    });
-  };
+        try {
+          const selectedText = selection.getTextContent();
+          if (!selectedText) return;
 
-  const changeFontSize = (size: string) => {
-    setFontSize(size);
-    // apply as block-level class (global for selection)
-    editor.update(() => {
-      const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
-        // wrap selection in a span with font-size
-        const mapping =
-          size === "small"
-            ? "font-size:12px"
-            : size === "large"
-            ? "font-size:18px"
-            : "font-size:14px";
-        applyInlineStyleToSelection(mapping);
-      }
-    });
-  };
+          // Create styled span element
+          const styledHtml = `<span style="${escapeHtml(style)}">${escapeHtml(
+            selectedText
+          )}</span>`;
 
-  const insertLink = () => {
+          const parser = new DOMParser();
+          const dom = parser.parseFromString(styledHtml, "text/html");
+          const nodes = $generateNodesFromDOM(editor, dom);
+
+          if (nodes.length > 0) {
+            selection.insertNodes(nodes);
+          }
+        } catch (error) {
+          console.warn("Failed to apply inline style:", error);
+        }
+      });
+    },
+    [editor]
+  );
+
+  const changeFontSize = useCallback(
+    (size: FontSize) => {
+      setToolbarState((prev) => ({ ...prev, fontSize: size }));
+
+      editor.update(() => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) return;
+
+        try {
+          const fontSizeValue = getFontSizeValue(size);
+          applyInlineStyleToSelection(`font-size: ${fontSizeValue}`);
+        } catch (error) {
+          console.warn("Failed to change font size:", error);
+        }
+      });
+    },
+    [editor, applyInlineStyleToSelection]
+  );
+
+  const insertLink = useCallback(() => {
     const raw = window.prompt("آدرس لینک را وارد کنید");
     if (!raw) return;
+
     let url = raw.trim();
     if (!/^https?:\/\//i.test(url)) {
       url = `https://${url}`;
     }
-    try {
-      // validate URL
-      new URL(url);
-    } catch {
+
+    if (!isValidUrl(url)) {
       alert("آدرس معتبر نیست");
       return;
     }
 
-    const linkText = window.prompt("متن لینک (اختیاری)");
+    const linkText = window.prompt("متن لینک (اختیاری)") || url;
+
     editor.update(() => {
       const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
+      if (!$isRangeSelection(selection)) return;
+
+      try {
         const linkNode = $createLinkNode(url);
-        const textNode = $createTextNode(linkText || url);
+        const textNode = $createTextNode(linkText);
         linkNode.append(textNode);
         selection.insertNodes([linkNode]);
+      } catch (error) {
+        console.warn("Failed to insert link:", error);
       }
     });
-  };
+  }, [editor]);
 
-  const insertTable = () => {
-    editor.dispatchCommand(INSERT_TABLE_COMMAND, {
-      columns: "3",
-      rows: "3",
-      includeHeaders: true,
-    });
-  };
+  const insertTable = useCallback(() => {
+    try {
+      editor.dispatchCommand(INSERT_TABLE_COMMAND, {
+        columns: "3",
+        rows: "3",
+        includeHeaders: true,
+      });
+    } catch (error) {
+      console.warn("Failed to insert table:", error);
+    }
+  }, [editor]);
 
-  const insertImage = () => {
-    // Create file input for image upload
+  const insertImage = useCallback(() => {
+    if (isUploading) return;
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
-    input.onchange = (e) => {
+    input.multiple = false;
+
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
-      // Check file size (max 5MB)
+      // Validate file
       if (file.size > 5 * 1024 * 1024) {
         alert("حجم فایل نباید بیشتر از 5 مگابایت باشد");
         return;
       }
 
-      // Check file type
       if (!file.type.startsWith("image/")) {
         alert("لطفاً یک فایل تصویری انتخاب کنید");
         return;
       }
 
-      // Create FormData for upload
-      const formData = new FormData();
-      formData.append("file", file);
+      try {
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append("file", file);
 
-      // Upload to server (you'll need to implement this endpoint)
-      fetch("/api/upload/image", {
-        method: "POST",
-        body: formData,
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success && data.url) {
-            // Insert image into editor
-            editor.update(() => {
-              const selection = $getSelection();
-              if ($isRangeSelection(selection)) {
-                const imageHtml = `<img src="${escapeHtml(
-                  data.url
-                )}" alt="تصویر" style="max-width:100%;height:auto;border-radius:8px;" />`;
-                const parser = new DOMParser();
-                const dom = parser.parseFromString(imageHtml, "text/html");
-                const nodes = $generateNodesFromDOM(editor, dom);
-                selection.insertNodes(nodes);
-              }
-            });
-          } else {
-            alert("خطا در آپلود تصویر");
-          }
-        })
-        .catch((error) => {
-          console.error("Upload error:", error);
-          alert("خطا در آپلود تصویر");
+        const response = await fetch("/api/upload/image", {
+          method: "POST",
+          body: formData,
         });
-    };
-    input.click();
-  };
 
-  const insertFile = () => {
+        const data: UploadResponse = await response.json();
+
+        if (data.success && data.url) {
+          const imageUrl = data.url;
+          editor.update(() => {
+            const selection = $getSelection();
+            if (!$isRangeSelection(selection)) return;
+
+            try {
+              const imageHtml = `<img src="${escapeHtml(
+                imageUrl
+              )}" alt="تصویر" style="max-width:100%;height:auto;border-radius:8px;" />`;
+              const parser = new DOMParser();
+              const dom = parser.parseFromString(imageHtml, "text/html");
+              const nodes = $generateNodesFromDOM(editor, dom);
+              selection.insertNodes(nodes);
+            } catch (error) {
+              console.warn("Failed to insert image:", error);
+            }
+          });
+        } else {
+          alert(data.error || "خطا در آپلود تصویر");
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+        alert("خطا در آپلود تصویر");
+      } finally {
+        setIsUploading(false);
+      }
+    };
+
+    input.click();
+  }, [editor]);
+
+  const insertFile = useCallback(() => {
     const url = window.prompt("آدرس فایل را وارد کنید");
     if (!url) return;
+
     const safeUrl = url.trim();
-    if (!safeUrl) return;
+    if (!safeUrl || !isValidUrl(safeUrl)) {
+      alert("آدرس معتبر نیست");
+      return;
+    }
+
     const name = window.prompt("نام فایل (اختیاری)") || "دانلود فایل";
+
     editor.update(() => {
       const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
+      if (!$isRangeSelection(selection)) return;
+
+      try {
         const linkNode = $createLinkNode(safeUrl);
         const textNode = $createTextNode(name);
         linkNode.append(textNode);
         selection.insertNodes([linkNode]);
+      } catch (error) {
+        console.warn("Failed to insert file link:", error);
       }
     });
-  };
+  }, [editor]);
 
-  const applyTextRight = () => {
-    // wrap selection into div with RTL text-align: right
+  const applyTextRight = useCallback(() => {
     editor.update(() => {
       const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
+      if (!$isRangeSelection(selection)) return;
+
+      try {
         const text = selection.getTextContent();
+        if (!text) return;
+
         const html = `<div style="text-align:right; direction:rtl">${escapeHtml(
           text
         )}</div>`;
@@ -326,11 +436,11 @@ function ToolbarPlugin() {
         const dom = parser.parseFromString(html, "text/html");
         const nodes = $generateNodesFromDOM(editor, dom);
         selection.insertNodes(nodes);
+      } catch (error) {
+        console.warn("Failed to apply text alignment:", error);
       }
     });
-  };
-
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  }, [editor]);
 
   return (
     <div className="border-b bg-white rounded-t">
@@ -343,7 +453,8 @@ function ToolbarPlugin() {
             title="بازگردانی (Ctrl+Z)"
             type="button"
             onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-rotate-left" cdi={false} />
           </button>
@@ -352,7 +463,8 @@ function ToolbarPlugin() {
             title="تکرار (Ctrl+Y)"
             type="button"
             onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-rotate-right" cdi={false} />
           </button>
@@ -366,7 +478,8 @@ function ToolbarPlugin() {
             aria-label="تراز راست"
             title="تراز راست"
             onClick={applyTextRight}
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-align-right" cdi={false} />
           </button>
@@ -380,7 +493,8 @@ function ToolbarPlugin() {
               );
               if (color) applyInlineStyleToSelection(`color: ${color}`);
             }}
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-palette" cdi={false} />
           </button>
@@ -395,7 +509,8 @@ function ToolbarPlugin() {
               if (color)
                 applyInlineStyleToSelection(`background-color: ${color}`);
             }}
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-highlighter" cdi={false} />
           </button>
@@ -412,7 +527,8 @@ function ToolbarPlugin() {
                   `border: 1px solid ${color}; padding: 2px 4px; border-radius: 3px;`
                 );
             }}
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-square" cdi={false} />
           </button>
@@ -420,8 +536,12 @@ function ToolbarPlugin() {
           <select
             aria-label="نوع بلاک"
             className="select select-bordered select-sm min-w-[120px]"
-            value={currentBlock.startsWith("h") ? currentBlock : "paragraph"}
-            onChange={(e) => formatBlock(e.target.value)}
+            value={
+              toolbarState.currentBlock.startsWith("h")
+                ? toolbarState.currentBlock
+                : "paragraph"
+            }
+            onChange={(e) => formatBlock(e.target.value as BlockType)}
           >
             <option value="paragraph">پاراگراف</option>
             <option value="h1">سرتیتر ۱</option>
@@ -433,7 +553,8 @@ function ToolbarPlugin() {
             aria-label="لینک"
             title="درج لینک"
             onClick={insertLink}
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-link" cdi={false} />
           </button>
@@ -442,25 +563,32 @@ function ToolbarPlugin() {
             aria-label="جدول"
             title="درج جدول"
             onClick={insertTable}
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-table" cdi={false} />
           </button>
 
           <button
             aria-label="تصویر"
-            title="درج تصویر"
+            title={isUploading ? "در حال آپلود..." : "درج تصویر"}
             onClick={insertImage}
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled || isUploading}
           >
-            <DIcon icon="fa-image" cdi={false} />
+            {isUploading ? (
+              <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full" />
+            ) : (
+              <DIcon icon="fa-image" cdi={false} />
+            )}
           </button>
 
           <button
             aria-label="فایل"
             title="درج فایل"
             onClick={insertFile}
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-paperclip" cdi={false} />
           </button>
@@ -472,7 +600,7 @@ function ToolbarPlugin() {
             title="ضخیم"
             onClick={() => formatText("bold")}
             className={`p-2 rounded hover:bg-gray-100 transition-colors ${
-              isBold ? "bg-gray-100" : ""
+              toolbarState.isBold ? "bg-gray-100" : ""
             }`}
           >
             <span className="font-bold text-sm">B</span>
@@ -483,7 +611,7 @@ function ToolbarPlugin() {
             title="ایتالیک"
             onClick={() => formatText("italic")}
             className={`p-2 rounded hover:bg-gray-100 transition-colors ${
-              isItalic ? "bg-gray-100" : ""
+              toolbarState.isItalic ? "bg-gray-100" : ""
             }`}
           >
             <span className="italic text-sm">I</span>
@@ -494,7 +622,7 @@ function ToolbarPlugin() {
             title="زیرخط"
             onClick={() => formatText("underline")}
             className={`p-2 rounded hover:bg-gray-100 transition-colors ${
-              isUnderline ? "bg-gray-100" : ""
+              toolbarState.isUnderline ? "bg-gray-100" : ""
             }`}
           >
             <span className="underline text-sm">U</span>
@@ -505,7 +633,7 @@ function ToolbarPlugin() {
             title="کد"
             onClick={() => formatText("code")}
             className={`p-2 rounded hover:bg-gray-100 transition-colors ${
-              isCode ? "bg-gray-100" : ""
+              toolbarState.isCode ? "bg-gray-100" : ""
             }`}
           >
             <DIcon icon="fa-code" cdi={false} />
@@ -516,7 +644,7 @@ function ToolbarPlugin() {
             title="خط خورده"
             onClick={() => formatText("strikethrough")}
             className={`p-2 rounded hover:bg-gray-100 transition-colors ${
-              isStrikethrough ? "bg-gray-100" : ""
+              toolbarState.isStrikethrough ? "bg-gray-100" : ""
             }`}
           >
             <DIcon icon="fa-strikethrough" cdi={false} />
@@ -528,7 +656,8 @@ function ToolbarPlugin() {
             onClick={() =>
               applyInlineStyleToSelection("text-decoration: double underline")
             }
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-underline" cdi={false} />
           </button>
@@ -541,7 +670,8 @@ function ToolbarPlugin() {
                 "text-shadow: 1px 1px 2px rgba(0,0,0,0.3)"
               )
             }
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-text-height" cdi={false} />
           </button>
@@ -549,8 +679,8 @@ function ToolbarPlugin() {
           <select
             aria-label="اندازه قلم"
             className="select select-bordered select-sm min-w-[100px]"
-            value={fontSize}
-            onChange={(e) => changeFontSize(e.target.value)}
+            value={toolbarState.fontSize}
+            onChange={(e) => changeFontSize(e.target.value as FontSize)}
           >
             <option value="small">کوچک</option>
             <option value="medium">متوسط</option>
@@ -565,7 +695,8 @@ function ToolbarPlugin() {
             onClick={() =>
               editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
             }
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-list-ul" cdi={false} />
           </button>
@@ -575,7 +706,8 @@ function ToolbarPlugin() {
             onClick={() =>
               editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
             }
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-list-ol" cdi={false} />
           </button>
@@ -585,7 +717,8 @@ function ToolbarPlugin() {
             onClick={() =>
               editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined)
             }
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon icon="fa-list" cdi={false} />
           </button>
@@ -600,14 +733,16 @@ function ToolbarPlugin() {
             <button
               aria-label="بازگردانی"
               onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
-              className="p-2 rounded hover:bg-gray-100 transition-colors"
+              className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={disabled}
             >
               <DIcon icon="fa-rotate-left" cdi={false} />
             </button>
             <button
               aria-label="تکرار"
               onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
-              className="p-2 rounded hover:bg-gray-100 transition-colors"
+              className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={disabled}
             >
               <DIcon icon="fa-rotate-right" cdi={false} />
             </button>
@@ -615,7 +750,8 @@ function ToolbarPlugin() {
 
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={disabled}
           >
             <DIcon
               icon={isMobileMenuOpen ? "fa-chevron-up" : "fa-chevron-down"}
@@ -635,7 +771,9 @@ function ToolbarPlugin() {
                   <button
                     onClick={() => formatText("bold")}
                     className={`p-2 rounded text-sm ${
-                      isBold ? "bg-blue-100 text-blue-600" : "bg-white"
+                      toolbarState.isBold
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-white"
                     }`}
                   >
                     B
@@ -643,7 +781,9 @@ function ToolbarPlugin() {
                   <button
                     onClick={() => formatText("italic")}
                     className={`p-2 rounded text-sm ${
-                      isItalic ? "bg-blue-100 text-blue-600" : "bg-white"
+                      toolbarState.isItalic
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-white"
                     }`}
                   >
                     I
@@ -651,7 +791,9 @@ function ToolbarPlugin() {
                   <button
                     onClick={() => formatText("underline")}
                     className={`p-2 rounded text-sm ${
-                      isUnderline ? "bg-blue-100 text-blue-600" : "bg-white"
+                      toolbarState.isUnderline
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-white"
                     }`}
                   >
                     U
@@ -665,9 +807,11 @@ function ToolbarPlugin() {
                 <select
                   className="w-full text-xs p-1 border rounded"
                   value={
-                    currentBlock.startsWith("h") ? currentBlock : "paragraph"
+                    toolbarState.currentBlock.startsWith("h")
+                      ? toolbarState.currentBlock
+                      : "paragraph"
                   }
-                  onChange={(e) => formatBlock(e.target.value)}
+                  onChange={(e) => formatBlock(e.target.value as BlockType)}
                 >
                   <option value="paragraph">پاراگراف</option>
                   <option value="h1">سرتیتر ۱</option>
@@ -689,10 +833,11 @@ function ToolbarPlugin() {
                   </button>
                   <button
                     onClick={insertImage}
-                    className="p-2 rounded bg-white text-xs"
-                    title="تصویر"
+                    className="p-2 rounded bg-white text-xs disabled:opacity-50"
+                    title={isUploading ? "در حال آپلود..." : "تصویر"}
+                    disabled={isUploading}
                   >
-                    🖼️
+                    {isUploading ? "⏳" : "🖼️"}
                   </button>
                   <button
                     onClick={insertTable}
@@ -743,30 +888,51 @@ function ToolbarPlugin() {
 }
 
 /* -------------- InitialHTMLPlugin -------------- */
-function InitialHTMLPlugin({ html }: { html: string }) {
+interface InitialHTMLPluginProps {
+  html: string;
+}
+
+function InitialHTMLPlugin({ html }: InitialHTMLPluginProps) {
   const [editor] = useLexicalComposerContext();
   const initializedRef = useRef(false);
   const lastHtmlRef = useRef<string>("");
 
   useEffect(() => {
-    // initialize only once OR when html changes substantially (if desired)
+    // Only initialize once or when HTML changes significantly
     if (initializedRef.current && lastHtmlRef.current === html) return;
+
     editor.update(() => {
       try {
-        const parser = new DOMParser();
-        const dom = parser.parseFromString(html || "<p></p>", "text/html");
-        const nodes = $generateNodesFromDOM(editor, dom);
         const root = $getRoot();
         root.clear();
+
+        if (!html || html.trim() === "") {
+          root.append($createParagraphNode());
+          return;
+        }
+
+        const parser = new DOMParser();
+        const dom = parser.parseFromString(html, "text/html");
+        const nodes = $generateNodesFromDOM(editor, dom);
+
         if (nodes.length === 0) {
           root.append($createParagraphNode());
         } else {
-          nodes.forEach((node) => root.append(node));
+          nodes.forEach((node) => {
+            if (node) {
+              root.append(node);
+            }
+          });
         }
       } catch (error) {
         console.error("Error parsing HTML into editor:", error);
+        // Fallback to empty paragraph
+        const root = $getRoot();
+        root.clear();
+        root.append($createParagraphNode());
       }
     });
+
     initializedRef.current = true;
     lastHtmlRef.current = html;
   }, [editor, html]);
@@ -779,8 +945,10 @@ export default function RichTextEditor({
   value,
   onChange,
   placeholder = "متن خود را وارد کنید...",
-}: Props) {
-  // default theme and nodes
+  disabled = false,
+  className = "",
+}: RichTextEditorProps) {
+  // Editor configuration with performance optimizations
   const editorConfig = useMemo(
     () => ({
       namespace: "RichTextEditor",
@@ -800,6 +968,7 @@ export default function RichTextEditor({
       onError: (error: Error) => {
         console.error("Lexical Editor Error:", error);
       },
+      editable: !disabled,
       theme: {
         // rtl content default
         ltr: "text-left",
@@ -821,38 +990,51 @@ export default function RichTextEditor({
         link: "text-blue-600 hover:text-blue-800 underline decoration-blue-400 hover:decoration-blue-600 inline-flex items-center gap-1",
         code: "bg-gray-100 px-1 py-0.5 rounded text-sm font-mono",
         image: "max-w-full h-auto rounded-lg shadow-sm",
-        table: "border-collapse border border-gray-300 w-full",
-        tableCell: "border border-gray-300 px-2 py-1",
+        table: "border-collapse border border-gray-300 w-full my-4",
+        tableCell: "border border-gray-300 px-2 py-1 text-sm",
         tableCellHeader:
-          "border border-gray-300 px-2 py-1 bg-gray-100 font-semibold",
+          "border border-gray-300 px-2 py-1 bg-gray-100 font-semibold text-sm",
       },
     }),
-    []
+    [disabled]
   );
 
-  // debounce onChange to avoid heavy serialization on each key
-  const changeTimeoutRef = useRef<number | null>(null);
-  const onChangeHandler = (editorState: EditorState, editor: LexicalEditor) => {
-    if (changeTimeoutRef.current) {
-      clearTimeout(changeTimeoutRef.current);
-    }
-    changeTimeoutRef.current = window.setTimeout(() => {
-      editorState.read(() => {
-        try {
-          const html = $generateHtmlFromNodes(editor, null);
-          onChange(html);
-        } catch (e) {
-          console.warn("Failed to generate HTML:", e);
-        }
-      });
-    }, 250);
-  };
+  // Debounced onChange handler to avoid heavy serialization
+  const changeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onChangeHandler = useCallback(
+    (editorState: EditorState, editor: LexicalEditor) => {
+      if (changeTimeoutRef.current) {
+        clearTimeout(changeTimeoutRef.current);
+      }
 
-  // better autolink regex (no global)
+      changeTimeoutRef.current = setTimeout(() => {
+        editorState.read(() => {
+          try {
+            const html = $generateHtmlFromNodes(editor, null);
+            onChange(html);
+          } catch (error) {
+            console.warn("Failed to generate HTML:", error);
+          }
+        });
+      }, 250);
+    },
+    [onChange]
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (changeTimeoutRef.current) {
+        clearTimeout(changeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // URL matchers for auto-linking
   const URL_MATCHERS = useMemo(
     () => [
       (text: string) => {
-        const regex = /(https?:\/\/[^\s]+)/im;
+        const regex = /(https?:\/\/[^\s]+)/i;
         const match = regex.exec(text);
         if (match) {
           return {
@@ -870,16 +1052,25 @@ export default function RichTextEditor({
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
-      <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
-        <ToolbarPlugin />
+      <div
+        className={`border rounded-lg bg-white shadow-sm overflow-hidden ${className}`}
+      >
+        <ToolbarPlugin disabled={disabled} />
         <div className="relative" style={{ minHeight: 220 }}>
           <RichTextPlugin
             contentEditable={
               <ContentEditable
                 className="p-4 focus:outline-none min-h-[220px] text-base leading-relaxed"
                 dir="rtl"
-                style={{ minHeight: 220, direction: "rtl", textAlign: "right" }}
+                style={{
+                  minHeight: 220,
+                  direction: "rtl",
+                  textAlign: "right",
+                  opacity: disabled ? 0.6 : 1,
+                  pointerEvents: disabled ? "none" : "auto",
+                }}
                 aria-label="Rich text editor"
+                readOnly={disabled}
               />
             }
             placeholder={

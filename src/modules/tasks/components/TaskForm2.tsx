@@ -4,7 +4,7 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import Loading from "@/@Client/Components/common/Loading";
-import RichTextEditor from "@/@Client/Components/ui/RichTextEditor2";
+import RichTextEditor from "@/@Client/Components/ui/RichTextEditor";
 import Select3 from "@/@Client/Components/ui/Select3";
 import StandaloneDatePicker from "@/@Client/Components/ui/StandaloneDatePicker2";
 import { usePMStatus } from "@/modules/pm-statuses/hooks/usePMStatus";

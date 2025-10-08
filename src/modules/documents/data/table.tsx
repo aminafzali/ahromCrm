@@ -292,7 +292,7 @@ const DocumentCard = ({ item }: { item: any }) => {
       : "fa-file";
 
   return (
-    <div className="card bg-white border rounded-xl overflow-hidden h-[320px] flex flex-col">
+    <div className="card bg-white border rounded-xl overflow-hidden h-[280px] flex flex-col">
       <div
         className={`relative w-full aspect-square ${squareBg} flex items-center justify-center`}
         style={{ minHeight: 0 }}
@@ -334,7 +334,7 @@ const DocumentCard = ({ item }: { item: any }) => {
           {(item.entityType && `مرتبط با ${item.entityType}`) || ""}
           {item.entityId ? ` #${item.entityId}` : ""}
         </div>
-        <div className="mt-auto flex items-center gap-3 pt-1">
+        <div className="mt-1 flex items-center gap-2 pt-0">
           <a
             className="flex items-center gap-1 text-green-600 hover:text-green-700 transition-colors"
             href={item.url}
