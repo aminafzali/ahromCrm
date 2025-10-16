@@ -1,6 +1,9 @@
 "use client";
 
 import { DetailPageWrapper } from "@/@Client/Components/wrappers";
+// import { useChat } from "@/modules/chat/hooks/useChat"; // Removed: Chat module deprecated
+import CommentsThread from "@/modules/comments/components/Thread";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import EditForm from "../../components/EditForm";
 import TeamPermissionForm from "../../components/TeamPermissionForm";
@@ -9,6 +12,8 @@ import { useDocument } from "../../hooks/useDocument";
 export default function DocumentViewPage({ id }: { id: number }) {
   const { getById, remove, loading } = useDocument();
   const [doc, setDoc] = useState<any | null>(null);
+  // const { repo: chatRepo } = useChat(); // Removed: Chat module deprecated
+  const router = useRouter();
 
   const load = async () => {
     const data = await getById(id);
@@ -56,6 +61,12 @@ export default function DocumentViewPage({ id }: { id: number }) {
         <EditForm id={id} onSaved={load} />
         <TeamPermissionForm id={id} onChanged={load} />
       </div>
+      {doc?.id && (
+        <div className="mt-8 space-y-4">
+          <CommentsThread entityType="Document" entityId={Number(id)} />
+          {/* TODO: Add internal-chat link for this document */}
+        </div>
+      )}
     </div>
   );
 }

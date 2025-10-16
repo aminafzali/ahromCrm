@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import { lazy, Suspense } from "react";
 
 export default function DynamicCreatePage() {
-  const { slug } = useParams();
+  const { slug } = (useParams() as { slug?: string }) || {};
   const { data: session, status } = useSession();
 
   const DynamicComponent = lazy(async () => {

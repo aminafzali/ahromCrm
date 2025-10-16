@@ -4,6 +4,7 @@
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
 import { DetailPageWrapper } from "@/@Client/Components/wrappers";
+// import ChatLinkButton from "@/modules/chat/components/ChatLinkButton"; // Removed: Use internal-chat instead
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -11,8 +12,8 @@ import { useTeam } from "../../hooks/useTeam";
 import { TeamWithRelations } from "../../types";
 
 export default function DetailPage() {
-  const params = useParams();
-  const id = parseInt(params.id as string);
+  const params = useParams() as { id?: string } | null;
+  const id = Number(params?.id);
   const router = useRouter();
   const { getById, loading, error, statusCode, remove } = useTeam();
   const [team, setTeam] = useState<TeamWithRelations | null>(null);
@@ -61,18 +62,21 @@ export default function DetailPage() {
       }
     : {};
 
+  if (!id) return <NotFound />;
   if (loading) return <Loading />;
   if (statusCode === 404) return <NotFound />;
 
   return (
-    <DetailPageWrapper
-      data={displayData}
-      title="جزئیات تیم"
-      loading={loading}
-      error={error}
-      onDelete={() => handleDelete(team)}
-      editUrl={`/dashboard/teams/${id}/update`}
-    />
+    <>
+      <DetailPageWrapper
+        data={displayData}
+        title="جزئیات تیم"
+        loading={loading}
+        error={error}
+        onDelete={() => handleDelete(team)}
+        editUrl={`/dashboard/teams/${id}/update`}
+      />
+    </>
   );
 }
 

@@ -23,12 +23,6 @@ export const include = {
       status: true,
     },
   },
-  notifications: {
-    select: {
-      title: true,
-      message: true,
-    },
-  },
   labels: {
     include: {
       _count: {
@@ -67,10 +61,4 @@ export const searchFileds = [
 // ===== پایان اصلاحیه برای تست =====
 
 export const relations = [];
-export const connects = [
-  "user",
-  "role",
-  "labels",
-  "userGroups",
-  "notifications",
-];
+export const connects = ["user", "role", "labels", "userGroups"];

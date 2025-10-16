@@ -1,4 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Environment setup
+
+Create `.env` (or `.env.local`) in project root:
+
+```
+DATABASE_URL=mysql://USER:PASS@HOST:PORT/DB
+NEXTAUTH_SECRET=change-me-to-a-strong-secret
+NEXT_PUBLIC_SOCKET_PATH=/api/socket_io
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+- Chat behavior
+  - Public website ([slug] pages): Workspace support room per workspace -> `Support#<workspaceId>`
+  - Panel (users with role=User): Private per-user support rooms -> `Support#<workspaceId>#<userId>`
+  - Socket path must be accessible at `NEXT_PUBLIC_SOCKET_PATH`
+```
+
+Notes
+
+- Ensure MySQL user can run Prisma migrations.
+- WebSocket path is served at `/api/socket_io` by Next API route.
+- If behind a proxy/CDN, allow WS upgrade on this path.
+  This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
@@ -34,4 +54,3 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-

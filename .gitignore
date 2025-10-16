@@ -12,7 +12,8 @@
 
 # testing
 /coverage
-/prisma/migrations/*  
+/prisma/migrations/*
+!/prisma/schema.prisma
 /public/uploads/*  
 /uploads/*  
 !/uploads/.gitkeep

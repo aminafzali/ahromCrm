@@ -61,19 +61,36 @@ model Workspace {
   actualServicesOnRequest ActualServiceOnRequest[]
   paymentCategories       PaymentCategory[] // رابطه متقابل برای دسته‌بندی پرداخت‌ها
 
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  Team                   Team[]
-  Project                Project[]
-  Task                   Task[]
-  PMStatus               PMStatus[]
-  TaskStatusHistory      TaskStatusHistory[]
-  Workflow               Workflow[]
-  DocumentCategory       DocumentCategory[]
-  Document               Document[]
-  TeamCategoryPermission TeamCategoryPermission[]
-  TeamDocumentPermission TeamDocumentPermission[]
-  RoleDocumentPolicy     RoleDocumentPolicy[]
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  Team                    Team[]
+  Project                 Project[]
+  Task                    Task[]
+  PMStatus                PMStatus[]
+  TaskStatusHistory       TaskStatusHistory[]
+  Workflow                Workflow[]
+  DocumentCategory        DocumentCategory[]
+  Document                Document[]
+  TeamCategoryPermission  TeamCategoryPermission[]
+  TeamDocumentPermission  TeamDocumentPermission[]
+  RoleDocumentPolicy      RoleDocumentPolicy[]
+  // Knowledge Base & Collaboration
+  KnowledgeCategory       KnowledgeCategory[]
+  Knowledge               Knowledge[]
+  Comment                 Comment[]
+  ChatRoom                ChatRoom[]
+  KnowledgeTeamPermission KnowledgeTeamPermission[]
+  KnowledgeUserPermission KnowledgeUserPermission[]
+  // Support Info module (renamed from Support)
+  SupportInfoCategory     SupportInfoCategory[]
+  SupportInfoLabel        SupportInfoLabel[]
+  SupportInfo             SupportInfo[]
+
+  // Support Chat module (new - online ticketing)
+  SupportChatCategory SupportChatCategory[]
+  SupportChatLabel    SupportChatLabel[]
+  SupportGuestUser    SupportGuestUser[]
+  SupportChatTicket   SupportChatTicket[]
 }
 
 model WorkspaceUser {
@@ -110,28 +127,63 @@ model WorkspaceUser {
   userGroups UserGroup[] @relation("WorkspaceUserGroups")
 
   // Project Management Relations
-  teams                 TeamMember[]
-  assignedProjects      Project[]               @relation("AssignedWorkspaceUsersToProject")
-  assignedTasks         Task[]                  @relation("AssignedWorkspaceUsersToTask")
-  taskStatusChanges     TaskStatusHistory[]
-  relatedTasks          Task[]                  @relation("TaskToWorkspaceUser")
-  ReminderRecipient     ReminderRecipient[]
-  NotificationRecipient NotificationRecipient[]
+  teams                   TeamMember[]
+  assignedProjects        Project[]                 @relation("AssignedWorkspaceUsersToProject")
+  assignedTasks           Task[]                    @relation("AssignedWorkspaceUsersToTask")
+  taskStatusChanges       TaskStatusHistory[]
+  relatedTasks            Task[]                    @relation("TaskToWorkspaceUser")
+  ReminderRecipient       ReminderRecipient[]
+  NotificationRecipient   NotificationRecipient[]
+  Knowledge               Knowledge[]
+  KnowledgeAssignee       KnowledgeAssignee[]
+  KnowledgeUserPermission KnowledgeUserPermission[]
+  Comment                 Comment[]
+  CommentLike             CommentLike[]
+
+  // Internal Chat (Complete)
+  chatRoomMemberships     ChatRoomMember[]
+  sentMessages            ChatMessage[]          @relation("ChatMessageSender")
+  createdChatRooms        ChatRoom[]             @relation("ChatRoomCreator")
+  pinnedMessages          ChatMessage[]          @relation("ChatMessagePinner")
+  invitedChatMembers      ChatRoomMember[]       @relation("ChatRoomInviter")
+  messageReactions        ChatMessageReaction[]  @relation("ChatMessageReactions")
+  chatPermissions         ChatRoomPermission[]   @relation("ChatRoomPermissions")
+  addedDocumentsToMessage ChatMessageDocument[]  @relation("ChatMessageDocumentAdder")
+  addedTasksToMessage     ChatMessageTask[]      @relation("ChatMessageTaskAdder")
+  addedKnowledgeToMessage ChatMessageKnowledge[] @relation("ChatMessageKnowledgeAdder")
+  addedInvoicesToMessage  ChatMessageInvoice[]   @relation("ChatMessageInvoiceAdder")
+  addedRequestsToMessage  ChatMessageRequest[]   @relation("ChatMessageRequestAdder")
+  addedDocumentsToRoom    ChatRoomDocument[]     @relation("ChatRoomDocumentAdder")
+  addedTasksToRoom        ChatRoomTask[]         @relation("ChatRoomTaskAdder")
+  addedKnowledgeToRoom    ChatRoomKnowledge[]    @relation("ChatRoomKnowledgeAdder")
+
+  // Support Info module (renamed)
+  SupportInfoAsUser     SupportInfo[] @relation("SupportInfo_user")
+  SupportInfoAsAssignee SupportInfo[] @relation("SupportInfo_assignedAdmin")
+
+  // Support Chat module (new)
+  SupportChatAsUser           SupportChatTicket[]     @relation("SupportChatTicket_user")
+  SupportChatAsAssignee       SupportChatTicket[]     @relation("SupportChatTicket_assignee")
+  SupportChatMessages         SupportChatMessage[]    @relation("SupportChatAgent_messages")
+  SupportChatCustomerMessages SupportChatMessage[]    @relation("SupportChatCustomer_messages")
+  SupportChatHistoryChanges   SupportChatHistory[]    @relation("SupportChatHistory_changedBy")
+  SupportChatUploads          SupportChatAttachment[] @relation("SupportChatAttachment_uploadedBy")
 
   @@unique([workspaceId, userId])
 }
 
 model Role {
-  id                 Int                  @id @default(autoincrement())
-  workspaceId        Int
-  workspace          Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name               String
-  description        String?
-  permissions        RolePermission[]
-  users              WorkspaceUser[]
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  RoleDocumentPolicy RoleDocumentPolicy[]
+  id                  Int                  @id @default(autoincrement())
+  workspaceId         Int
+  workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                String
+  description         String?
+  permissions         RolePermission[]
+  users               WorkspaceUser[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  RoleDocumentPolicy  RoleDocumentPolicy[]
+  chatRoomPermissions ChatRoomPermission[]
 
   @@unique([name, workspaceId])
 }
@@ -231,6 +283,9 @@ model Request {
   cancellations  RequestCancellation[]
   actualServices ActualServiceOnRequest[]
   Reminder       Reminder[]
+
+  // Internal Chat relations
+  chatMessages ChatMessageRequest[]
 }
 
 model Invoice {
@@ -279,6 +334,9 @@ model Invoice {
 
   // برای رابطه معکوس اگر نیاز باشد:
   referencedBy Invoice[] @relation("InvoiceReference")
+
+  // Internal Chat relations
+  chatMessages ChatMessageInvoice[]
 
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
@@ -616,15 +674,16 @@ model RequestCancellation {
 }
 
 model Label {
-  id             Int             @id @default(autoincrement())
+  id             Int              @id @default(autoincrement())
   workspaceId    Int
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name           String
-  color          String          @default("primary")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  workspaceUsers WorkspaceUser[] @relation("WorkspaceUserLabels")
+  color          String           @default("primary")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  workspaceUsers WorkspaceUser[]  @relation("WorkspaceUserLabels")
   TaskLabel      TaskLabel[]
+  KnowledgeLabel KnowledgeLabel[]
 
   @@unique([name, workspaceId])
 }
@@ -723,8 +782,957 @@ model Document {
   // دسترسی‌ها
   teamPermissions TeamDocumentPermission[]
 
+  // Internal Chat relations
+  chatMessages ChatMessageDocument[]
+  chatRooms    ChatRoomDocument[]
+
+  // Support Info relations
+  supportInfo SupportInfoDocument[]
+
+  // Support Chat relations
+  supportChat            SupportChatDocument[]
+  supportChatAttachments SupportChatAttachment[]
+
   @@index([workspaceId, categoryId])
   @@index([workspaceId, entityType, entityId])
+}
+
+// =========================
+// Knowledge Base Models
+// =========================
+
+model KnowledgeCategory {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+
+  parentId Int?
+  parent   KnowledgeCategory?  @relation("KnowledgeCategoryToParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children KnowledgeCategory[] @relation("KnowledgeCategoryToParent")
+
+  knowledges Knowledge[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, name, parentId])
+  @@index([workspaceId, parentId])
+}
+
+model Knowledge {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  title       String
+  slug        String
+  excerpt     String?         @db.Text
+  content     String          @db.LongText
+  status      KnowledgeStatus @default(DRAFT)
+  publishedAt DateTime?
+  viewsCount  Int             @default(0)
+  attachments Json?
+
+  authorId Int
+  author   WorkspaceUser @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  categoryId Int?
+  category   KnowledgeCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Relations
+  labels    KnowledgeLabel[]
+  assignees KnowledgeAssignee[]
+  teamACL   KnowledgeTeamPermission[]
+  userACL   KnowledgeUserPermission[]
+
+  // Internal Chat relations
+  chatMessages ChatMessageKnowledge[]
+  chatRooms    ChatRoomKnowledge[]
+
+  // Support Info relations
+  supportInfo SupportInfoKnowledge[]
+
+  // Support Chat relations
+  supportChat SupportChatKnowledge[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId, status])
+  @@index([workspaceId, categoryId])
+}
+
+model KnowledgeLabel {
+  knowledgeId Int
+  labelId     Int
+  knowledge   Knowledge @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+  label       Label     @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([knowledgeId, labelId])
+}
+
+model KnowledgeAssignee {
+  knowledgeId     Int
+  workspaceUserId Int
+  knowledge       Knowledge     @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([knowledgeId, workspaceUserId])
+}
+
+model KnowledgeTeamPermission {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  teamId Int
+  team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  knowledgeId Int
+  knowledge   Knowledge @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+
+  canRead   Boolean @default(true)
+  canWrite  Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, knowledgeId])
+  @@index([workspaceId, teamId])
+}
+
+model KnowledgeUserPermission {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  knowledgeId Int
+  knowledge   Knowledge @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+
+  canRead   Boolean @default(true)
+  canWrite  Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceUserId, knowledgeId])
+  @@index([workspaceId, workspaceUserId])
+}
+
+// =========================
+// Generic Comments
+// =========================
+
+model Comment {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  entityType String
+  entityId   Int
+
+  authorId Int
+  author   WorkspaceUser @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  body     String  @db.LongText
+  isEdited Boolean @default(false)
+
+  parentId Int?
+  parent   Comment?  @relation("CommentToParent", fields: [parentId], references: [id], onDelete: SetNull)
+  replies  Comment[] @relation("CommentToParent")
+
+  likeCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  likes CommentLike[]
+
+  @@index([workspaceId, entityType, entityId])
+}
+
+model CommentLike {
+  commentId       Int
+  workspaceUserId Int
+  comment         Comment       @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([commentId, workspaceUserId])
+}
+
+// =========================
+// Internal Chat Models (Complete - V2)
+// Purpose: Internal organizational communication for Admins
+// =========================
+
+model ChatRoom {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  type        InternalChatRoomType
+  title       String?              @db.VarChar(255)
+  description String?              @db.Text
+  icon        String?              @db.VarChar(255)
+  coverImage  String?              @db.VarChar(500)
+
+  teamId Int?
+  team   Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  projectId Int?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  createdById Int?
+  createdBy   WorkspaceUser? @relation("ChatRoomCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  isPrivate          Boolean @default(false)
+  isArchived         Boolean @default(false)
+  isLocked           Boolean @default(false)
+  allowNotifications Boolean @default(true)
+
+  lastActivityAt DateTime?
+
+  members     ChatRoomMember[]
+  messages    ChatMessage[]
+  settings    ChatRoomSettings?
+  permissions ChatRoomPermission[]
+
+  linkedDocuments ChatRoomDocument[]
+  linkedTasks     ChatRoomTask[]
+  linkedKnowledge ChatRoomKnowledge[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, type])
+  @@index([workspaceId, isArchived])
+  @@index([teamId])
+  @@index([projectId])
+  @@index([lastActivityAt])
+}
+
+model ChatRoomMember {
+  id              Int           @id @default(autoincrement())
+  roomId          Int
+  room            ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  role ChatRoomMemberRole @default(MEMBER)
+
+  lastReadAt        DateTime?
+  lastReadMessageId Int?
+
+  isMuted        Boolean   @default(false)
+  mutedUntil     DateTime?
+  customNickname String?   @db.VarChar(100)
+  customColor    String?   @db.VarChar(7)
+
+  messageCount Int @default(0)
+
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+
+  invitedById Int?
+  invitedBy   WorkspaceUser? @relation("ChatRoomInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  typingIndicators ChatTypingIndicator[]
+  readReceipts     ChatMessageReadReceipt[]
+
+  @@unique([roomId, workspaceUserId])
+  @@index([workspaceUserId])
+  @@index([roomId, role])
+  @@index([leftAt])
+}
+
+model ChatMessage {
+  id     Int      @id @default(autoincrement())
+  roomId Int
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  senderId Int
+  sender   WorkspaceUser @relation("ChatMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  body        String          @db.LongText
+  bodyPreview String?         @db.VarChar(200)
+  messageType ChatMessageType @default(TEXT)
+
+  replyToId Int?
+  replyTo   ChatMessage?  @relation("ChatMessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[] @relation("ChatMessageReply")
+
+  attachments Json?
+  mentions    Json?
+
+  isEdited  Boolean   @default(false)
+  editedAt  DateTime?
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy Int?
+
+  isPinned   Boolean        @default(false)
+  pinnedAt   DateTime?
+  pinnedById Int?
+  pinnedBy   WorkspaceUser? @relation("ChatMessagePinner", fields: [pinnedById], references: [id], onDelete: SetNull)
+
+  linkedDocuments ChatMessageDocument[]
+  linkedTasks     ChatMessageTask[]
+  linkedKnowledge ChatMessageKnowledge[]
+  linkedInvoices  ChatMessageInvoice[]
+  linkedRequests  ChatMessageRequest[]
+
+  reactions    ChatMessageReaction[]
+  readReceipts ChatMessageReadReceipt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roomId, createdAt])
+  @@index([senderId])
+  @@index([replyToId])
+  @@index([roomId, isPinned])
+  @@index([roomId, isDeleted])
+}
+
+// ===== لینک پیام به موجودیت‌ها =====
+
+model ChatMessageDocument {
+  id         Int           @id @default(autoincrement())
+  messageId  Int
+  message    ChatMessage   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  documentId Int
+  document   Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  addedById  Int
+  addedBy    WorkspaceUser @relation("ChatMessageDocumentAdder", fields: [addedById], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+
+  @@unique([messageId, documentId])
+  @@index([messageId])
+  @@index([documentId])
+}
+
+model ChatMessageTask {
+  id        Int           @id @default(autoincrement())
+  messageId Int
+  message   ChatMessage   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  taskId    Int
+  task      Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  addedById Int
+  addedBy   WorkspaceUser @relation("ChatMessageTaskAdder", fields: [addedById], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@unique([messageId, taskId])
+  @@index([messageId])
+  @@index([taskId])
+}
+
+model ChatMessageKnowledge {
+  id          Int           @id @default(autoincrement())
+  messageId   Int
+  message     ChatMessage   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  knowledgeId Int
+  knowledge   Knowledge     @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+  addedById   Int
+  addedBy     WorkspaceUser @relation("ChatMessageKnowledgeAdder", fields: [addedById], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@unique([messageId, knowledgeId])
+  @@index([messageId])
+  @@index([knowledgeId])
+}
+
+model ChatMessageInvoice {
+  id        Int           @id @default(autoincrement())
+  messageId Int
+  message   ChatMessage   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  invoiceId Int
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  addedById Int
+  addedBy   WorkspaceUser @relation("ChatMessageInvoiceAdder", fields: [addedById], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@unique([messageId, invoiceId])
+  @@index([messageId])
+  @@index([invoiceId])
+}
+
+model ChatMessageRequest {
+  id        Int           @id @default(autoincrement())
+  messageId Int
+  message   ChatMessage   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  requestId Int
+  request   Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  addedById Int
+  addedBy   WorkspaceUser @relation("ChatMessageRequestAdder", fields: [addedById], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@unique([messageId, requestId])
+  @@index([messageId])
+  @@index([requestId])
+}
+
+// ===== لینک اتاق به موجودیت‌ها (برای تب‌های UI) =====
+
+model ChatRoomDocument {
+  id         Int           @id @default(autoincrement())
+  roomId     Int
+  room       ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  documentId Int
+  document   Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  addedById  Int
+  addedBy    WorkspaceUser @relation("ChatRoomDocumentAdder", fields: [addedById], references: [id], onDelete: Cascade)
+  isPinned   Boolean       @default(false)
+  pinnedAt   DateTime?
+  order      Int           @default(0)
+  note       String?       @db.Text
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([roomId, documentId])
+  @@index([roomId, isPinned])
+  @@index([documentId])
+}
+
+model ChatRoomTask {
+  id        Int           @id @default(autoincrement())
+  roomId    Int
+  room      ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  taskId    Int
+  task      Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  addedById Int
+  addedBy   WorkspaceUser @relation("ChatRoomTaskAdder", fields: [addedById], references: [id], onDelete: Cascade)
+  isPinned  Boolean       @default(false)
+  pinnedAt  DateTime?
+  note      String?       @db.Text
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([roomId, taskId])
+  @@index([roomId])
+  @@index([taskId])
+}
+
+model ChatRoomKnowledge {
+  id          Int           @id @default(autoincrement())
+  roomId      Int
+  room        ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  knowledgeId Int
+  knowledge   Knowledge     @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+  addedById   Int
+  addedBy     WorkspaceUser @relation("ChatRoomKnowledgeAdder", fields: [addedById], references: [id], onDelete: Cascade)
+  isPinned    Boolean       @default(false)
+  pinnedAt    DateTime?
+  note        String?       @db.Text
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([roomId, knowledgeId])
+  @@index([roomId])
+  @@index([knowledgeId])
+}
+
+// ===== تعاملات =====
+
+model ChatMessageReaction {
+  id        Int           @id @default(autoincrement())
+  messageId Int
+  message   ChatMessage   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      WorkspaceUser @relation("ChatMessageReactions", fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String        @db.VarChar(10)
+  createdAt DateTime      @default(now())
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@index([userId])
+}
+
+model ChatMessageReadReceipt {
+  id        Int            @id @default(autoincrement())
+  messageId Int
+  message   ChatMessage    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  memberId  Int
+  member    ChatRoomMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  readAt    DateTime       @default(now())
+
+  @@unique([messageId, memberId])
+  @@index([messageId])
+  @@index([memberId])
+}
+
+model ChatTypingIndicator {
+  id        Int            @id @default(autoincrement())
+  roomId    Int
+  memberId  Int
+  member    ChatRoomMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  startedAt DateTime       @default(now())
+
+  @@unique([roomId, memberId])
+  @@index([roomId])
+  @@index([startedAt])
+}
+
+// ===== تنظیمات =====
+
+model ChatRoomSettings {
+  id     Int      @id @default(autoincrement())
+  roomId Int      @unique
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  whoCanPost           ChatRoomWhoCanPost   @default(ALL_MEMBERS)
+  whoCanInvite         ChatRoomWhoCanInvite @default(ADMINS)
+  whoCanChangeSettings ChatRoomWhoCanInvite @default(ADMINS)
+
+  allowFileAttachments Boolean @default(true)
+  allowLinkPreviews    Boolean @default(true)
+  allowReactions       Boolean @default(true)
+  allowReplies         Boolean @default(true)
+
+  maxMessageLength Int @default(10000)
+  maxFileSize      Int @default(10485760)
+
+  autoDeleteAfterDays Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ChatRoomPermission {
+  id     Int      @id @default(autoincrement())
+  roomId Int
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  roleId Int?
+  role   Role? @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  workspaceUserId Int?
+  workspaceUser   WorkspaceUser? @relation("ChatRoomPermissions", fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  canRead   Boolean @default(true)
+  canWrite  Boolean @default(true)
+  canDelete Boolean @default(false)
+  canManage Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roomId])
+  @@index([roleId])
+  @@index([workspaceUserId])
+}
+
+// =========================
+// Support Info Module (Renamed from Support)
+// Purpose: Track phone calls, in-person visits, and support contacts
+// =========================
+
+model SupportInfoCategory {
+  id          Int                   @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  parentId    Int?
+  parent      SupportInfoCategory?  @relation("SupportInfoCategoryTree", fields: [parentId], references: [id])
+  children    SupportInfoCategory[] @relation("SupportInfoCategoryTree")
+  tickets     SupportInfo[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+}
+
+model SupportInfoLabel {
+  id          Int           @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  color       String?
+  tickets     SupportInfo[] @relation("SupportInfoLabels")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([name, workspaceId])
+}
+
+model SupportInfo {
+  id            Int             @id @default(autoincrement())
+  workspaceId   Int
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?         @db.LongText
+  source        SupportSource
+  type          SupportType
+  priority      SupportPriority @default(MEDIUM)
+  status        String
+  contactAt     DateTime?
+  dueAt         DateTime?
+  visibleToUser Boolean         @default(true)
+
+  userId          Int?
+  user            WorkspaceUser? @relation("SupportInfo_user", fields: [userId], references: [id], onDelete: SetNull)
+  assignedAdminId Int?
+  assignedAdmin   WorkspaceUser? @relation("SupportInfo_assignedAdmin", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  assignedTeamId  Int?
+  assignedTeam    Team?          @relation("SupportInfo_assignedTeam", fields: [assignedTeamId], references: [id], onDelete: SetNull)
+
+  categoryId Int?
+  category   SupportInfoCategory? @relation(fields: [categoryId], references: [id])
+
+  labels SupportInfoLabel[] @relation("SupportInfoLabels")
+
+  tasks     SupportInfoTask[]
+  documents SupportInfoDocument[]
+  knowledge SupportInfoKnowledge[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SupportInfoTask {
+  id        Int         @id @default(autoincrement())
+  ticketId  Int
+  ticket    SupportInfo @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  taskId    Int
+  task      Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([ticketId, taskId])
+  @@index([ticketId])
+  @@index([taskId])
+}
+
+model SupportInfoDocument {
+  id         Int         @id @default(autoincrement())
+  ticketId   Int
+  ticket     SupportInfo @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  documentId Int
+  document   Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([ticketId, documentId])
+  @@index([ticketId])
+  @@index([documentId])
+}
+
+model SupportInfoKnowledge {
+  id          Int         @id @default(autoincrement())
+  ticketId    Int
+  ticket      SupportInfo @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  knowledgeId Int
+  knowledge   Knowledge   @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([ticketId, knowledgeId])
+  @@index([ticketId])
+  @@index([knowledgeId])
+}
+
+// =========================
+// Support Chat Module (New - Online Ticketing System)
+// Purpose: Online chat-based support with guests and registered users
+// =========================
+
+model SupportChatCategory {
+  id          Int                   @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  parentId    Int?
+  parent      SupportChatCategory?  @relation("SupportChatCategoryTree", fields: [parentId], references: [id])
+  children    SupportChatCategory[] @relation("SupportChatCategoryTree")
+  tickets     SupportChatTicket[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@index([workspaceId])
+}
+
+model SupportChatLabel {
+  id          Int                 @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  color       String?
+  tickets     SupportChatTicket[] @relation("SupportChatTicketLabels")
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([name, workspaceId])
+  @@index([workspaceId])
+}
+
+model SupportGuestUser {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Network & Location Info
+  ipAddress String  @db.VarChar(45)
+  country   String? @db.VarChar(100)
+  city      String? @db.VarChar(100)
+  region    String? @db.VarChar(100)
+  timezone  String? @db.VarChar(50)
+
+  // Device & Browser Info
+  userAgent        String? @db.Text
+  browser          String? @db.VarChar(100)
+  browserVersion   String? @db.VarChar(50)
+  os               String? @db.VarChar(100)
+  osVersion        String? @db.VarChar(50)
+  device           String? @db.VarChar(100)
+  deviceType       String? @db.VarChar(50) // mobile, tablet, desktop
+  screenResolution String? @db.VarChar(20) // 1920x1080
+
+  // Contact Info
+  email String? @db.VarChar(255)
+  name  String? @db.VarChar(255)
+  phone String? @db.VarChar(50)
+
+  // Security & Tracking
+  fingerprint String? @db.VarChar(255)
+  sessionId   String? @db.VarChar(255)
+  referrer    String? @db.Text
+  utmSource   String? @db.VarChar(100)
+  utmMedium   String? @db.VarChar(100)
+  utmCampaign String? @db.VarChar(100)
+
+  // Timestamps
+  firstVisitAt DateTime @default(now())
+  lastVisitAt  DateTime @updatedAt
+  visitCount   Int      @default(1)
+  isActive     Boolean  @default(true)
+
+  tickets  SupportChatTicket[]
+  messages SupportChatMessage[] @relation("SupportChatGuestMessages")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, ipAddress])
+  @@index([workspaceId, email])
+  @@index([fingerprint])
+  @@index([sessionId])
+}
+
+model SupportChatTicket {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  ticketNumber String @db.VarChar(50)
+
+  guestUserId Int?
+  guestUser   SupportGuestUser? @relation(fields: [guestUserId], references: [id], onDelete: SetNull)
+
+  workspaceUserId Int?
+  workspaceUser   WorkspaceUser? @relation("SupportChatTicket_user", fields: [workspaceUserId], references: [id], onDelete: SetNull)
+
+  subject     String  @db.VarChar(500)
+  description String? @db.LongText
+
+  categoryId Int?
+  category   SupportChatCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  priority SupportPriority     @default(MEDIUM)
+  status   SupportTicketStatus @default(OPEN)
+
+  assignedToId Int?
+  assignedTo   WorkspaceUser? @relation("SupportChatTicket_assignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  assignedTeamId Int?
+  assignedTeam   Team? @relation("SupportChatTicket_assignedTeam", fields: [assignedTeamId], references: [id], onDelete: SetNull)
+
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+
+  dueDate DateTime?
+
+  responseTime   Int? @default(0)
+  resolutionTime Int? @default(0)
+  reopenCount    Int  @default(0)
+
+  isPublic       Boolean @default(true)
+  notifyCustomer Boolean @default(true)
+
+  messages    SupportChatMessage[]
+  labels      SupportChatLabel[]      @relation("SupportChatTicketLabels")
+  attachments SupportChatAttachment[]
+  history     SupportChatHistory[]
+
+  linkedTasks     SupportChatTask[]
+  linkedDocuments SupportChatDocument[]
+  linkedKnowledge SupportChatKnowledge[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, ticketNumber])
+  @@index([workspaceId, status])
+  @@index([workspaceId, priority])
+  @@index([assignedToId])
+  @@index([guestUserId])
+  @@index([workspaceUserId])
+  @@index([categoryId])
+  @@index([createdAt])
+}
+
+model SupportChatMessage {
+  id       Int               @id @default(autoincrement())
+  ticketId Int
+  ticket   SupportChatTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  supportAgentId Int?
+  supportAgent   WorkspaceUser? @relation("SupportChatAgent_messages", fields: [supportAgentId], references: [id], onDelete: SetNull)
+
+  guestUserId Int?
+  guestUser   SupportGuestUser? @relation("SupportChatGuestMessages", fields: [guestUserId], references: [id], onDelete: SetNull)
+
+  workspaceUserId Int?
+  workspaceUser   WorkspaceUser? @relation("SupportChatCustomer_messages", fields: [workspaceUserId], references: [id], onDelete: SetNull)
+
+  body        String             @db.LongText
+  messageType SupportMessageType @default(TEXT)
+
+  isInternal Boolean @default(false)
+  isVisible  Boolean @default(true)
+
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  // Reply functionality
+  replyToId     Int?
+  replyTo       SupportChatMessage?  @relation("SupportChatMessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies       SupportChatMessage[] @relation("SupportChatMessageReplies")
+  replySnapshot String?              @db.Text
+
+  // Edit/Delete functionality
+  isEdited  Boolean   @default(false)
+  isDeleted Boolean   @default(false)
+  editedAt  DateTime?
+  deletedAt DateTime?
+  editCount Int       @default(0)
+
+  attachments Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+model SupportChatAttachment {
+  id       Int               @id @default(autoincrement())
+  ticketId Int
+  ticket   SupportChatTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  fileName String @db.VarChar(255)
+  filePath String @db.VarChar(500)
+  fileSize Int
+  mimeType String @db.VarChar(100)
+
+  // Link to Document system
+  documentId Int?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  // Uploader (optional)
+  workspaceUserId Int?
+  uploadedBy      WorkspaceUser? @relation("SupportChatAttachment_uploadedBy", fields: [workspaceUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([documentId])
+}
+
+model SupportChatHistory {
+  id       Int               @id @default(autoincrement())
+  ticketId Int
+  ticket   SupportChatTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  action    SupportHistoryAction
+  fieldName String?              @db.VarChar(100)
+  oldValue  String?              @db.Text
+  newValue  String?              @db.Text
+  note      String?              @db.Text
+
+  changedById Int?
+  changedBy   WorkspaceUser? @relation("SupportChatHistory_changedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+model SupportChatTask {
+  id        Int               @id @default(autoincrement())
+  ticketId  Int
+  ticket    SupportChatTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  taskId    Int
+  task      Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  note      String?           @db.Text
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @default(now()) @updatedAt
+
+  @@unique([ticketId, taskId])
+  @@index([ticketId])
+  @@index([taskId])
+}
+
+model SupportChatDocument {
+  id         Int               @id @default(autoincrement())
+  ticketId   Int
+  ticket     SupportChatTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  documentId Int
+  document   Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  note       String?           @db.Text
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @default(now()) @updatedAt
+
+  @@unique([ticketId, documentId])
+  @@index([ticketId])
+  @@index([documentId])
+}
+
+model SupportChatKnowledge {
+  id          Int               @id @default(autoincrement())
+  ticketId    Int
+  ticket      SupportChatTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  knowledgeId Int
+  knowledge   Knowledge         @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+  note        String?           @db.Text
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @default(now()) @updatedAt
+
+  @@unique([ticketId, knowledgeId])
+  @@index([ticketId])
+  @@index([knowledgeId])
 }
 
 // سطح دسترسی‌ها به‌صورت ساده: مشاهده/ایجاد-ویرایش/حذف
@@ -1120,10 +2128,20 @@ model Team {
   assignedProjects Project[]    @relation("AssignedTeamsToProject")
   assignedTasks    Task[]       @relation("AssignedTeamsToTask")
 
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  TeamCategoryPermission TeamCategoryPermission[]
-  TeamDocumentPermission TeamDocumentPermission[]
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  TeamCategoryPermission  TeamCategoryPermission[]
+  TeamDocumentPermission  TeamDocumentPermission[]
+  KnowledgeTeamPermission KnowledgeTeamPermission[]
+
+  // Internal Chat
+  chatRooms ChatRoom[]
+
+  // Support Info (renamed)
+  SupportInfoTickets SupportInfo[] @relation("SupportInfo_assignedTeam")
+
+  // Support Chat (new)
+  SupportChatTickets SupportChatTicket[] @relation("SupportChatTicket_assignedTeam")
 
   @@unique([name, workspaceId])
 }
@@ -1157,6 +2175,9 @@ model Project {
 
   assignedUsers WorkspaceUser[] @relation("AssignedWorkspaceUsersToProject")
   assignedTeams Team[]          @relation("AssignedTeamsToProject")
+
+  // Internal Chat
+  chatRooms ChatRoom[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1204,6 +2225,16 @@ model Task {
 
   statusHistory TaskStatusHistory[]
   reminders     Reminder[]
+
+  // Internal Chat relations
+  chatMessages ChatMessageTask[]
+  chatRooms    ChatRoomTask[]
+
+  // Support Info relations
+  supportInfo SupportInfoTask[]
+
+  // Support Chat relations
+  supportChat SupportChatTask[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1397,4 +2428,117 @@ enum LabelColor {
   success
   neutral
   info
+}
+
+// ===== New Enums =====
+enum KnowledgeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// Internal Chat Enums
+enum InternalChatRoomType {
+  DIRECT // 1-1 خصوصی
+  TEAM // گروه تیم
+  GROUP // گروه دستی
+  PROJECT // مربوط به پروژه
+}
+
+enum ChatRoomMemberRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+  GUEST
+}
+
+enum ChatMessageType {
+  TEXT
+  IMAGE
+  FILE
+  VOICE
+  VIDEO
+  LINK
+  SYSTEM
+  POLL
+  TASK_CREATE
+  DOC_SHARE
+}
+
+enum ChatRoomWhoCanPost {
+  ALL_MEMBERS
+  ADMINS_ONLY
+  OWNER_ONLY
+}
+
+enum ChatRoomWhoCanInvite {
+  ALL_MEMBERS
+  ADMINS
+  OWNER_ONLY
+}
+
+// Support enums
+enum SupportSource {
+  INBOUND_CALL
+  OUTBOUND_CALL
+  USER_TICKET
+  ADMIN_TICKET
+  ONSITE_BY_USER
+  ONSITE_BY_US
+}
+
+enum SupportType {
+  SALES_ORDER
+  QUOTE
+  ORDER_FOLLOWUP
+  PURCHASE_ORDER
+  PURCHASE_QUOTE
+  COMPLAINT
+  ISSUE
+  QUESTION
+}
+
+enum SupportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// Support Chat enums
+enum SupportTicketStatus {
+  OPEN
+  PENDING
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
+  REOPENED
+}
+
+enum SupportMessageType {
+  TEXT
+  NOTE
+  SYSTEM
+  EMAIL
+  ATTACHMENT
+}
+
+enum SupportHistoryAction {
+  CREATED
+  STATUS_CHANGED
+  PRIORITY_CHANGED
+  ASSIGNED
+  REASSIGNED
+  CATEGORY_CHANGED
+  LABEL_ADDED
+  LABEL_REMOVED
+  COMMENT_ADDED
+  ATTACHMENT_ADDED
+  CLOSED
+  REOPENED
+  RESOLVED
+  DUE_DATE_CHANGED
+  CUSTOM
 }

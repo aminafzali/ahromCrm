@@ -1,11 +1,13 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
+import DIcon from "@/@Client/Components/common/DIcon";
 import { DetailPageWrapper, FormWrapper } from "@/@Client/Components/wrappers";
-import { Button, Card, Input } from "ndui-ahrom";
+import { Card, Input } from "ndui-ahrom";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import DIcon from "@/@Client/Components/common/DIcon";
 
 const profileSchema = z.object({
   name: z.string().min(2, "نام باید حداقل 2 کاراکتر باشد"),
@@ -96,7 +98,6 @@ export default function UserProfilePage() {
 
   return (
     <div className="max-w-2xl lg:mx-auto p-2">
-
       {!isEditing ? (
         <DetailPageWrapper
           data={profile}

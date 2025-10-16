@@ -6,7 +6,12 @@ import { NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const publicApiRoutes = ["/api/auth", "/api/cron", "/api/public/requests"];
+  const publicApiRoutes = [
+    "/api/auth",
+    "/api/cron",
+    "/api/public/requests",
+    "/api/support-chat/public",
+  ];
 
   if (publicApiRoutes.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();

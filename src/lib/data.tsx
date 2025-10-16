@@ -208,6 +208,25 @@ export const dashboardMenuItems = [
     divider: true,
     href: "/information",
   },
+  {
+    id: "knowledge-group",
+    label: "پایگاه دانش",
+    icon: <DIcon icon="fa-book" cdi={false}></DIcon>,
+    children: [
+      {
+        id: "knowledge",
+        label: "دانش‌نامه",
+        icon: <DIcon icon="fa-book-open" cdi={false}></DIcon>,
+        href: "/dashboard/knowledge",
+      },
+      {
+        id: "knowledge-categories",
+        label: "دسته‌بندی دانش",
+        icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+        href: "/dashboard/knowledge-categories",
+      },
+    ],
+  },
 
   {
     id: "documents-group",
@@ -225,6 +244,37 @@ export const dashboardMenuItems = [
         label: "دسته‌های اسناد",
         icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
         href: "/dashboard/document-categories",
+      },
+    ],
+  },
+  {
+    id: "chat-group",
+    label: "سیستم گفتگو و پشتیبانی",
+    icon: <DIcon icon="fa-headset" cdi={false}></DIcon>,
+    children: [
+      {
+        id: "internal-chat",
+        label: "چت درون سازمانی",
+        icon: <DIcon icon="fa-comments" cdi={false}></DIcon>,
+        href: "/dashboard/internal-chat",
+      },
+      {
+        id: "support-chat",
+        label: "چت پشتیبانی مشتریان",
+        icon: <DIcon icon="fa-headset" cdi={false}></DIcon>,
+        href: "/dashboard/support-chat",
+      },
+      {
+        id: "support-info",
+        label: "اطلاعات پشتیبانی",
+        icon: <DIcon icon="fa-circle-info" cdi={false}></DIcon>,
+        href: "/dashboard/support-info",
+      },
+      {
+        id: "support-info-categories",
+        label: "دسته‌بندی اطلاعات پشتیبانی",
+        icon: <DIcon icon="fa-code-branch" cdi={false}></DIcon>,
+        href: "/dashboard/support-info-categories",
       },
     ],
   },
@@ -287,6 +337,24 @@ export const userMenuItems = [
     href: "/panel/invoices",
   },
   {
+    id: "panel-support-chat",
+    label: "پشتیبانی (چت)",
+    icon: <DIcon icon="fa-headset" cdi={false}></DIcon>,
+    href: "/panel/support-chat",
+  },
+  {
+    id: "panel-support-info",
+    label: "اطلاعات پشتیبانی",
+    icon: <DIcon icon="fa-circle-info" cdi={false}></DIcon>,
+    href: "/panel/support-info",
+  },
+  {
+    id: "panel-knowledge",
+    label: "دانش‌نامه",
+    icon: <DIcon icon="fa-book-open" cdi={false}></DIcon>,
+    href: "/panel/knowledge",
+  },
+  {
     id: "profile",
     label: "پروفایل",
     icon: <DIcon icon="fa-user" cdi={false}></DIcon>,
@@ -315,6 +383,13 @@ export const userBottomItems = [
     label: "اعلان ها",
     icon: <DIcon icon="fa-bell" cdi={false}></DIcon>,
     href: "/panel/notifications",
+  },
+  {
+    id: "panel-support-chat",
+    value: "panel-support-chat",
+    label: "پشتیبانی",
+    icon: <DIcon icon="fa-headset" cdi={false}></DIcon>,
+    href: "/panel/support-chat",
   },
   {
     id: "profile",

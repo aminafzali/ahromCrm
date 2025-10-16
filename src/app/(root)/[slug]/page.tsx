@@ -112,6 +112,12 @@ export default async function WorkspacePage({ params }: Props) {
   };
   // ===== پایان بخش سئو ۲ =====
 
+  // const WorkspaceSupportButton = dynamic(
+  //   () => import("@/modules/chat/components/WorkspaceSupportButtonClient"),
+  //   { ssr: true }
+  // );
+  // TODO: Add support-chat widget button
+
   return (
     <>
       {/* ===== شروع بخش سئو ۳: تزریق داده‌های ساختاریافته به صفحه ===== */}
@@ -151,6 +157,12 @@ export default async function WorkspacePage({ params }: Props) {
               <Link href="/demo" className="btn btn-ghost btn-lg text-white">
                 <DIcon icon="fa-play" cdi={false} classCustom="ml-2" />
                 مشاهده دمو
+              </Link>
+              <Link
+                href={`/${slug}/support`}
+                className="btn btn-secondary btn-lg"
+              >
+                گفتگو با پشتیبانی
               </Link>
             </div>
           </div>

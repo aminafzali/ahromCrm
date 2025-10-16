@@ -7,7 +7,8 @@ import { useParams } from "next/navigation";
 import { lazy, Suspense } from "react";
 
 export default function DynamicGroupedPage() {
-  const { slug, groupNumber } = useParams();
+  const { slug, groupNumber } =
+    (useParams() as { slug?: string; groupNumber?: string }) || {};
   const { activeWorkspace, isLoading } = useWorkspace();
 
   const DynamicComponent = lazy(async () => {

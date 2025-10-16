@@ -5,14 +5,15 @@
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
 import { DetailPageWrapper } from "@/@Client/Components/wrappers";
+// import ChatLinkButton from "@/modules/chat/components/ChatLinkButton"; // Removed: Use internal-chat instead
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useProject } from "../../hooks/useProject";
 import { ProjectWithRelations } from "../../types";
 
 export default function DetailPage() {
-  const params = useParams();
-  const id = parseInt(params.id as string);
+  const params = useParams() as { id?: string } | null;
+  const id = Number(params?.id);
   const router = useRouter();
   const { getById, loading, error, statusCode, remove } = useProject();
   const [project, setProject] = useState<ProjectWithRelations | null>(null);
@@ -38,8 +39,8 @@ export default function DetailPage() {
   const displayData = project
     ? {
         "نام پروژه": project.name,
-        "توضیحات": project.description || "-",
-        "وضعیت": project.status?.name || "-",
+        توضیحات: project.description || "-",
+        وضعیت: project.status?.name || "-",
         "تعداد وظایف": project._count?.tasks || 0,
         "تاریخ شروع": project.startDate
           ? new Date(project.startDate).toLocaleDateString("fa-IR")
@@ -48,24 +49,29 @@ export default function DetailPage() {
           ? new Date(project.endDate).toLocaleDateString("fa-IR")
           : "-",
         "اعضای تخصیص یافته":
-          project.assignedUsers?.map((u) => u.displayName || u.user.name).join(", ") ||
-          "ندارد",
+          project.assignedUsers
+            ?.map((u) => u.displayName || u.user.name)
+            .join(", ") || "ندارد",
         "تیم‌های تخصیص یافته":
           project.assignedTeams?.map((t) => t.name).join(", ") || "ندارد",
       }
     : {};
 
+  if (!id) return <NotFound />;
   if (loading) return <Loading />;
   if (statusCode === 404) return <NotFound />;
 
   return (
-    <DetailPageWrapper
-      data={displayData}
-      title="جزئیات پروژه"
-      loading={loading}
-      error={error}
-      onDelete={() => handleDelete(project)}
-      editUrl={`/dashboard/projects/${id}/update`}
-    />
+    <>
+      <DetailPageWrapper
+        data={displayData}
+        title="جزئیات پروژه"
+        loading={loading}
+        error={error}
+        onDelete={() => handleDelete(project)}
+        editUrl={`/dashboard/projects/${id}/update`}
+      />
+      {/* TODO: Add internal-chat link for this project */}
+    </>
   );
 }
