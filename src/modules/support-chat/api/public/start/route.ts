@@ -165,14 +165,40 @@ export async function POST(req: NextRequest) {
 
     // try to reuse existing ticket id cookie to keep continuity between sessions
     let ticketId = cookieStore.get("support_ticket_id")?.value;
-    if (!ticketId) {
-      // create a pseudo ticket id (numeric) for socket room usage
-      const num = Math.abs(
-        (guestId.split("").reduce((a, c) => a + c.charCodeAt(0), 0) * 9301 +
-          Date.now()) %
-          1_000_000_000
-      );
-      ticketId = String(num);
+    let ticket: any = null;
+
+    if (ticketId) {
+      // Try to find existing ticket
+      try {
+        ticket = await prisma.supportChatTicket.findUnique({
+          where: { id: parseInt(ticketId) },
+        });
+      } catch (error) {
+        console.error("Error finding existing ticket:", error);
+        ticket = null;
+      }
+    }
+
+    if (!ticket) {
+      // Generate unique ticket number
+      const ticketNumber = `TKT-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 6)
+        .toUpperCase()}`;
+
+      // Create a new support ticket
+      ticket = await prisma.supportChatTicket.create({
+        data: {
+          workspaceId: 1, // Default workspace for now
+          ticketNumber,
+          guestUserId: guest.id,
+          subject: "پشتیبانی آنلاین",
+          description: "درخواست پشتیبانی از طریق چت آنلاین",
+          status: "OPEN",
+          priority: "MEDIUM",
+        },
+      });
+      ticketId = ticket.id.toString();
     }
 
     const res = NextResponse.json({
@@ -194,7 +220,7 @@ export async function POST(req: NextRequest) {
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 365,
     });
-    res.cookies.set("support_ticket_id", ticketId, {
+    res.cookies.set("support_ticket_id", ticketId || "", {
       path: "/",
       httpOnly: false,
       sameSite: "lax",
