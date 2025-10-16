@@ -56,6 +56,7 @@ export default function ChatWindow({
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const lastNearBottomAtRef = useRef<number>(0);
   const prevMessagesLenRef = useRef<number>(messages.length);
+  const prevFirstIdRef = useRef<any>(messages[0]?.id);
   const isTypingRef = useRef<boolean>(false);
 
   const getDistanceFromBottom = (): number => {
@@ -92,7 +93,14 @@ export default function ChatWindow({
   // Auto-scroll when new message arrives and user is near bottom, or when it's own message
   useEffect(() => {
     const len = messages.length;
-    const appended = len > (prevMessagesLenRef.current || 0);
+    const newFirstId = messages[0]?.id;
+    const appended =
+      len > (prevMessagesLenRef.current || 0) &&
+      newFirstId === prevFirstIdRef.current; // last changed
+    const prepended =
+      len > (prevMessagesLenRef.current || 0) &&
+      newFirstId !== prevFirstIdRef.current; // older loaded at top
+
     if (appended && !skipAutoScroll) {
       const last = messages[len - 1];
       const own =
@@ -106,7 +114,10 @@ export default function ChatWindow({
         return () => cancelAnimationFrame(id);
       }
     }
+
+    // update trackers after decision
     prevMessagesLenRef.current = len;
+    prevFirstIdRef.current = newFirstId;
   }, [messages.length, skipAutoScroll, currentUserId]);
 
   // Track visibility states for top/bottom buttons and trigger near-bottom callback
@@ -246,6 +257,7 @@ export default function ChatWindow({
         style={{
           backgroundImage:
             "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+          overflowAnchor: "none", // prevent Chrome's scroll anchoring from jumping to bottom
         }}
       >
         {/* Reserve space for sticky load-older to avoid jump when toggling */}
@@ -263,14 +275,22 @@ export default function ChatWindow({
                 const prevBehavior = (el.style as any).scrollBehavior;
                 (el.style as any).scrollBehavior = "auto";
                 await onLoadMore();
-                // Double RAF to wait for DOM + layout
+                // Triple-pass adjustment for Chrome stability
+                const adjust = () => {
+                  const delta = el.scrollHeight - prevHeight;
+                  el.scrollTop = prevTop + delta;
+                };
+                // force layout read between passes
                 requestAnimationFrame(() => {
-                  const delta1 = el.scrollHeight - prevHeight;
-                  el.scrollTop = prevTop + delta1;
+                  void el.getBoundingClientRect();
+                  adjust();
                   requestAnimationFrame(() => {
-                    const delta2 = el.scrollHeight - prevHeight;
-                    el.scrollTop = prevTop + delta2;
-                    (el.style as any).scrollBehavior = prevBehavior || "";
+                    void el.getBoundingClientRect();
+                    adjust();
+                    setTimeout(() => {
+                      adjust();
+                      (el.style as any).scrollBehavior = prevBehavior || "";
+                    }, 0);
                   });
                 });
               }}
@@ -356,13 +376,13 @@ export default function ChatWindow({
       {/* Floating scroll-to-bottom button (FAB) */}
       {showScrollBottom && (
         <button
-          className="absolute left-4 w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 flex items-center justify-center z-30"
+          className="absolute left-4 w-10 h-10 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 flex items-center justify-center z-30"
           style={{ bottom: 88 }}
           onClick={scrollToBottom}
           title="آخرین پیام"
           aria-label="آخرین پیام"
         >
-          <DIcon icon="fa-arrow-down" />
+          <DIcon icon="fa-arrow-down" classCustom="text-white" />
         </button>
       )}
 

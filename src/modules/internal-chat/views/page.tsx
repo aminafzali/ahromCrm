@@ -15,6 +15,7 @@ export default function InternalChatPage() {
     joinRoom,
     sendMessageRealtime,
     onMessage,
+    onAck,
     sendReadReceipt,
     onReadReceipt,
     setUserOnline,
@@ -121,35 +122,74 @@ export default function InternalChatPage() {
     };
   }, [selectedRoom?.id, onMessage]);
 
-  // Listen for read receipts and merge only if needed
+  // Listen for server ACK to replace temp messages reliably
   useEffect(() => {
-    const off = onReadReceipt((data: { roomId: number }) => {
-      if (composerMode) return;
-      if (selectedRoom?.id !== data.roomId) return;
-      const now = Date.now();
-      if (mergingRef.current || now - (lastMergeAtRef.current || 0) < 2000)
-        return;
-      mergingRef.current = true;
-      repo
-        .getMessages(data.roomId, { page, limit: MESSAGES_PAGE_LIMIT })
-        .then((res: any) => {
-          const updates: any[] = res?.data || [];
-          setMessages((prev) => {
-            const { next, changed } = mergeById(prev, updates);
-            return changed ? next : prev;
-          });
-          lastMergeAtRef.current = Date.now();
-        })
-        .finally(() => {
-          setTimeout(() => {
-            mergingRef.current = false;
-          }, 0);
+    const off = onAck?.(({ tempId, message }: any) => {
+      if (!message?.roomId || message.roomId !== selectedRoom?.id) return;
+      if (!tempId) {
+        // ensure not duplicated
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === message.id)) return prev;
+          return [...prev, message];
         });
+        return;
+      }
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? message : m)));
     });
     return () => {
       if (off) off();
     };
-  }, [selectedRoom?.id, page, composerMode, onReadReceipt, repo]);
+  }, [selectedRoom?.id, onAck]);
+
+  // Listen for read receipts and merge only if needed (also flip local flags up to lastReadMessageId)
+  useEffect(() => {
+    const off = onReadReceipt(
+      (data: { roomId: number; lastReadMessageId?: number }) => {
+        if (composerMode) return;
+        if (selectedRoom?.id !== data.roomId) return;
+
+        if (data.lastReadMessageId) {
+          // Optimistically mark my sent messages with id <= lastReadMessageId as read
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.senderId === activeWorkspace?.id &&
+              m.id <= (data.lastReadMessageId as any)
+                ? { ...m, isRead: true }
+                : m
+            )
+          );
+        }
+
+        const now = Date.now();
+        if (mergingRef.current || now - (lastMergeAtRef.current || 0) < 2000)
+          return;
+        mergingRef.current = true;
+        repo
+          .getMessages(data.roomId, { page, limit: MESSAGES_PAGE_LIMIT })
+          .then((res: any) => {
+            const updates: any[] = res?.data || [];
+            setMessages((prev) => {
+              const { next, changed } = mergeById(prev, updates);
+              return changed ? next : prev;
+            });
+            lastMergeAtRef.current = Date.now();
+          })
+          .finally(() => {
+            setTimeout(() => {
+              mergingRef.current = false;
+            }, 0);
+          });
+      }
+    );
+    return () => off?.();
+  }, [
+    selectedRoom?.id,
+    page,
+    composerMode,
+    onReadReceipt,
+    repo,
+    activeWorkspace?.id,
+  ]);
 
   // Listen for message edited/deleted realtime
   useEffect(() => {
@@ -227,17 +267,20 @@ export default function InternalChatPage() {
     try {
       const counts: { [key: number]: number } = {};
 
-      // Get unread count for each user's room
-      for (const user of usersList) {
-        try {
-          const count = await repo.getUnreadCount(user.id);
-          if (count > 0) {
-            counts[user.id] = count;
-          }
-        } catch (err) {
-          console.warn(`Failed to get unread count for user ${user.id}:`, err);
+      const tasks = (usersList || []).map((user: any) =>
+        repo
+          .getUnreadCount(user.id)
+          .then((count) => ({ id: user.id, count }))
+          .catch(() => ({ id: user.id, count: 0 }))
+      );
+
+      const results = await Promise.allSettled(tasks);
+      results.forEach((r) => {
+        if (r.status === "fulfilled") {
+          const { id, count } = r.value as any;
+          if (count > 0) counts[id] = count;
         }
-      }
+      });
 
       console.log("✅ [Internal Chat Page] Unread counts loaded:", counts);
       setUnreadCounts(counts);
