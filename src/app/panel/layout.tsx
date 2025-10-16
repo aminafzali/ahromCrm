@@ -15,7 +15,6 @@ import {
   ToastProvider,
 } from "ndui-ahrom";
 import { signOut } from "next-auth/react";
-import NextDynamic from "next/dynamic";
 
 const sidebarContent = (
   <div className="mb-8">
@@ -25,22 +24,23 @@ const sidebarContent = (
 );
 
 function Toolbar() {
-  const PanelSupportButton = NextDynamic(
-    () => import("@/modules/chat/components/PanelSupportButton"),
-    { ssr: false }
-  );
+  // const PanelSupportButton = NextDynamic(
+  //   () => import("@/modules/chat/components/PanelSupportButton"),
+  //   { ssr: false }
+  // );
   const { activeWorkspace } = useWorkspace();
   return (
     <div className="flex gap-2 justify-between w-full">
       <p className="text-lg font-semibold">پنل کاربری</p>
 
       <div className="flex items-center gap-2">
-        {activeWorkspace?.id ? (
+        {/* TODO: Add support-chat button */}
+        {/* {activeWorkspace?.id ? (
           <PanelSupportButton
             workspaceId={activeWorkspace.id}
             className="btn btn-ghost"
           />
-        ) : null}
+        ) : null} */}
         <Button
           className="text-primary"
           variant="ghost"

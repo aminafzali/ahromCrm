@@ -8,7 +8,6 @@ import Testimonials from "@/components/home/Testimonials";
 import prisma from "@/lib/prisma";
 import { Button } from "ndui-ahrom";
 import { Metadata } from "next"; // ایمپورت کردن تایپ متادیتا
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -113,10 +112,11 @@ export default async function WorkspacePage({ params }: Props) {
   };
   // ===== پایان بخش سئو ۲ =====
 
-  const WorkspaceSupportButton = dynamic(
-    () => import("@/modules/chat/components/WorkspaceSupportButtonClient"),
-    { ssr: true }
-  );
+  // const WorkspaceSupportButton = dynamic(
+  //   () => import("@/modules/chat/components/WorkspaceSupportButtonClient"),
+  //   { ssr: true }
+  // );
+  // TODO: Add support-chat widget button
 
   return (
     <>

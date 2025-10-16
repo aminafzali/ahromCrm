@@ -5,7 +5,7 @@
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
 import { DetailPageWrapper } from "@/@Client/Components/wrappers";
-import { useChat } from "@/modules/chat/hooks/useChat";
+// import { useChat } from "@/modules/chat/hooks/useChat"; // Removed: Chat module deprecated
 import CommentsThread from "@/modules/comments/components/Thread";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -18,7 +18,7 @@ export default function DetailPage() {
   const router = useRouter();
   const { getById, loading, error, statusCode, remove } = useTask();
   const [task, setTask] = useState<TaskWithRelations | null>(null);
-  const { repo: chatRepo } = useChat();
+  // const { repo: chatRepo } = useChat(); // Removed: Chat module deprecated
 
   useEffect(() => {
     if (id) {
@@ -74,27 +74,7 @@ export default function DetailPage() {
       />
       <div className="p-4 space-y-4">
         <CommentsThread entityType="Task" entityId={Number(id)} />
-        <button
-          className="btn btn-outline"
-          onClick={async () => {
-            const roomName = `Task#${id}`;
-            const found: any = await chatRepo.getAll({
-              page: 1,
-              limit: 1,
-              filters: { name: roomName },
-            });
-            const existing = found?.data?.[0];
-            if (existing?.id) {
-              router.push(`/dashboard/chat/${existing.id}`);
-              return;
-            }
-            const created: any = await chatRepo.create({ name: roomName });
-            const newId = created?.data?.id || created?.id;
-            if (newId) router.push(`/dashboard/chat/${newId}`);
-          }}
-        >
-          گفتگو برای این تسک
-        </button>
+        {/* TODO: Add internal-chat link for this task */}
       </div>
     </>
   );

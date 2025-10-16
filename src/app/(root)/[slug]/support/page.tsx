@@ -16,5 +16,11 @@ export default async function SupportPage({
     { ssr: true }
   );
 
-  return <SupportChatPublic workspaceId={workspace.id} slug={slug} />;
+  return (
+    <SupportChatPublic
+      // workspaceId={workspace.id}
+      // TODO: این بخش باید بعدا اصلاح شود
+    //  slug={slug}
+    />
+  );
 }

@@ -5,7 +5,7 @@
 import Loading from "@/@Client/Components/common/Loading";
 import NotFound from "@/@Client/Components/common/NotFound";
 import { DetailPageWrapper } from "@/@Client/Components/wrappers";
-import ChatLinkButton from "@/modules/chat/components/ChatLinkButton";
+// import ChatLinkButton from "@/modules/chat/components/ChatLinkButton"; // Removed: Use internal-chat instead
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useProject } from "../../hooks/useProject";
@@ -71,16 +71,7 @@ export default function DetailPage() {
         onDelete={() => handleDelete(project)}
         editUrl={`/dashboard/projects/${id}/update`}
       />
-      {id ? (
-        <div className="p-4">
-          <ChatLinkButton
-            roomName={`Project#${id}`}
-            className="btn btn-outline"
-          >
-            گفتگو برای این پروژه
-          </ChatLinkButton>
-        </div>
-      ) : null}
+      {/* TODO: Add internal-chat link for this project */}
     </>
   );
 }

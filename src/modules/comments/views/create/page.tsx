@@ -5,7 +5,7 @@ import Select3 from "@/@Client/Components/ui/Select3";
 import { useDocument } from "@/modules/documents/hooks/useDocument";
 import { useKnowledge } from "@/modules/knowledge/hooks/useKnowledge";
 import { useProject } from "@/modules/projects/hooks/useProject";
-import { useSupports } from "@/modules/supports/hooks/useSupports";
+import { useSupportInfo } from "@/modules/support-info/hooks/useSupports";
 import { useTask } from "@/modules/tasks/hooks/useTask";
 import { Button } from "ndui-ahrom";
 import Link from "next/link";
@@ -29,7 +29,7 @@ export default function CommentsCreatePage() {
   const { getAll: getAllProjects } = useProject();
   const { getAll: getAllKnowledge } = useKnowledge();
   const { getAll: getAllDocuments } = useDocument();
-  const { getAll: getAllSupports } = useSupports();
+  const { getAll: getAllSupports } = useSupportInfo();
 
   const [entityType, setEntityType] = useState<string>("");
   const [entityId, setEntityId] = useState<number | null>(null);

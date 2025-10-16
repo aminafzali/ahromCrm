@@ -1,7 +1,7 @@
 "use client";
 
 import DIcon from "@/@Client/Components/common/DIcon";
-import { useChat } from "@/modules/chat/hooks/useChat";
+// import { useChat } from "@/modules/chat/hooks/useChat"; // Removed: Chat module deprecated
 import CommentsThread from "@/modules/comments/components/Thread";
 // Documents temporarily disabled per request
 import Link from "next/link";
@@ -14,7 +14,7 @@ export default function KnowledgeViewPage({ id }: { id: number }) {
   const { getById, remove, loading, error } = useKnowledge();
   const [item, setItem] = useState<any | null>(null);
   // documents disabled
-  const { repo: chatRepo } = useChat();
+  // const { repo: chatRepo } = useChat(); // Removed: Chat module deprecated
   const router = useRouter();
 
   // documents disabled
@@ -131,29 +131,7 @@ export default function KnowledgeViewPage({ id }: { id: number }) {
       {/* attachments disabled */}
 
       {/* documents modals disabled */}
-      <div className="mt-8">
-        <button
-          className="btn btn-outline"
-          onClick={async () => {
-            const roomName = `Knowledge#${id}`;
-            const found: any = await chatRepo.getAll({
-              page: 1,
-              limit: 1,
-              filters: { name: roomName },
-            });
-            const existing = found?.data?.[0];
-            if (existing?.id) {
-              router.push(`/dashboard/chat/${existing.id}`);
-              return;
-            }
-            const created: any = await chatRepo.create({ name: roomName });
-            const newId = created?.data?.id || created?.id;
-            if (newId) router.push(`/dashboard/chat/${newId}`);
-          }}
-        >
-          گفتگو برای این دانش
-        </button>
-      </div>
+      {/* TODO: Add internal-chat link for this knowledge */}
       <div className="mt-8">
         <KnowledgeACLForm id={id} initial={item} />
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { DetailPageWrapper } from "@/@Client/Components/wrappers";
-import { useChat } from "@/modules/chat/hooks/useChat";
+// import { useChat } from "@/modules/chat/hooks/useChat"; // Removed: Chat module deprecated
 import CommentsThread from "@/modules/comments/components/Thread";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -12,7 +12,7 @@ import { useDocument } from "../../hooks/useDocument";
 export default function DocumentViewPage({ id }: { id: number }) {
   const { getById, remove, loading } = useDocument();
   const [doc, setDoc] = useState<any | null>(null);
-  const { repo: chatRepo } = useChat();
+  // const { repo: chatRepo } = useChat(); // Removed: Chat module deprecated
   const router = useRouter();
 
   const load = async () => {
@@ -64,27 +64,7 @@ export default function DocumentViewPage({ id }: { id: number }) {
       {doc?.id && (
         <div className="mt-8 space-y-4">
           <CommentsThread entityType="Document" entityId={Number(id)} />
-          <button
-            className="btn btn-outline"
-            onClick={async () => {
-              const roomName = `Document#${id}`;
-              const found: any = await chatRepo.getAll({
-                page: 1,
-                limit: 1,
-                filters: { name: roomName },
-              });
-              const existing = found?.data?.[0];
-              if (existing?.id) {
-                router.push(`/dashboard/chat/${existing.id}`);
-                return;
-              }
-              const created: any = await chatRepo.create({ name: roomName });
-              const newId = created?.data?.id || created?.id;
-              if (newId) router.push(`/dashboard/chat/${newId}`);
-            }}
-          >
-            گفتگو برای این سند
-          </button>
+          {/* TODO: Add internal-chat link for this document */}
         </div>
       )}
     </div>
