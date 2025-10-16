@@ -101,6 +101,15 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const cookieStore = req.cookies;
+    const clientIP = getClientIP(req);
+
+    console.log("🚀 [Support Chat API] درخواست شروع چت", {
+      clientIP,
+      userAgent: req.headers.get("user-agent"),
+      referer: req.headers.get("referer"),
+      timestamp: new Date().toISOString(),
+      bodyKeys: Object.keys(body),
+    });
 
     let guestId = cookieStore.get("support_guest_id")?.value || body.guestId;
     let guest: any = null;
@@ -108,11 +117,22 @@ export async function POST(req: NextRequest) {
     // If we have a guestId, try to find existing guest
     if (guestId) {
       try {
+        console.log("🔍 [Support Chat API] جستجوی مهمان موجود", { guestId });
+
         guest = await prisma.supportGuestUser.findFirst({
           where: { id: parseInt(guestId) },
         });
 
         if (guest) {
+          console.log("✅ [Support Chat API] مهمان موجود پیدا شد", {
+            guestId: guest.id,
+            name: guest.name,
+            visitCount: guest.visitCount,
+            lastVisitAt: guest.lastVisitAt,
+            country: guest.country,
+            ipAddress: guest.ipAddress,
+          });
+
           // Update last visit and increment visit count
           guest = await prisma.supportGuestUser.update({
             where: { id: guest.id },
@@ -123,9 +143,20 @@ export async function POST(req: NextRequest) {
               userAgent: body.userAgent || guest.userAgent,
             },
           });
+
+          console.log("🔄 [Support Chat API] اطلاعات مهمان به‌روزرسانی شد", {
+            guestId: guest.id,
+            newVisitCount: guest.visitCount,
+            newLastVisitAt: guest.lastVisitAt,
+            newIpAddress: guest.ipAddress,
+          });
+        } else {
+          console.log("❌ [Support Chat API] مهمان با ID داده شده پیدا نشد", {
+            guestId,
+          });
         }
       } catch (error) {
-        console.error("Error finding guest:", error);
+        console.error("❌ [Support Chat API] خطا در جستجوی مهمان:", error);
         guest = null;
       }
     }
@@ -134,6 +165,20 @@ export async function POST(req: NextRequest) {
     if (!guest) {
       const clientIP = getClientIP(req);
       const parsedUA = parseUserAgent(body.userAgent || "");
+
+      console.log("🆕 [Support Chat API] ایجاد مهمان جدید", {
+        clientIP,
+        userAgent: body.userAgent,
+        browser: parsedUA.browser,
+        os: parsedUA.os,
+        deviceType: parsedUA.deviceType,
+        screenResolution: body.screenResolution,
+        timezone: body.timezone,
+        referrer: body.referrer,
+        utmSource: body.utmSource,
+        utmMedium: body.utmMedium,
+        utmCampaign: body.utmCampaign,
+      });
 
       guest = await prisma.supportGuestUser.create({
         data: {
@@ -161,6 +206,13 @@ export async function POST(req: NextRequest) {
         },
       });
       guestId = guest.id.toString();
+
+      console.log("✅ [Support Chat API] مهمان جدید ایجاد شد", {
+        guestId: guest.id,
+        sessionId: guest.sessionId,
+        fingerprint: guest.fingerprint,
+        createdAt: guest.createdAt,
+      });
     }
 
     // try to reuse existing ticket id cookie to keep continuity between sessions
@@ -170,11 +222,27 @@ export async function POST(req: NextRequest) {
     if (ticketId) {
       // Try to find existing ticket
       try {
+        console.log("🔍 [Support Chat API] جستجوی تیکت موجود", { ticketId });
+
         ticket = await prisma.supportChatTicket.findUnique({
           where: { id: parseInt(ticketId) },
         });
+
+        if (ticket) {
+          console.log("✅ [Support Chat API] تیکت موجود پیدا شد", {
+            ticketId: ticket.id,
+            ticketNumber: ticket.ticketNumber,
+            status: ticket.status,
+            priority: ticket.priority,
+            createdAt: ticket.createdAt,
+          });
+        } else {
+          console.log("❌ [Support Chat API] تیکت با ID داده شده پیدا نشد", {
+            ticketId,
+          });
+        }
       } catch (error) {
-        console.error("Error finding existing ticket:", error);
+        console.error("❌ [Support Chat API] خطا در جستجوی تیکت:", error);
         ticket = null;
       }
     }
@@ -185,6 +253,12 @@ export async function POST(req: NextRequest) {
         .toString(36)
         .substr(2, 6)
         .toUpperCase()}`;
+
+      console.log("🆕 [Support Chat API] ایجاد تیکت جدید", {
+        ticketNumber,
+        guestId: guest.id,
+        workspaceId: 1,
+      });
 
       // Create a new support ticket
       ticket = await prisma.supportChatTicket.create({
@@ -199,6 +273,14 @@ export async function POST(req: NextRequest) {
         },
       });
       ticketId = ticket.id.toString();
+
+      console.log("✅ [Support Chat API] تیکت جدید ایجاد شد", {
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        status: ticket.status,
+        priority: ticket.priority,
+        createdAt: ticket.createdAt,
+      });
     }
 
     const res = NextResponse.json({
@@ -226,9 +308,25 @@ export async function POST(req: NextRequest) {
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 30,
     });
+
+    console.log("🎉 [Support Chat API] چت با موفقیت شروع شد", {
+      guestId,
+      ticketId: Number(ticketId),
+      ticketNumber: ticket.ticketNumber,
+      clientIP,
+      userAgent: req.headers.get("user-agent"),
+      timestamp: new Date().toISOString(),
+    });
+
     return res;
   } catch (e: any) {
-    console.error("Error starting support chat:", e);
+    console.error("❌ [Support Chat API] خطا در شروع چت:", {
+      error: e.message,
+      stack: e.stack,
+      clientIP: getClientIP(req),
+      userAgent: req.headers.get("user-agent"),
+      timestamp: new Date().toISOString(),
+    });
     return NextResponse.json({ error: "Failed to start" }, { status: 500 });
   }
 }

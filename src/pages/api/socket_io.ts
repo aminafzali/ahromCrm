@@ -453,20 +453,111 @@ export default function handler(
       /**
        * Join a support ticket room
        */
-      socket.on("support-chat:join", (ticketId: number) => {
-        logger.debug(
-          `📥 [Support Chat] Socket ${socket.id} joining ticket ${ticketId}`
-        );
+      socket.on("support-chat:join", async (ticketId: number) => {
+        // Get user info for logging
+        const userInfo = socket.data.user || { type: "guest", id: "unknown" };
+        const isGuest = userInfo.type === "guest";
+        const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
+        const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
+
+        logger.info(`📥 [Support Chat] درخواست ورود به تیکت`, {
+          ticketId,
+          userType,
+          userId,
+          isGuest,
+          socketId: socket.id,
+          timestamp: new Date().toISOString(),
+        });
+
         if (!ticketId) {
-          logger.warn("⚠️ [Support Chat] No ticketId provided for join");
+          logger.warn("⚠️ [Support Chat] No ticketId provided for join", {
+            userType,
+            userId,
+            socketId: socket.id,
+          });
           return;
         }
-        const roomKey = `support-ticket:${ticketId}`;
-        socket.join(roomKey);
-        logger.debug(
-          `✅ [Support Chat] Socket ${socket.id} joined ticket ${ticketId}`
-        );
-        socket.emit("support-chat:joined", { ticketId });
+
+        try {
+          // Get ticket info for logging
+          const ticket = await prisma.supportChatTicket.findUnique({
+            where: { id: ticketId },
+            include: {
+              guestUser: {
+                select: {
+                  id: true,
+                  name: true,
+                  ipAddress: true,
+                  country: true,
+                },
+              },
+              workspaceUser: {
+                select: {
+                  id: true,
+                  user: { select: { name: true, email: true } },
+                },
+              },
+            },
+          });
+
+          if (!ticket) {
+            logger.error("❌ [Support Chat] Ticket not found for join", {
+              ticketId,
+              userType,
+              userId,
+              socketId: socket.id,
+            });
+            return;
+          }
+
+          const roomKey = `support-ticket:${ticketId}`;
+          socket.join(roomKey);
+
+          // Get room member count (not accessible from socket)
+          const roomSize = 0;
+
+          logger.info(`✅ [Support Chat] کاربر با موفقیت به تیکت پیوست`, {
+            ticketId,
+            ticketNumber: ticket.ticketNumber,
+            userType,
+            userId,
+            isGuest,
+            socketId: socket.id,
+            roomKey,
+            roomSize,
+            ticketStatus: ticket.status,
+            ticketPriority: ticket.priority,
+            guestUser: ticket.guestUser
+              ? {
+                  id: ticket.guestUser.id,
+                  name: ticket.guestUser.name,
+                  ipAddress: ticket.guestUser.ipAddress,
+                  country: ticket.guestUser.country,
+                }
+              : null,
+            workspaceUser: ticket.workspaceUser
+              ? {
+                  id: ticket.workspaceUser.id,
+                  name: ticket.workspaceUser.user.name,
+                  email: ticket.workspaceUser.user.email,
+                }
+              : null,
+            timestamp: new Date().toISOString(),
+          });
+
+          socket.emit("support-chat:joined", { ticketId });
+        } catch (error: any) {
+          logger.error("❌ [Support Chat] خطا در ورود به تیکت", {
+            error: error?.message || "Unknown error",
+            stack: error?.stack,
+            ticketId,
+            userType,
+            userId,
+            isGuest,
+            socketId: socket.id,
+            timestamp: new Date().toISOString(),
+          });
+        }
       });
 
       /**
@@ -520,20 +611,91 @@ export default function handler(
           replyToId?: number;
           replySnapshot?: string;
         }) => {
-          logger.debug(`📨 [Support Chat] Message received:`, {
+          // Get user info for logging
+          const userInfo = socket.data.user || { type: "guest", id: "unknown" };
+          const isGuest = userInfo.type === "guest";
+          const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
+          const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
+
+          logger.info(`📨 [Support Chat] پیام جدید دریافت شد`, {
             ticketId: payload.ticketId,
+            userType,
+            userId,
+            isGuest,
             bodyLength: payload.body?.length,
             tempId: payload.tempId,
             isInternal: payload.isInternal,
             replyToId: payload.replyToId,
+            socketId: socket.id,
+            timestamp: new Date().toISOString(),
           });
 
           if (!payload?.ticketId || !payload?.body) {
-            logger.warn("⚠️ [Support Chat] Invalid message payload");
+            logger.warn("⚠️ [Support Chat] Invalid message payload", {
+              ticketId: payload.ticketId,
+              bodyLength: payload.body?.length,
+              userType,
+              userId,
+              socketId: socket.id,
+            });
             return;
           }
 
           try {
+            // Get ticket info for logging
+            const ticket = await prisma.supportChatTicket.findUnique({
+              where: { id: payload.ticketId },
+              include: {
+                guestUser: {
+                  select: {
+                    id: true,
+                    name: true,
+                    ipAddress: true,
+                    country: true,
+                  },
+                },
+                workspaceUser: {
+                  select: {
+                    id: true,
+                    user: { select: { name: true, email: true } },
+                  },
+                },
+              },
+            });
+
+            if (!ticket) {
+              logger.error("❌ [Support Chat] Ticket not found", {
+                ticketId: payload.ticketId,
+                userType,
+                userId,
+                socketId: socket.id,
+              });
+              return;
+            }
+
+            // Log ticket info
+            logger.info(`🎫 [Support Chat] Ticket info`, {
+              ticketId: ticket.id,
+              ticketNumber: ticket.ticketNumber,
+              status: ticket.status,
+              priority: ticket.priority,
+              guestUser: ticket.guestUser
+                ? {
+                    id: ticket.guestUser.id,
+                    name: ticket.guestUser.name,
+                    ipAddress: ticket.guestUser.ipAddress,
+                    country: ticket.guestUser.country,
+                  }
+                : null,
+              workspaceUser: ticket.workspaceUser
+                ? {
+                    id: ticket.workspaceUser.id,
+                    name: ticket.workspaceUser.user.name,
+                    email: ticket.workspaceUser.user.email,
+                  }
+                : null,
+            });
+
             // Create message in database
             const savedMessage = await prisma.supportChatMessage.create({
               data: {
@@ -545,9 +707,17 @@ export default function handler(
               },
             });
 
-            logger.debug(
-              `💾 [Support Chat] Message saved with ID ${savedMessage.id}`
-            );
+            logger.info(`💾 [Support Chat] پیام با موفقیت ذخیره شد`, {
+              messageId: savedMessage.id,
+              ticketId: payload.ticketId,
+              userType,
+              userId,
+              isGuest,
+              bodyLength: payload.body.length,
+              isInternal: payload.isInternal,
+              replyToId: payload.replyToId,
+              timestamp: savedMessage.createdAt,
+            });
 
             const roomKey = `support-ticket:${payload.ticketId}`;
 
@@ -558,10 +728,25 @@ export default function handler(
                 messageId: savedMessage.id,
                 savedMessage,
               });
+              logger.debug(`📤 [Support Chat] ACK sent to sender`, {
+                tempId: payload.tempId,
+                messageId: savedMessage.id,
+                userType,
+                userId,
+              });
             }
 
             // Broadcast to room
             socket.to(roomKey).emit("support-chat:message", savedMessage);
+            logger.info(`📢 [Support Chat] پیام به اتاق ارسال شد`, {
+              roomKey,
+              ticketId: payload.ticketId,
+              messageId: savedMessage.id,
+              userType,
+              userId,
+              isGuest,
+              recipientsCount: 0, // Room size not accessible from socket
+            });
 
             // Update message status to delivered
             setTimeout(() => {
@@ -575,13 +760,39 @@ export default function handler(
                 messageId: savedMessage.id,
                 status: "delivered",
               });
+              logger.debug(
+                `✅ [Support Chat] Message status updated to delivered`,
+                {
+                  messageId: savedMessage.id,
+                  tempId: payload.tempId,
+                  userType,
+                  userId,
+                }
+              );
             }, 1000);
 
-            logger.info(
-              `💬 [Support Chat] Message broadcasted to ticket ${payload.ticketId}`
-            );
-          } catch (error) {
-            logger.error("❌ [Support Chat] Error saving message", error);
+            logger.info(`💬 [Support Chat] فرآیند ارسال پیام کامل شد`, {
+              ticketId: payload.ticketId,
+              messageId: savedMessage.id,
+              userType,
+              userId,
+              isGuest,
+              bodyPreview:
+                payload.body.substring(0, 50) +
+                (payload.body.length > 50 ? "..." : ""),
+            });
+          } catch (error: any) {
+            logger.error("❌ [Support Chat] خطا در ذخیره پیام", {
+              error: error?.message || "Unknown error",
+              stack: error?.stack,
+              ticketId: payload.ticketId,
+              userType,
+              userId,
+              isGuest,
+              bodyLength: payload.body?.length,
+              socketId: socket.id,
+              timestamp: new Date().toISOString(),
+            });
             socket.emit("support-chat:error", {
               code: "MESSAGE_FAILED",
               message: "Failed to send message",
@@ -598,10 +809,40 @@ export default function handler(
           messageId: number;
           body: string;
         }) => {
-          try {
-            if (!payload?.ticketId || !payload?.messageId) return;
+          // Get user info for logging
+          const userInfo = socket.data.user || { type: "guest", id: "unknown" };
+          const isGuest = userInfo.type === "guest";
+          const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
+          const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
-            logger.debug("✏️ [Support Chat] Edit message:", payload);
+          try {
+            if (!payload?.ticketId || !payload?.messageId) {
+              logger.warn("⚠️ [Support Chat] Invalid edit payload", {
+                ticketId: payload.ticketId,
+                messageId: payload.messageId,
+                userType,
+                userId,
+                socketId: socket.id,
+              });
+              return;
+            }
+
+            logger.info("✏️ [Support Chat] درخواست ویرایش پیام", {
+              ticketId: payload.ticketId,
+              messageId: payload.messageId,
+              userType,
+              userId,
+              isGuest,
+              newBodyLength: payload.body?.length,
+              socketId: socket.id,
+              timestamp: new Date().toISOString(),
+            });
+
+            // Get original message for logging
+            const originalMessage = await prisma.supportChatMessage.findUnique({
+              where: { id: payload.messageId },
+              select: { body: true, isEdited: true, editCount: true },
+            });
 
             // Update message in database
             const updatedMessage = await prisma.supportChatMessage.update({
@@ -623,11 +864,30 @@ export default function handler(
               editCount: updatedMessage.editCount,
             });
 
-            logger.info(
-              `✅ [Support Chat] Message ${payload.messageId} edited successfully`
-            );
-          } catch (error) {
-            logger.error("❌ [Support Chat] Error editing message", error);
+            logger.info("✅ [Support Chat] پیام با موفقیت ویرایش شد", {
+              messageId: payload.messageId,
+              ticketId: payload.ticketId,
+              userType,
+              userId,
+              isGuest,
+              originalBodyLength: originalMessage?.body?.length || 0,
+              newBodyLength: payload.body.length,
+              editCount: updatedMessage.editCount,
+              wasEditedBefore: originalMessage?.isEdited || false,
+              timestamp: updatedMessage.editedAt,
+            });
+          } catch (error: any) {
+            logger.error("❌ [Support Chat] خطا در ویرایش پیام", {
+              error: error?.message || "Unknown error",
+              stack: error?.stack,
+              ticketId: payload.ticketId,
+              messageId: payload.messageId,
+              userType,
+              userId,
+              isGuest,
+              socketId: socket.id,
+              timestamp: new Date().toISOString(),
+            });
             socket.emit("support-chat:error", {
               code: "EDIT_FAILED",
               message: "Failed to edit message",
@@ -640,10 +900,39 @@ export default function handler(
       socket.on(
         "support-chat:message-delete",
         async (payload: { ticketId: number; messageId: number }) => {
-          try {
-            if (!payload?.ticketId || !payload?.messageId) return;
+          // Get user info for logging
+          const userInfo = socket.data.user || { type: "guest", id: "unknown" };
+          const isGuest = userInfo.type === "guest";
+          const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
+          const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
-            logger.debug("🗑️ [Support Chat] Delete message:", payload);
+          try {
+            if (!payload?.ticketId || !payload?.messageId) {
+              logger.warn("⚠️ [Support Chat] Invalid delete payload", {
+                ticketId: payload.ticketId,
+                messageId: payload.messageId,
+                userType,
+                userId,
+                socketId: socket.id,
+              });
+              return;
+            }
+
+            logger.info("🗑️ [Support Chat] درخواست حذف پیام", {
+              ticketId: payload.ticketId,
+              messageId: payload.messageId,
+              userType,
+              userId,
+              isGuest,
+              socketId: socket.id,
+              timestamp: new Date().toISOString(),
+            });
+
+            // Get original message for logging
+            const originalMessage = await prisma.supportChatMessage.findUnique({
+              where: { id: payload.messageId },
+              select: { body: true, isDeleted: true, createdAt: true },
+            });
 
             // Soft delete message in database
             const deletedMessage = await prisma.supportChatMessage.update({
@@ -662,11 +951,36 @@ export default function handler(
               deletedAt: deletedMessage.deletedAt,
             });
 
-            logger.info(
-              `✅ [Support Chat] Message ${payload.messageId} deleted successfully`
-            );
-          } catch (error) {
-            logger.error("❌ [Support Chat] Error deleting message", error);
+            logger.info("✅ [Support Chat] پیام با موفقیت حذف شد", {
+              messageId: payload.messageId,
+              ticketId: payload.ticketId,
+              userType,
+              userId,
+              isGuest,
+              originalBodyLength: originalMessage?.body?.length || 0,
+              wasDeletedBefore: originalMessage?.isDeleted || false,
+              messageAge: originalMessage?.createdAt
+                ? Math.floor(
+                    (new Date().getTime() -
+                      new Date(originalMessage.createdAt).getTime()) /
+                      1000 /
+                      60
+                  )
+                : 0, // in minutes
+              timestamp: deletedMessage.deletedAt,
+            });
+          } catch (error: any) {
+            logger.error("❌ [Support Chat] خطا در حذف پیام", {
+              error: error?.message || "Unknown error",
+              stack: error?.stack,
+              ticketId: payload.ticketId,
+              messageId: payload.messageId,
+              userType,
+              userId,
+              isGuest,
+              socketId: socket.id,
+              timestamp: new Date().toISOString(),
+            });
             socket.emit("support-chat:error", {
               code: "DELETE_FAILED",
               message: "Failed to delete message",
@@ -681,12 +995,39 @@ export default function handler(
       socket.on(
         "support-chat:typing",
         (payload: { ticketId: number; isTyping: boolean }) => {
-          if (!payload?.ticketId) return;
+          // Get user info for logging
+          const userInfo = socket.data.user || { type: "guest", id: "unknown" };
+          const isGuest = userInfo.type === "guest";
+          const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
+          const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
+
+          if (!payload?.ticketId) {
+            logger.warn("⚠️ [Support Chat] Invalid typing payload", {
+              ticketId: payload.ticketId,
+              userType,
+              userId,
+              socketId: socket.id,
+            });
+            return;
+          }
+
           const roomKey = `support-ticket:${payload.ticketId}`;
 
           socket.to(roomKey).emit("support-chat:typing", {
             ticketId: payload.ticketId,
             isTyping: payload.isTyping,
+            senderId: userId,
+          });
+
+          logger.debug("⌨️ [Support Chat] Typing indicator", {
+            ticketId: payload.ticketId,
+            userType,
+            userId,
+            isGuest,
+            isTyping: payload.isTyping,
+            roomKey,
+            socketId: socket.id,
+            timestamp: new Date().toISOString(),
           });
         }
       );
@@ -726,26 +1067,61 @@ export default function handler(
       // ==================== DISCONNECT ====================
 
       socket.on("disconnect", () => {
-        logger.info("❌ [Socket.IO] Client disconnected:", socket.id);
+        // Get user info for logging
+        const userInfo = socket.data.user || { type: "guest", id: "unknown" };
+        const isGuest = userInfo.type === "guest";
+        const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
+        const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
+
+        logger.info("❌ [Socket.IO] کلاینت قطع شد", {
+          socketId: socket.id,
+          userType,
+          userId,
+          isGuest,
+          timestamp: new Date().toISOString(),
+        });
 
         // Handle user going offline
-        const userId = onlineUsers.get(socket.id);
-        if (userId) {
+        const internalUserId = onlineUsers.get(socket.id);
+        if (internalUserId) {
           onlineUsers.delete(socket.id);
-          const userSocketSet = userSockets.get(userId);
+          const userSocketSet = userSockets.get(internalUserId);
           if (userSocketSet) {
             userSocketSet.delete(socket.id);
 
             // If user has no more sockets, they're offline
             if (userSocketSet.size === 0) {
-              userSockets.delete(userId);
-              socket.broadcast.emit("internal-chat:user-offline", { userId });
-              logger.debug(`👤 [Internal Chat] User ${userId} is offline`);
+              userSockets.delete(internalUserId);
+              socket.broadcast.emit("internal-chat:user-offline", {
+                userId: internalUserId,
+              });
+              logger.debug(
+                `👤 [Internal Chat] User ${internalUserId} is offline`
+              );
               // Also broadcast for support-chat listeners
-              socket.broadcast.emit("support-chat:user-offline", { userId });
-              logger.debug(`👤 [Support Chat] User ${userId} is offline`);
+              socket.broadcast.emit("support-chat:user-offline", {
+                userId: internalUserId,
+              });
+              logger.debug(
+                `👤 [Support Chat] User ${internalUserId} is offline`
+              );
             }
           }
+        }
+
+        // Log support chat disconnect
+        if (isGuest) {
+          logger.info("👋 [Support Chat] مهمان از چت خارج شد", {
+            guestId: userId,
+            socketId: socket.id,
+            timestamp: new Date().toISOString(),
+          });
+        } else {
+          logger.info("👋 [Support Chat] کاربر ثبت‌نام‌شده از چت خارج شد", {
+            workspaceUserId: userId,
+            socketId: socket.id,
+            timestamp: new Date().toISOString(),
+          });
         }
       });
     });
