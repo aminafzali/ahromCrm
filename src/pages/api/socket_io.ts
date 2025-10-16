@@ -470,6 +470,29 @@ export default function handler(
       });
 
       /**
+       * Support Chat Typing Indicator
+       */
+      socket.on(
+        "support-chat:typing",
+        (data: { ticketId: number; isTyping: boolean }) => {
+          try {
+            const { ticketId, isTyping } = data;
+            logger.debug("Support chat typing", { ticketId, isTyping });
+
+            // Broadcast typing status to other users in the room
+            socket
+              .to(`support-ticket:${ticketId}`)
+              .emit("support-chat:typing", {
+                isTyping,
+                senderId: socket.data.guestId || socket.data.workspaceUserId,
+              });
+          } catch (error) {
+            logger.error("Error handling support chat typing", error);
+          }
+        }
+      );
+
+      /**
        * Leave a support ticket room
        */
       socket.on("support-chat:leave", (ticketId: number) => {
@@ -489,17 +512,20 @@ export default function handler(
        */
       socket.on(
         "support-chat:message",
-        (payload: {
+        async (payload: {
           ticketId: number;
           body: string;
           tempId?: string;
           isInternal?: boolean;
+          replyToId?: number;
+          replySnapshot?: string;
         }) => {
           logger.debug(`📨 [Support Chat] Message received:`, {
             ticketId: payload.ticketId,
             bodyLength: payload.body?.length,
             tempId: payload.tempId,
             isInternal: payload.isInternal,
+            replyToId: payload.replyToId,
           });
 
           if (!payload?.ticketId || !payload?.body) {
@@ -507,51 +533,145 @@ export default function handler(
             return;
           }
 
-          const roomKey = `support-ticket:${payload.ticketId}`;
+          try {
+            // Create message in database
+            const savedMessage = await prisma.supportChatMessage.create({
+              data: {
+                ticketId: payload.ticketId,
+                body: payload.body.trim(),
+                isInternal: payload.isInternal || false,
+                replyToId: payload.replyToId || null,
+                replySnapshot: payload.replySnapshot || null,
+              },
+            });
 
-          // Get sockets in room for debugging
-          const socketsInRoom = io.sockets.adapter.rooms.get(roomKey);
-          logger.debug(
-            `👥 [Support Chat] Sockets in ticket ${payload.ticketId}:`,
-            socketsInRoom?.size || 0
-          );
+            logger.debug(
+              `💾 [Support Chat] Message saved with ID ${savedMessage.id}`
+            );
 
-          const message = {
-            id: payload.tempId || `temp-${Date.now()}`,
-            ticketId: payload.ticketId,
-            body: payload.body,
-            isInternal: payload.isInternal || false,
-            createdAt: new Date().toISOString(),
-            tempId: payload.tempId,
-          };
+            const roomKey = `support-ticket:${payload.ticketId}`;
 
-          // Broadcast to all clients in the room (except sender)
-          socket.to(roomKey).emit("support-chat:message", message);
-          logger.debug(
-            `💬 [Support Chat] Message broadcasted to ticket ${payload.ticketId}`
-          );
+            // Send ACK to sender
+            if (payload.tempId) {
+              socket.emit("support-chat:ack", {
+                tempId: payload.tempId,
+                messageId: savedMessage.id,
+                savedMessage,
+              });
+            }
+
+            // Broadcast to room
+            socket.to(roomKey).emit("support-chat:message", savedMessage);
+
+            // Update message status to delivered
+            setTimeout(() => {
+              if (payload.tempId) {
+                socket.emit("support-chat:message-status", {
+                  messageId: payload.tempId,
+                  status: "delivered",
+                });
+              }
+              socket.to(roomKey).emit("support-chat:message-status", {
+                messageId: savedMessage.id,
+                status: "delivered",
+              });
+            }, 1000);
+
+            logger.info(
+              `💬 [Support Chat] Message broadcasted to ticket ${payload.ticketId}`
+            );
+          } catch (error) {
+            logger.error("❌ [Support Chat] Error saving message", error);
+            socket.emit("support-chat:error", {
+              code: "MESSAGE_FAILED",
+              message: "Failed to send message",
+            });
+          }
         }
       );
 
       // Edit support chat message
       socket.on(
         "support-chat:message-edit",
-        (payload: { ticketId: number; messageId: number; body: string }) => {
-          if (!payload?.ticketId || !payload?.messageId) return;
-          const roomKey = `support-ticket:${payload.ticketId}`;
-          logger.debug("✏️ [Support Chat] Message edited:", payload);
-          socket.to(roomKey).emit("support-chat:message-edited", payload);
+        async (payload: {
+          ticketId: number;
+          messageId: number;
+          body: string;
+        }) => {
+          try {
+            if (!payload?.ticketId || !payload?.messageId) return;
+
+            logger.debug("✏️ [Support Chat] Edit message:", payload);
+
+            // Update message in database
+            const updatedMessage = await prisma.supportChatMessage.update({
+              where: { id: payload.messageId },
+              data: {
+                body: payload.body.trim(),
+                isEdited: true,
+                editedAt: new Date(),
+                editCount: { increment: 1 },
+              },
+            });
+
+            const roomKey = `support-ticket:${payload.ticketId}`;
+            socket.to(roomKey).emit("support-chat:message-edited", {
+              messageId: payload.messageId,
+              body: updatedMessage.body,
+              isEdited: true,
+              editedAt: updatedMessage.editedAt,
+              editCount: updatedMessage.editCount,
+            });
+
+            logger.info(
+              `✅ [Support Chat] Message ${payload.messageId} edited successfully`
+            );
+          } catch (error) {
+            logger.error("❌ [Support Chat] Error editing message", error);
+            socket.emit("support-chat:error", {
+              code: "EDIT_FAILED",
+              message: "Failed to edit message",
+            });
+          }
         }
       );
 
       // Delete support chat message
       socket.on(
         "support-chat:message-delete",
-        (payload: { ticketId: number; messageId: number }) => {
-          if (!payload?.ticketId || !payload?.messageId) return;
-          const roomKey = `support-ticket:${payload.ticketId}`;
-          logger.debug("🗑️ [Support Chat] Message deleted:", payload);
-          socket.to(roomKey).emit("support-chat:message-deleted", payload);
+        async (payload: { ticketId: number; messageId: number }) => {
+          try {
+            if (!payload?.ticketId || !payload?.messageId) return;
+
+            logger.debug("🗑️ [Support Chat] Delete message:", payload);
+
+            // Soft delete message in database
+            const deletedMessage = await prisma.supportChatMessage.update({
+              where: { id: payload.messageId },
+              data: {
+                isDeleted: true,
+                deletedAt: new Date(),
+                body: "پیام حذف شده",
+              },
+            });
+
+            const roomKey = `support-ticket:${payload.ticketId}`;
+            socket.to(roomKey).emit("support-chat:message-deleted", {
+              messageId: payload.messageId,
+              isDeleted: true,
+              deletedAt: deletedMessage.deletedAt,
+            });
+
+            logger.info(
+              `✅ [Support Chat] Message ${payload.messageId} deleted successfully`
+            );
+          } catch (error) {
+            logger.error("❌ [Support Chat] Error deleting message", error);
+            socket.emit("support-chat:error", {
+              code: "DELETE_FAILED",
+              message: "Failed to delete message",
+            });
+          }
         }
       );
 

@@ -25,6 +25,7 @@ export default function InternalChatPage() {
     emitDeleteMessage,
     onMessageEdited,
     onMessageDeleted,
+    connected,
   } = useInternalChat();
 
   const [users, setUsers] = useState<any[]>([]);
@@ -447,6 +448,11 @@ export default function InternalChatPage() {
       );
 
       const fallbackTimer = setTimeout(async () => {
+        if (connected) {
+          // اگر اتصال سوکت برقرار است، دیگر fallback نکن تا از دوبل جلوگیری شود
+          pendingAckTimersRef.current.delete(tempId);
+          return;
+        }
         try {
           const savedMessage = await repo.sendMessage(selectedRoom.id, {
             body: messageBody,
@@ -456,12 +462,11 @@ export default function InternalChatPage() {
             prev.map((m) => (m.id === tempId ? savedMessage : m))
           );
         } catch (e) {
-          // keep temp or remove? remove to avoid confusion
           setMessages((prev) => prev.filter((m) => m.id !== tempId));
         } finally {
           pendingAckTimersRef.current.delete(tempId);
         }
-      }, 4000);
+      }, 10000);
       pendingAckTimersRef.current.set(tempId, fallbackTimer);
 
       setComposerMode(null);

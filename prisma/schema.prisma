@@ -790,7 +790,8 @@ model Document {
   supportInfo SupportInfoDocument[]
 
   // Support Chat relations
-  supportChat SupportChatDocument[]
+  supportChat            SupportChatDocument[]
+  supportChatAttachments SupportChatAttachment[]
 
   @@index([workspaceId, categoryId])
   @@index([workspaceId, entityType, entityId])
@@ -1489,24 +1490,41 @@ model SupportGuestUser {
   workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  // Network & Location Info
   ipAddress String  @db.VarChar(45)
   country   String? @db.VarChar(100)
   city      String? @db.VarChar(100)
-  userAgent String? @db.Text
-  browser   String? @db.VarChar(100)
-  os        String? @db.VarChar(100)
-  device    String? @db.VarChar(100)
+  region    String? @db.VarChar(100)
+  timezone  String? @db.VarChar(50)
 
+  // Device & Browser Info
+  userAgent        String? @db.Text
+  browser          String? @db.VarChar(100)
+  browserVersion   String? @db.VarChar(50)
+  os               String? @db.VarChar(100)
+  osVersion        String? @db.VarChar(50)
+  device           String? @db.VarChar(100)
+  deviceType       String? @db.VarChar(50) // mobile, tablet, desktop
+  screenResolution String? @db.VarChar(20) // 1920x1080
+
+  // Contact Info
   email String? @db.VarChar(255)
   name  String? @db.VarChar(255)
   phone String? @db.VarChar(50)
 
+  // Security & Tracking
   fingerprint String? @db.VarChar(255)
   sessionId   String? @db.VarChar(255)
+  referrer    String? @db.Text
+  utmSource   String? @db.VarChar(100)
+  utmMedium   String? @db.VarChar(100)
+  utmCampaign String? @db.VarChar(100)
 
+  // Timestamps
   firstVisitAt DateTime @default(now())
-  lastVisitAt  DateTime @default(now())
+  lastVisitAt  DateTime @updatedAt
   visitCount   Int      @default(1)
+  isActive     Boolean  @default(true)
 
   tickets  SupportChatTicket[]
   messages SupportChatMessage[] @relation("SupportChatGuestMessages")
@@ -1606,6 +1624,19 @@ model SupportChatMessage {
   isRead Boolean   @default(false)
   readAt DateTime?
 
+  // Reply functionality
+  replyToId     Int?
+  replyTo       SupportChatMessage?  @relation("SupportChatMessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies       SupportChatMessage[] @relation("SupportChatMessageReplies")
+  replySnapshot String?              @db.Text
+
+  // Edit/Delete functionality
+  isEdited  Boolean   @default(false)
+  isDeleted Boolean   @default(false)
+  editedAt  DateTime?
+  deletedAt DateTime?
+  editCount Int       @default(0)
+
   attachments Json?
 
   createdAt DateTime @default(now())
@@ -1613,6 +1644,30 @@ model SupportChatMessage {
 
   @@index([ticketId])
   @@index([createdAt])
+}
+
+model SupportChatAttachment {
+  id       Int               @id @default(autoincrement())
+  ticketId Int
+  ticket   SupportChatTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  fileName String @db.VarChar(255)
+  filePath String @db.VarChar(500)
+  fileSize Int
+  mimeType String @db.VarChar(100)
+
+  // Link to Document system
+  documentId Int?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  // Uploader (optional)
+  workspaceUserId Int?
+  uploadedBy      WorkspaceUser? @relation("SupportChatAttachment_uploadedBy", fields: [workspaceUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([documentId])
 }
 
 model SupportChatHistory {
@@ -1633,25 +1688,6 @@ model SupportChatHistory {
 
   @@index([ticketId])
   @@index([createdAt])
-}
-
-model SupportChatAttachment {
-  id       Int               @id @default(autoincrement())
-  ticketId Int
-  ticket   SupportChatTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-
-  filename     String @db.VarChar(500)
-  originalName String @db.VarChar(500)
-  mimeType     String @db.VarChar(100)
-  size         Int
-  url          String @db.VarChar(1000)
-
-  uploadedById Int?
-  uploadedBy   WorkspaceUser? @relation("SupportChatAttachment_uploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now())
-
-  @@index([ticketId])
 }
 
 model SupportChatTask {
