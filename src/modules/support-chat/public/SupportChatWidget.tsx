@@ -4,6 +4,7 @@ import DIcon from "@/@Client/Components/common/DIcon";
 import { Button, Input } from "ndui-ahrom";
 import { useEffect, useRef, useState } from "react";
 import { useSupportPublicChat } from "./hooks/useSupportPublicChat";
+import "./SupportChatWidget.css";
 
 interface SupportChatWidgetProps {
   workspaceSlug?: string;
@@ -164,17 +165,23 @@ export default function SupportChatWidget({
   };
 
   return (
-    <div className="fixed bottom-6 left-6 z-50">
+    <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-50">
       {/* Floating Action Button */}
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
-          className="w-14 h-14 rounded-full shadow-lg relative"
-          icon={<DIcon icon="fa-comments" cdi={false} classCustom="text-xl" />}
+          className="chat-button w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 relative bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+          icon={
+            <DIcon
+              icon="fa-comments"
+              cdi={false}
+              classCustom="text-lg sm:text-xl text-white"
+            />
+          }
         >
           {messages.length > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
-              {messages.length}
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center font-bold animate-pulse">
+              {messages.length > 9 ? "9+" : messages.length}
             </span>
           )}
         </Button>
@@ -182,31 +189,42 @@ export default function SupportChatWidget({
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="w-80 h-96 bg-white rounded-lg shadow-lg border flex flex-col">
+        <div className="chat-panel w-80 sm:w-96 h-96 sm:h-[500px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden backdrop-blur-sm">
           {/* Header */}
-          <div className="p-4 border-b bg-primary text-white rounded-t-lg">
+          <div className="p-4 border-b bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-2xl">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold">پشتیبانی آنلاین</h3>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <DIcon icon="fa-headset" cdi={false} classCustom="text-sm" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base">
+                    پشتیبانی آنلاین
+                  </h3>
+                  <div className="text-xs opacity-90 flex items-center gap-2">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        connected ? "bg-green-400" : "bg-yellow-400"
+                      }`}
+                    />
+                    {connected ? "متصل" : "در حال اتصال..."}
+                  </div>
+                </div>
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-white/20"
-                icon={<DIcon icon="fa-times" cdi={false} />}
+                className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+                icon={
+                  <DIcon icon="fa-times" cdi={false} classCustom="text-sm" />
+                }
               />
-            </div>
-            <div className="text-sm opacity-90 flex items-center gap-2">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  connected ? "bg-green-400" : "bg-yellow-400"
-                }`}
-              />
-              {connected ? "متصل" : "در حال اتصال..."}
             </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-2">
+          <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             {/* Load more button */}
             {hasMoreMessages && (
               <div className="flex justify-center mb-4">
@@ -215,7 +233,7 @@ export default function SupportChatWidget({
                   size="sm"
                   onClick={loadMoreMessages}
                   disabled={loadingMore}
-                  className="text-xs"
+                  className="text-xs bg-gray-100 hover:bg-gray-200 rounded-full px-4 py-2 transition-colors"
                   icon={
                     loadingMore ? (
                       <DIcon
@@ -237,12 +255,19 @@ export default function SupportChatWidget({
 
             {messages.length === 0 ? (
               <div className="text-center text-gray-500 py-8">
-                <DIcon
-                  icon="fa-comments"
-                  cdi={false}
-                  classCustom="text-4xl mb-2"
-                />
-                <p>سلام! چطور می‌تونم کمکتون کنم؟</p>
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <DIcon
+                    icon="fa-comments"
+                    cdi={false}
+                    classCustom="text-2xl text-blue-500"
+                  />
+                </div>
+                <p className="text-sm sm:text-base font-medium">
+                  سلام! چطور می‌تونم کمکتون کنم؟
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  پیام خود را بنویسید تا با تیم پشتیبانی صحبت کنید
+                </p>
               </div>
             ) : (
               messages.map((msg) => (
@@ -253,23 +278,27 @@ export default function SupportChatWidget({
                   }`}
                 >
                   <div
-                    className={`max-w-xs p-3 rounded-lg relative group ${
+                    className={`message-bubble max-w-[85%] sm:max-w-xs p-3 rounded-2xl relative group transition-all duration-200 ${
                       msg.isInternal
-                        ? "bg-gray-100 text-gray-800"
-                        : "bg-primary text-white"
+                        ? "bg-gray-100 text-gray-800 rounded-bl-md message-support"
+                        : "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md message-user"
                     } ${msg.isDeleted ? "opacity-50" : ""}`}
                   >
                     {/* Reply preview */}
                     {msg.replyToId && msg.replySnapshot && (
                       <div
-                        className={`text-xs p-2 rounded mb-2 border-r-2 ${
+                        className={`text-xs p-2 rounded-lg mb-2 border-r-2 ${
                           msg.isInternal
                             ? "bg-gray-200 border-gray-400"
                             : "bg-white/20 border-white/40"
                         }`}
                       >
-                        <div className="font-medium">پاسخ به:</div>
-                        <div className="truncate">{msg.replySnapshot}</div>
+                        <div className="font-medium text-xs opacity-75">
+                          پاسخ به:
+                        </div>
+                        <div className="truncate text-xs">
+                          {msg.replySnapshot}
+                        </div>
                       </div>
                     )}
 
@@ -285,11 +314,16 @@ export default function SupportChatWidget({
                         return (
                           <div className="space-y-2">
                             {isImage ? (
-                              <a href={url} target="_blank" rel="noreferrer">
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block"
+                              >
                                 <img
                                   src={url}
                                   alt={originalName}
-                                  className="max-w-full max-h-40 rounded"
+                                  className="max-w-full max-h-32 sm:max-h-40 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                                 />
                               </a>
                             ) : null}
@@ -297,25 +331,39 @@ export default function SupportChatWidget({
                               href={url}
                               target="_blank"
                               rel="noreferrer"
-                              className={`text-xs underline ${
+                              className={`text-xs underline hover:no-underline transition-all flex items-center gap-1 ${
                                 msg.isInternal ? "text-blue-700" : "text-white"
                               }`}
                             >
+                              <DIcon
+                                icon="fa-download"
+                                cdi={false}
+                                classCustom="text-xs"
+                              />
                               دانلود {originalName}
                             </a>
                           </div>
                         );
                       })()
                     ) : (
-                      <p className="text-sm">{msg.body}</p>
+                      <p className="text-sm leading-relaxed break-words">
+                        {msg.body}
+                      </p>
                     )}
 
                     {/* Edit indicator */}
                     {msg.isEdited && (
-                      <div className="text-xs opacity-50 mt-1">ویرایش شده</div>
+                      <div className="text-xs opacity-60 mt-1 flex items-center gap-1">
+                        <DIcon
+                          icon="fa-edit"
+                          cdi={false}
+                          classCustom="text-xs"
+                        />
+                        ویرایش شده
+                      </div>
                     )}
 
-                    <div className="flex items-center justify-between mt-1">
+                    <div className="flex items-center justify-between mt-2">
                       <p className="text-xs opacity-70">
                         {formatMessageTime(msg.createdAt)}
                       </p>
@@ -335,7 +383,7 @@ export default function SupportChatWidget({
                                   editMessage(Number(msg.id), newBody);
                                 }
                               }}
-                              className="text-xs p-1 hover:bg-white/20 rounded"
+                              className="text-xs p-1.5 hover:bg-white/20 rounded-full transition-colors"
                               title="ویرایش"
                             >
                               <DIcon
@@ -354,7 +402,7 @@ export default function SupportChatWidget({
                                   deleteMessage(Number(msg.id));
                                 }
                               }}
-                              className="text-xs p-1 hover:bg-white/20 rounded text-red-300"
+                              className="text-xs p-1.5 hover:bg-red-500/20 rounded-full transition-colors text-red-300 hover:text-red-200"
                               title="حذف"
                             >
                               <DIcon
@@ -375,20 +423,20 @@ export default function SupportChatWidget({
             {/* Typing indicator */}
             {otherTyping && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 p-3 rounded-lg">
-                  <div className="flex items-center gap-1">
+                <div className="bg-gray-100 p-3 rounded-2xl rounded-bl-md">
+                  <div className="flex items-center gap-2">
                     <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-blue-400 rounded-full typing-dot" />
                       <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        className="w-2 h-2 bg-blue-400 rounded-full typing-dot"
                         style={{ animationDelay: "0.1s" }}
                       />
                       <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        className="w-2 h-2 bg-blue-400 rounded-full typing-dot"
                         style={{ animationDelay: "0.2s" }}
                       />
                     </div>
-                    <span className="text-xs text-gray-500 mr-2">
+                    <span className="text-xs text-gray-600 font-medium">
                       پشتیبان در حال تایپ...
                     </span>
                   </div>
@@ -401,16 +449,24 @@ export default function SupportChatWidget({
 
           {/* Reply preview */}
           {replyTo && (
-            <div className="px-4 py-2 bg-gray-50 border-t border-b">
+            <div className="px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-t border-b border-blue-200">
               <div className="flex items-center justify-between">
-                <div className="text-sm">
+                <div className="text-sm flex items-center gap-2">
+                  <DIcon
+                    icon="fa-reply"
+                    cdi={false}
+                    classCustom="text-xs text-blue-500"
+                  />
                   <span className="text-gray-600">پاسخ به: </span>
-                  <span className="font-medium">{replyTo.body}</span>
+                  <span className="font-medium text-gray-800 truncate max-w-[200px]">
+                    {replyTo.body}
+                  </span>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setReplyTo(null)}
+                  className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-full p-1"
                   icon={
                     <DIcon icon="fa-times" cdi={false} classCustom="text-xs" />
                   }
@@ -420,14 +476,14 @@ export default function SupportChatWidget({
           )}
 
           {/* Input */}
-          <div className="p-4 border-t">
+          <div className="p-3 sm:p-4 border-t bg-gray-50">
             <div className="flex gap-2">
               <Input
                 value={message}
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
                 placeholder="پیام خود را بنویسید..."
-                className="flex-1"
+                className="chat-input flex-1 text-sm"
                 disabled={!canSendMessage()}
                 name={""}
               />
@@ -443,21 +499,41 @@ export default function SupportChatWidget({
                 size="sm"
                 onClick={() => document.getElementById("file-upload")?.click()}
                 disabled={!connected || !canSendMessage()}
-                icon={<DIcon icon="fa-paperclip" cdi={false} />}
+                className="chat-button text-gray-600 hover:text-blue-600 hover:bg-blue-100 rounded-full p-2 transition-colors"
+                icon={
+                  <DIcon
+                    icon="fa-paperclip"
+                    cdi={false}
+                    classCustom="text-sm"
+                  />
+                }
                 title="آپلود فایل"
               />
               <Button
                 onClick={handleSend}
                 disabled={!message.trim() || !connected || !canSendMessage()}
-                icon={<DIcon icon="fa-paper-plane" cdi={false} />}
+                className="chat-button bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                icon={
+                  <DIcon
+                    icon="fa-paper-plane"
+                    cdi={false}
+                    classCustom="text-sm"
+                  />
+                }
+                title="ارسال پیام"
               />
             </div>
 
             {/* Rate limit warning */}
             {!canSendMessage() && (
-              <p className="text-xs text-red-500 mt-1">
-                تعداد پیام‌های ارسالی زیاد است. لطفاً کمی صبر کنید.
-              </p>
+              <div className="flex items-center gap-2 mt-2 text-xs text-red-500">
+                <DIcon
+                  icon="fa-exclamation-triangle"
+                  cdi={false}
+                  classCustom="text-xs"
+                />
+                <span>تعداد پیام‌های ارسالی زیاد است. لطفاً کمی صبر کنید.</span>
+              </div>
             )}
           </div>
         </div>
