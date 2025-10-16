@@ -345,6 +345,19 @@ export default function InternalChatPage() {
     const tempId: string = `temp-${Date.now()}`;
     const isSelfChat =
       selectedType === "user" && selectedId === activeWorkspace?.id;
+    let replySnapshot: any = undefined;
+    if (replyToId) {
+      const ref = messages.find((m) => m.id === replyToId);
+      if (ref) {
+        replySnapshot = {
+          id: ref.id,
+          body: ref.body,
+          senderId: ref.senderId,
+          sender: { displayName: ref.sender?.displayName },
+          isDeleted: !!ref.isDeleted,
+        };
+      }
+    }
     try {
       if (composerMode === "edit" && editMessageId) {
         const updated = await repo.editMessage(editMessageId, messageBody);
@@ -368,13 +381,16 @@ export default function InternalChatPage() {
         createdAt: new Date().toISOString(),
         isRead: isSelfChat,
         replyToId,
+        replyTo: replySnapshot,
       };
       setMessages((prev) => [...prev, tempMessage]);
       sendMessageRealtime(
         selectedRoom.id,
         messageBody,
         tempId,
-        activeWorkspace?.id
+        activeWorkspace?.id,
+        replyToId,
+        replySnapshot
       );
       const savedMessage = await repo.sendMessage(selectedRoom.id, {
         body: messageBody,
@@ -483,7 +499,12 @@ export default function InternalChatPage() {
             return;
           mergingRef.current = true;
           try {
+            // mark as read and optimistically update read flags if last message is mine
+            const last = messages[messages.length - 1];
             await markMessagesAsRead(selectedRoom.id);
+            if (last?.senderId !== activeWorkspace?.id) {
+              sendReadReceipt(selectedRoom.id, last?.id as any);
+            }
             const refreshed = await repo.getMessages(selectedRoom.id, {
               page,
               limit: MESSAGES_PAGE_LIMIT,

@@ -82,12 +82,21 @@ export default function handler(
           body: string;
           tempId?: string;
           senderId?: number;
+          replyToId?: number;
+          replySnapshot?: {
+            id: number;
+            body?: string | null;
+            senderId?: number | null;
+            sender?: { displayName?: string | null } | null;
+            isDeleted?: boolean;
+          } | null;
         }) => {
           console.log(`📨 [Internal Chat] Message received:`, {
             roomId: payload.roomId,
             bodyLength: payload.body?.length,
             tempId: payload.tempId,
             senderId: payload.senderId,
+            replyToId: payload.replyToId,
           });
 
           if (!payload?.roomId || !payload?.body) {
@@ -112,7 +121,9 @@ export default function handler(
             createdAt: new Date().toISOString(),
             tempId: payload.tempId,
             isRead: false, // پیام‌های جدید همیشه unread هستند برای گیرنده
-          };
+            replyToId: payload.replyToId,
+            replyTo: payload.replySnapshot || null,
+          } as any;
 
           // Broadcast to all clients in the room (except sender for now)
           socket.to(roomKey).emit("internal-chat:message", message);
@@ -164,24 +175,31 @@ export default function handler(
       /**
        * Read receipt for internal chat
        */
-      socket.on("internal-chat:read-receipt", (payload: { roomId: number }) => {
-        if (!payload?.roomId) {
-          console.warn(
-            "⚠️ [Internal Chat] No roomId provided for read receipt"
+      socket.on(
+        "internal-chat:read-receipt",
+        (payload: { roomId: number; lastReadMessageId?: number }) => {
+          if (!payload?.roomId) {
+            console.warn(
+              "⚠️ [Internal Chat] No roomId provided for read receipt"
+            );
+            return;
+          }
+          const roomKey = `internal-chat-room:${payload.roomId}`;
+
+          console.log(
+            `✅ [Internal Chat] Broadcasting read receipt for room ${payload.roomId}`,
+            payload.lastReadMessageId
+              ? `lastReadMessageId=${payload.lastReadMessageId}`
+              : ""
           );
-          return;
+
+          // Broadcast to all other clients in the room
+          socket.to(roomKey).emit("internal-chat:read-receipt", {
+            roomId: payload.roomId,
+            lastReadMessageId: payload.lastReadMessageId,
+          });
         }
-        const roomKey = `internal-chat-room:${payload.roomId}`;
-
-        console.log(
-          `✅ [Internal Chat] Broadcasting read receipt for room ${payload.roomId}`
-        );
-
-        // Broadcast to all other clients in the room
-        socket.to(roomKey).emit("internal-chat:read-receipt", {
-          roomId: payload.roomId,
-        });
-      });
+      );
 
       /**
        * User status (online/offline)

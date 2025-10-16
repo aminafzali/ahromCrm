@@ -60,18 +60,28 @@ export function useInternalChat() {
 
   // Send message via Socket.IO (real-time)
   const sendMessageRealtime = useCallback(
-    (roomId: number, body: string, tempId?: string, senderId?: number) => {
+    (
+      roomId: number,
+      body: string,
+      tempId?: string,
+      senderId?: number,
+      replyToId?: number,
+      replySnapshot?: any
+    ) => {
       console.log("📤 [useInternalChat] Sending message via Socket.IO:", {
         roomId,
         bodyLength: body.length,
         tempId,
         senderId,
+        replyToId,
       });
       socketRef.current?.emit("internal-chat:message", {
         roomId,
         body,
         tempId,
         senderId,
+        replyToId,
+        replySnapshot,
       });
     },
     []
@@ -89,10 +99,20 @@ export function useInternalChat() {
   }, []);
 
   // Send read receipt
-  const sendReadReceipt = useCallback((roomId: number) => {
-    console.log("✅ [useInternalChat] Sending read receipt for room:", roomId);
-    socketRef.current?.emit("internal-chat:read-receipt", { roomId });
-  }, []);
+  const sendReadReceipt = useCallback(
+    (roomId: number, lastReadMessageId?: number) => {
+      console.log(
+        "✅ [useInternalChat] Sending read receipt for room:",
+        roomId,
+        lastReadMessageId
+      );
+      socketRef.current?.emit("internal-chat:read-receipt", {
+        roomId,
+        lastReadMessageId,
+      });
+    },
+    []
+  );
 
   // Listen for read receipts
   const onReadReceipt = useCallback((callback: (data: any) => void) => {
