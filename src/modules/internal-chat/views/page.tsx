@@ -59,6 +59,7 @@ export default function InternalChatPage() {
   // merge helpers and locks
   const mergingRef = useRef(false);
   const lastMergeAtRef = useRef<number>(0);
+  const pendingAckTimersRef = useRef<Map<string, any>>(new Map());
 
   const mergeById = (
     prev: any[],
@@ -126,6 +127,13 @@ export default function InternalChatPage() {
   useEffect(() => {
     const off = onAck?.(({ tempId, message }: any) => {
       if (!message?.roomId || message.roomId !== selectedRoom?.id) return;
+      if (tempId) {
+        const t = pendingAckTimersRef.current.get(tempId);
+        if (t) {
+          clearTimeout(t);
+          pendingAckTimersRef.current.delete(tempId);
+        }
+      }
       if (!tempId) {
         // ensure not duplicated
         setMessages((prev) => {
@@ -427,6 +435,8 @@ export default function InternalChatPage() {
         replyTo: replySnapshot,
       };
       setMessages((prev) => [...prev, tempMessage]);
+
+      // Send realtime and wait for ACK; fallback to REST if ACK not received
       sendMessageRealtime(
         selectedRoom.id,
         messageBody,
@@ -435,13 +445,25 @@ export default function InternalChatPage() {
         replyToId,
         replySnapshot
       );
-      const savedMessage = await repo.sendMessage(selectedRoom.id, {
-        body: messageBody,
-        replyToId,
-      });
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? savedMessage : m))
-      );
+
+      const fallbackTimer = setTimeout(async () => {
+        try {
+          const savedMessage = await repo.sendMessage(selectedRoom.id, {
+            body: messageBody,
+            replyToId,
+          });
+          setMessages((prev) =>
+            prev.map((m) => (m.id === tempId ? savedMessage : m))
+          );
+        } catch (e) {
+          // keep temp or remove? remove to avoid confusion
+          setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        } finally {
+          pendingAckTimersRef.current.delete(tempId);
+        }
+      }, 4000);
+      pendingAckTimersRef.current.set(tempId, fallbackTimer);
+
       setComposerMode(null);
       setComposerPreview(undefined);
       setReplyToId(undefined);
