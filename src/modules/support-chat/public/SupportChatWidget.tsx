@@ -54,7 +54,10 @@ export default function SupportChatWidget({
   useEffect(() => {
     if (isOpen) {
       connect();
-      startOrResume();
+      // Start or resume after connection is established
+      setTimeout(() => {
+        startOrResume();
+      }, 100);
     } else {
       disconnect();
     }

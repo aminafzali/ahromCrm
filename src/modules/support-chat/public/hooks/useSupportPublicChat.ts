@@ -54,7 +54,18 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
 
   const connect = useCallback(() => {
     if (socketRef.current) return;
-    const socket = io({ path: "/api/socket_io" });
+
+    // Get auth data from localStorage
+    const gid = localStorage.getItem(STORAGE_KEYS.guestId);
+    const tid = localStorage.getItem(STORAGE_KEYS.ticketId);
+
+    const socket = io({
+      path: "/api/socket_io",
+      auth: {
+        guestId: gid ? parseInt(gid) : undefined,
+        ticketId: tid ? parseInt(tid) : undefined,
+      },
+    });
     socketRef.current = socket;
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
@@ -323,6 +334,15 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
 
       // Stop typing
       stopTyping();
+
+      console.log("🚀 [Support Chat] Sending message", {
+        ticketId,
+        body: body.substring(0, 50) + "...",
+        tempId,
+        replyToId,
+        replySnapshot,
+        socketConnected: socketRef.current?.connected,
+      });
 
       socketRef.current?.emit("support-chat:message", {
         ticketId,

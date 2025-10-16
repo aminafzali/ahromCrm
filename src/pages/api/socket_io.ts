@@ -44,19 +44,43 @@ export default function handler(
     const onlineUsers = new Map<string, number>(); // socketId -> workspaceUserId
     const userSockets = new Map<number, Set<string>>(); // workspaceUserId -> Set<socketId>
 
-    // Lightweight handshake auth (pluggable): expects handshake.auth.workspaceUserId
+    // Lightweight handshake auth (pluggable): supports both registered users and guests
     io.use((socket, next) => {
       try {
         const auth = socket.handshake.auth as any;
+
+        // Handle registered users
         if (auth && typeof auth.workspaceUserId === "number") {
           (socket.data as any).user = {
+            type: "registered",
             workspaceUserId: auth.workspaceUserId,
             workspaceId: auth.workspaceId,
             role: auth.role,
           };
         }
+        // Handle guest users
+        else if (auth && typeof auth.guestId === "number") {
+          (socket.data as any).user = {
+            type: "guest",
+            guestId: auth.guestId,
+            ticketId: auth.ticketId,
+          };
+        }
+        // Allow anonymous connections for public support chat
+        else {
+          (socket.data as any).user = {
+            type: "anonymous",
+            id: "unknown",
+          };
+        }
+
         return next();
       } catch (e) {
+        // Allow connection even if auth fails
+        (socket.data as any).user = {
+          type: "anonymous",
+          id: "unknown",
+        };
         return next();
       }
     });
@@ -456,7 +480,8 @@ export default function handler(
       socket.on("support-chat:join", async (ticketId: number) => {
         // Get user info for logging
         const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-        const isGuest = userInfo.type === "guest";
+        const isGuest =
+          userInfo.type === "guest" || userInfo.type === "anonymous";
         const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
         const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -613,9 +638,15 @@ export default function handler(
         }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          const isGuest = userInfo.type === "guest";
+          const isGuest =
+            userInfo.type === "guest" || userInfo.type === "anonymous";
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
+
+          // For guest users, try to get ticketId from socket.data if not provided in payload
+          if (isGuest && !payload.ticketId && userInfo.ticketId) {
+            payload.ticketId = userInfo.ticketId;
+          }
 
           logger.info(`📨 [Support Chat] پیام جدید دریافت شد`, {
             ticketId: payload.ticketId,
@@ -628,6 +659,7 @@ export default function handler(
             replyToId: payload.replyToId,
             socketId: socket.id,
             timestamp: new Date().toISOString(),
+            userInfo: userInfo,
           });
 
           if (!payload?.ticketId || !payload?.body) {
@@ -811,7 +843,8 @@ export default function handler(
         }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          const isGuest = userInfo.type === "guest";
+          const isGuest =
+            userInfo.type === "guest" || userInfo.type === "anonymous";
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -902,7 +935,8 @@ export default function handler(
         async (payload: { ticketId: number; messageId: number }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          const isGuest = userInfo.type === "guest";
+          const isGuest =
+            userInfo.type === "guest" || userInfo.type === "anonymous";
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -997,7 +1031,8 @@ export default function handler(
         (payload: { ticketId: number; isTyping: boolean }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          const isGuest = userInfo.type === "guest";
+          const isGuest =
+            userInfo.type === "guest" || userInfo.type === "anonymous";
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -1069,7 +1104,8 @@ export default function handler(
       socket.on("disconnect", () => {
         // Get user info for logging
         const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-        const isGuest = userInfo.type === "guest";
+        const isGuest =
+          userInfo.type === "guest" || userInfo.type === "anonymous";
         const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
         const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
