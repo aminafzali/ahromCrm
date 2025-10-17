@@ -200,8 +200,10 @@ export default function TicketChatWindow({
           </div>
         ) : (
           messages.map((message, index) => {
+            // For admin interface, messages from admin are "own" messages
             const isOwnMessage = isAgent
-              ? message.supportAgentId === currentUserId
+              ? message.supportAgentId === currentUserId ||
+                message.workspaceUserId === currentUserId
               : message.workspaceUserId === currentUserId ||
                 message.guestUserId === currentUserId;
             const showAvatar =

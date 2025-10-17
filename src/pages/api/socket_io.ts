@@ -480,8 +480,10 @@ export default function handler(
       socket.on("support-chat:join", async (ticketId: number) => {
         // Get user info for logging
         const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-        const isGuest =
-          userInfo.type === "guest" || userInfo.type === "anonymous";
+        
+        // Check if user is registered (has workspaceUserId) even if type is guest
+        const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
+        const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
         const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
         const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -538,8 +540,8 @@ export default function handler(
           const roomKey = `support-ticket:${ticketId}`;
           socket.join(roomKey);
 
-          // Get room member count (not accessible from socket)
-          const roomSize = 0;
+          // Get room member count
+          const roomSize = io.sockets.adapter.rooms.get(roomKey)?.size || 0;
 
           logger.debug(`🔌 [Support Chat] Socket joined room`, {
             socketId: socket.id,
@@ -646,8 +648,10 @@ export default function handler(
         }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          const isGuest =
-            userInfo.type === "guest" || userInfo.type === "anonymous";
+          
+          // Check if user is registered (has workspaceUserId) even if type is guest
+          const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
+          const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -683,7 +687,7 @@ export default function handler(
 
           try {
             // Get ticket info for logging
-            const ticket = await prisma.supportChatTicket.findUnique({
+            let ticket = await prisma.supportChatTicket.findUnique({
               where: { id: payload.ticketId },
               include: {
                 guestUser: {
@@ -704,37 +708,120 @@ export default function handler(
             });
 
             if (!ticket) {
-              logger.error("❌ [Support Chat] Ticket not found", {
-                ticketId: payload.ticketId,
-                userType,
-                userId,
-                socketId: socket.id,
-              });
-              return;
+              // For registered users using public chat, create a new ticket
+              if (
+                !isGuest &&
+                userInfo.workspaceUserId &&
+                userInfo.workspaceId
+              ) {
+                logger.info(
+                  "🆕 [Support Chat] Creating new ticket for registered user",
+                  {
+                    workspaceUserId: userInfo.workspaceUserId,
+                    workspaceId: userInfo.workspaceId,
+                    userType,
+                    userId,
+                  }
+                );
+
+                try {
+                  const newTicket = await prisma.supportChatTicket.create({
+                    data: {
+                      ticketNumber: `CUST-${
+                        userInfo.workspaceId
+                      }-${Date.now()}`,
+                      subject: "پشتیبانی آنلاین",
+                      description: "تیکت ایجاد شده از طریق چت عمومی",
+                      status: "OPEN",
+                      priority: "MEDIUM",
+                      workspaceId: userInfo.workspaceId,
+                      workspaceUserId: userInfo.workspaceUserId,
+                    },
+                  });
+
+                  // Update payload with new ticket ID
+                  payload.ticketId = newTicket.id;
+
+                  // Re-fetch ticket with includes
+                  const updatedTicket =
+                    await prisma.supportChatTicket.findUnique({
+                      where: { id: newTicket.id },
+                      include: {
+                        guestUser: {
+                          select: {
+                            id: true,
+                            name: true,
+                            ipAddress: true,
+                            country: true,
+                          },
+                        },
+                        workspaceUser: {
+                          select: {
+                            id: true,
+                            user: { select: { name: true, email: true } },
+                          },
+                        },
+                      },
+                    });
+
+                  // Update ticket variable
+                  ticket = updatedTicket;
+
+                  logger.info(
+                    "✅ [Support Chat] New ticket created for registered user",
+                    {
+                      ticketId: newTicket.id,
+                      ticketNumber: newTicket.ticketNumber,
+                      workspaceUserId: userInfo.workspaceUserId,
+                      workspaceId: userInfo.workspaceId,
+                    }
+                  );
+                } catch (createError) {
+                  logger.error(
+                    "❌ [Support Chat] Failed to create ticket for registered user",
+                    {
+                      error: createError,
+                      workspaceUserId: userInfo.workspaceUserId,
+                      workspaceId: userInfo.workspaceId,
+                    }
+                  );
+                  return;
+                }
+              } else {
+                logger.error("❌ [Support Chat] Ticket not found", {
+                  ticketId: payload.ticketId,
+                  userType,
+                  userId,
+                  socketId: socket.id,
+                });
+                return;
+              }
             }
 
             // Log ticket info
-            logger.info(`🎫 [Support Chat] Ticket info`, {
-              ticketId: ticket.id,
-              ticketNumber: ticket.ticketNumber,
-              status: ticket.status,
-              priority: ticket.priority,
-              guestUser: ticket.guestUser
-                ? {
-                    id: ticket.guestUser.id,
-                    name: ticket.guestUser.name,
-                    ipAddress: ticket.guestUser.ipAddress,
-                    country: ticket.guestUser.country,
-                  }
-                : null,
-              workspaceUser: ticket.workspaceUser
-                ? {
-                    id: ticket.workspaceUser.id,
-                    name: ticket.workspaceUser.user.name,
-                    email: ticket.workspaceUser.user.email,
-                  }
-                : null,
-            });
+            if (ticket) {
+              logger.info(`🎫 [Support Chat] Ticket info`, {
+                ticketId: ticket.id,
+                ticketNumber: ticket.ticketNumber,
+                status: ticket.status,
+                priority: ticket.priority,
+                guestUser: ticket.guestUser
+                  ? {
+                      id: ticket.guestUser.id,
+                      name: ticket.guestUser.name,
+                      ipAddress: ticket.guestUser.ipAddress,
+                      country: ticket.guestUser.country,
+                    }
+                  : null,
+                workspaceUser: ticket.workspaceUser
+                  ? {
+                      id: ticket.workspaceUser.id,
+                      name: ticket.workspaceUser.user.name,
+                      email: ticket.workspaceUser.user.email,
+                    }
+                  : null,
+              });
+            }
 
             // Create message in database
             const savedMessage = await prisma.supportChatMessage.create({
@@ -778,6 +865,9 @@ export default function handler(
 
             // Broadcast to room (including sender)
             io.to(roomKey).emit("support-chat:message", savedMessage);
+            // Get room size for logging
+            const roomSize = io.sockets.adapter.rooms.get(roomKey)?.size || 0;
+
             logger.info(`📢 [Support Chat] پیام به اتاق ارسال شد`, {
               roomKey,
               ticketId: payload.ticketId,
@@ -785,7 +875,7 @@ export default function handler(
               userType,
               userId,
               isGuest,
-              recipientsCount: 0, // Room size not accessible from socket
+              recipientsCount: roomSize,
             });
 
             // Update message status to delivered
@@ -851,8 +941,10 @@ export default function handler(
         }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          const isGuest =
-            userInfo.type === "guest" || userInfo.type === "anonymous";
+          
+          // Check if user is registered (has workspaceUserId) even if type is guest
+          const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
+          const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -943,8 +1035,10 @@ export default function handler(
         async (payload: { ticketId: number; messageId: number }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          const isGuest =
-            userInfo.type === "guest" || userInfo.type === "anonymous";
+          
+          // Check if user is registered (has workspaceUserId) even if type is guest
+          const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
+          const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -1039,8 +1133,10 @@ export default function handler(
         (payload: { ticketId: number; isTyping: boolean }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          const isGuest =
-            userInfo.type === "guest" || userInfo.type === "anonymous";
+          
+          // Check if user is registered (has workspaceUserId) even if type is guest
+          const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
+          const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -1112,8 +1208,10 @@ export default function handler(
       socket.on("disconnect", () => {
         // Get user info for logging
         const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-        const isGuest =
-          userInfo.type === "guest" || userInfo.type === "anonymous";
+        
+        // Check if user is registered (has workspaceUserId) even if type is guest
+        const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
+        const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
         const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
         const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 

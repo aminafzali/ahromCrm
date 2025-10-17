@@ -674,9 +674,33 @@ export class SupportChatServiceApi extends BaseService<any> {
    * Get support categories
    */
   async getCategories(context: AuthContext) {
+    let workspaceId = context.workspaceId;
+
+    // For public access, get workspaceId from workspaceSlug
+    if (
+      !workspaceId &&
+      (context as any).isPublic &&
+      (context as any).workspaceSlug
+    ) {
+      const workspace = await prisma.workspace.findUnique({
+        where: { slug: (context as any).workspaceSlug },
+        select: { id: true },
+      });
+
+      if (!workspace) {
+        throw new Error("Workspace not found");
+      }
+
+      workspaceId = workspace.id;
+    }
+
+    if (!workspaceId) {
+      throw new Error("Workspace ID is required");
+    }
+
     const categories = await prisma.supportChatCategory.findMany({
       where: {
-        workspaceId: context.workspaceId!,
+        workspaceId: workspaceId,
       },
       include: {
         parent: true,

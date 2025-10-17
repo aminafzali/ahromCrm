@@ -86,6 +86,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         "activeWorkspaceId",
         workspace.workspaceId.toString()
       );
+      localStorage.setItem("workspaceUserId", workspace.id.toString());
+      localStorage.setItem("workspaceId", workspace.workspaceId.toString());
     } catch {}
   }, []);
 
@@ -171,6 +173,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
             "activeWorkspaceId",
             currentActive.workspaceId.toString()
           );
+          localStorage.setItem("workspaceUserId", currentActive.id.toString());
+          localStorage.setItem(
+            "workspaceId",
+            currentActive.workspaceId.toString()
+          );
         } catch {}
       } else {
         try {
@@ -247,8 +254,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           "activeWorkspaceId",
           workspace.workspaceId.toString()
         );
+        localStorage.setItem("workspaceUserId", workspace.id.toString());
+        localStorage.setItem("workspaceId", workspace.workspaceId.toString());
       } else {
         localStorage.removeItem("activeWorkspaceId");
+        localStorage.removeItem("workspaceUserId");
+        localStorage.removeItem("workspaceId");
       }
     } catch {}
   };

@@ -1,10 +1,12 @@
 "use client";
 
+import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { SupportChatRepository } from "../repo/SupportChatRepository";
 
 export function useSupportChat() {
+  const { activeWorkspace } = useWorkspace();
   const repo = useMemo(() => new SupportChatRepository(), []);
   const [connected, setConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
@@ -13,16 +15,24 @@ export function useSupportChat() {
     if (socketRef.current) return;
 
     // Get auth data from localStorage or context
-    const workspaceUserId = localStorage.getItem("workspaceUserId");
-    const workspaceId = localStorage.getItem("workspaceId");
+    const workspaceUserId =
+      localStorage.getItem("workspaceUserId") || activeWorkspace?.id;
+    const workspaceId =
+      localStorage.getItem("workspaceId") || activeWorkspace?.workspace?.id;
+
+    console.log("🔌 [useSupportChat] Connecting with auth:", {
+      workspaceUserId,
+      workspaceId,
+      activeWorkspace: activeWorkspace,
+    });
 
     const socket = io({
       path: "/api/socket_io",
       auth: {
         workspaceUserId: workspaceUserId
-          ? parseInt(workspaceUserId)
+          ? parseInt(String(workspaceUserId))
           : undefined,
-        workspaceId: workspaceId ? parseInt(workspaceId) : undefined,
+        workspaceId: workspaceId ? parseInt(String(workspaceId)) : undefined,
         role: "Admin", // Admin users
       },
     });
