@@ -653,7 +653,8 @@ export default function handler(
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
 
           // Check if user is registered (has workspaceUserId) even if type is guest
-          const isRegisteredUser = userInfo.workspaceUserId;
+          const isRegisteredUser =
+            userInfo.workspaceUserId && userInfo.workspaceId;
           const isGuest =
             !isRegisteredUser &&
             (userInfo.type === "guest" || userInfo.type === "anonymous");
@@ -952,7 +953,8 @@ export default function handler(
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
 
           // Check if user is registered (has workspaceUserId) even if type is guest
-          const isRegisteredUser = userInfo.workspaceUserId;
+          const isRegisteredUser =
+            userInfo.workspaceUserId && userInfo.workspaceId;
           const isGuest =
             !isRegisteredUser &&
             (userInfo.type === "guest" || userInfo.type === "anonymous");
@@ -1048,7 +1050,8 @@ export default function handler(
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
 
           // Check if user is registered (has workspaceUserId) even if type is guest
-          const isRegisteredUser = userInfo.workspaceUserId;
+          const isRegisteredUser =
+            userInfo.workspaceUserId && userInfo.workspaceId;
           const isGuest =
             !isRegisteredUser &&
             (userInfo.type === "guest" || userInfo.type === "anonymous");
@@ -1148,7 +1151,8 @@ export default function handler(
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
 
           // Check if user is registered (has workspaceUserId) even if type is guest
-          const isRegisteredUser = userInfo.workspaceUserId;
+          const isRegisteredUser =
+            userInfo.workspaceUserId && userInfo.workspaceId;
           const isGuest =
             !isRegisteredUser &&
             (userInfo.type === "guest" || userInfo.type === "anonymous");

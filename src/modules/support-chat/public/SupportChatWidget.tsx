@@ -59,9 +59,18 @@ export default function SupportChatWidget({
         startOrResume();
       }, 100);
     } else {
-      disconnect();
+      // Don't disconnect when widget is closed, just hide it
+      // This allows guest to receive messages even when widget is closed
     }
-  }, [isOpen, connect, disconnect, startOrResume]);
+  }, [isOpen, connect, startOrResume]);
+
+  // Auto-connect and join room when component mounts
+  useEffect(() => {
+    connect();
+    setTimeout(() => {
+      startOrResume();
+    }, 100);
+  }, [connect, startOrResume]);
 
   // Play notification sound for new messages
   const playNotificationSound = () => {
