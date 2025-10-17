@@ -541,6 +541,14 @@ export default function handler(
           // Get room member count (not accessible from socket)
           const roomSize = 0;
 
+          logger.debug(`🔌 [Support Chat] Socket joined room`, {
+            socketId: socket.id,
+            roomKey,
+            ticketId,
+            userType,
+            userId,
+          });
+
           logger.info(`✅ [Support Chat] کاربر با موفقیت به تیکت پیوست`, {
             ticketId,
             ticketNumber: ticket.ticketNumber,
@@ -768,8 +776,8 @@ export default function handler(
               });
             }
 
-            // Broadcast to room
-            socket.to(roomKey).emit("support-chat:message", savedMessage);
+            // Broadcast to room (including sender)
+            io.to(roomKey).emit("support-chat:message", savedMessage);
             logger.info(`📢 [Support Chat] پیام به اتاق ارسال شد`, {
               roomKey,
               ticketId: payload.ticketId,
@@ -788,7 +796,7 @@ export default function handler(
                   status: "delivered",
                 });
               }
-              socket.to(roomKey).emit("support-chat:message-status", {
+              io.to(roomKey).emit("support-chat:message-status", {
                 messageId: savedMessage.id,
                 status: "delivered",
               });
@@ -889,7 +897,7 @@ export default function handler(
             });
 
             const roomKey = `support-ticket:${payload.ticketId}`;
-            socket.to(roomKey).emit("support-chat:message-edited", {
+            io.to(roomKey).emit("support-chat:message-edited", {
               messageId: payload.messageId,
               body: updatedMessage.body,
               isEdited: true,
@@ -979,7 +987,7 @@ export default function handler(
             });
 
             const roomKey = `support-ticket:${payload.ticketId}`;
-            socket.to(roomKey).emit("support-chat:message-deleted", {
+            io.to(roomKey).emit("support-chat:message-deleted", {
               messageId: payload.messageId,
               isDeleted: true,
               deletedAt: deletedMessage.deletedAt,
@@ -1048,7 +1056,7 @@ export default function handler(
 
           const roomKey = `support-ticket:${payload.ticketId}`;
 
-          socket.to(roomKey).emit("support-chat:typing", {
+          io.to(roomKey).emit("support-chat:typing", {
             ticketId: payload.ticketId,
             isTyping: payload.isTyping,
             senderId: userId,

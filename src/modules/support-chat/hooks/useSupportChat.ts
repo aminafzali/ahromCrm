@@ -11,7 +11,21 @@ export function useSupportChat() {
 
   const connect = useCallback(() => {
     if (socketRef.current) return;
-    const socket = io({ path: "/api/socket_io" });
+
+    // Get auth data from localStorage or context
+    const workspaceUserId = localStorage.getItem("workspaceUserId");
+    const workspaceId = localStorage.getItem("workspaceId");
+
+    const socket = io({
+      path: "/api/socket_io",
+      auth: {
+        workspaceUserId: workspaceUserId
+          ? parseInt(workspaceUserId)
+          : undefined,
+        workspaceId: workspaceId ? parseInt(workspaceId) : undefined,
+        role: "Admin", // Admin users
+      },
+    });
     socketRef.current = socket;
 
     socket.on("connect", () => {

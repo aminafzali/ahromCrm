@@ -79,10 +79,23 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
 
   // join ticket room
   const join = useCallback((id: number) => {
-    if (!id) return;
+    if (!id || !socketRef.current?.connected) return;
     setJoining(true);
+    console.log("🔌 [Support Chat] Joining ticket room:", id);
     socketRef.current?.emit("support-chat:join", id);
-    setJoining(false);
+    // Don't set joining to false immediately, wait for confirmation
+  }, []);
+
+  // listen for join confirmation
+  useEffect(() => {
+    const joinedHandler = (data: any) => {
+      console.log("✅ [Support Chat] Successfully joined ticket room:", data);
+      setJoining(false);
+    };
+    socketRef.current?.on("support-chat:joined", joinedHandler);
+    return () => {
+      socketRef.current?.off("support-chat:joined", joinedHandler);
+    };
   }, []);
 
   // listen messages
@@ -239,7 +252,20 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
     if (data.ticketId) {
       localStorage.setItem(STORAGE_KEYS.ticketId, String(data.ticketId));
       setTicketId(Number(data.ticketId));
-      join(Number(data.ticketId));
+      // Wait for socket to be connected before joining
+      if (socketRef.current?.connected) {
+        join(Number(data.ticketId));
+      } else {
+        // Wait for connection
+        const checkConnection = () => {
+          if (socketRef.current?.connected) {
+            join(Number(data.ticketId));
+          } else {
+            setTimeout(checkConnection, 100);
+          }
+        };
+        checkConnection();
+      }
     }
     return {
       ticketId: data.ticketId as number,
