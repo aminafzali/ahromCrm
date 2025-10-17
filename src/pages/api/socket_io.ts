@@ -480,10 +480,13 @@ export default function handler(
       socket.on("support-chat:join", async (ticketId: number) => {
         // Get user info for logging
         const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-        
+
         // Check if user is registered (has workspaceUserId) even if type is guest
-        const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
-        const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
+        const isRegisteredUser =
+          userInfo.workspaceUserId && userInfo.workspaceId;
+        const isGuest =
+          !isRegisteredUser &&
+          (userInfo.type === "guest" || userInfo.type === "anonymous");
         const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
         const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -648,10 +651,12 @@ export default function handler(
         }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          
+
           // Check if user is registered (has workspaceUserId) even if type is guest
-          const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
-          const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
+          const isRegisteredUser = userInfo.workspaceUserId;
+          const isGuest =
+            !isRegisteredUser &&
+            (userInfo.type === "guest" || userInfo.type === "anonymous");
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -831,6 +836,10 @@ export default function handler(
                 isInternal: payload.isInternal || false,
                 replyToId: payload.replyToId || null,
                 replySnapshot: payload.replySnapshot || null,
+                // Set the appropriate user ID based on user type
+                ...(isGuest
+                  ? { guestUserId: userId }
+                  : { workspaceUserId: userId }),
               },
             });
 
@@ -941,10 +950,12 @@ export default function handler(
         }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          
+
           // Check if user is registered (has workspaceUserId) even if type is guest
-          const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
-          const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
+          const isRegisteredUser = userInfo.workspaceUserId;
+          const isGuest =
+            !isRegisteredUser &&
+            (userInfo.type === "guest" || userInfo.type === "anonymous");
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -1035,10 +1046,12 @@ export default function handler(
         async (payload: { ticketId: number; messageId: number }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          
+
           // Check if user is registered (has workspaceUserId) even if type is guest
-          const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
-          const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
+          const isRegisteredUser = userInfo.workspaceUserId;
+          const isGuest =
+            !isRegisteredUser &&
+            (userInfo.type === "guest" || userInfo.type === "anonymous");
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -1133,10 +1146,12 @@ export default function handler(
         (payload: { ticketId: number; isTyping: boolean }) => {
           // Get user info for logging
           const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-          
+
           // Check if user is registered (has workspaceUserId) even if type is guest
-          const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
-          const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
+          const isRegisteredUser = userInfo.workspaceUserId;
+          const isGuest =
+            !isRegisteredUser &&
+            (userInfo.type === "guest" || userInfo.type === "anonymous");
           const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
           const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 
@@ -1208,10 +1223,13 @@ export default function handler(
       socket.on("disconnect", () => {
         // Get user info for logging
         const userInfo = socket.data.user || { type: "guest", id: "unknown" };
-        
+
         // Check if user is registered (has workspaceUserId) even if type is guest
-        const isRegisteredUser = userInfo.workspaceUserId && userInfo.workspaceId;
-        const isGuest = !isRegisteredUser && (userInfo.type === "guest" || userInfo.type === "anonymous");
+        const isRegisteredUser =
+          userInfo.workspaceUserId && userInfo.workspaceId;
+        const isGuest =
+          !isRegisteredUser &&
+          (userInfo.type === "guest" || userInfo.type === "anonymous");
         const userType = isGuest ? "مهمان" : "کاربر ثبت‌نام‌شده";
         const userId = isGuest ? userInfo.guestId : userInfo.workspaceUserId;
 

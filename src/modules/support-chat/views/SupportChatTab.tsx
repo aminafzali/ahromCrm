@@ -159,16 +159,9 @@ export default function SupportChatTab() {
       console.log("✨ [Support Chat Tab] Adding optimistic message:", tempId);
       setMessages((prev) => [...prev, tempMessage]);
 
-      // Send via Socket.IO for real-time
+      // Send via Socket.IO (with HTTP fallback handled in hook)
       console.log("🔌 [Support Chat Tab] Sending via Socket.IO...");
       sendMessageRealtime(selectedTicket.id, messageBody, tempId);
-
-      // Also send via HTTP for persistence
-      console.log("📡 [Support Chat Tab] Sending via HTTP...");
-      await repo.sendMessage(selectedTicket.id, {
-        body: messageBody,
-        isInternal,
-      });
       console.log("✅ [Support Chat Tab] Message sent successfully");
     } catch (error) {
       console.error("❌ [Support Chat Tab] Error sending message:", error);

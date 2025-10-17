@@ -96,13 +96,50 @@ export function useSupportChat() {
 
   const sendMessageRealtime = useCallback(
     (ticketId: number, body: string, tempId?: string) => {
+      if (!socketRef.current?.connected) {
+        console.warn("⚠️ [Support Chat] Socket not connected, using HTTP fallback");
+        // Fallback to HTTP if socket not connected
+        return repo.sendMessage(ticketId, { body });
+      }
+
       socketRef.current?.emit("support-chat:message", {
         ticketId,
         body,
         tempId,
       });
+
+      // Set up fallback timer for HTTP API if no ACK received
+      const fallbackTimer = setTimeout(async () => {
+        console.log("📡 [Support Chat] Fallback: Sending via HTTP...");
+        try {
+          await repo.sendMessage(ticketId, { body });
+        } catch (fallbackError) {
+          console.error("❌ [Support Chat] Fallback HTTP failed:", fallbackError);
+        }
+      }, 10000); // 10 second timeout
+
+      // Clear fallback timer when ACK is received
+      const clearFallback = () => {
+        clearTimeout(fallbackTimer);
+      };
+
+      // Listen for ACK to clear fallback timer
+      const ackHandler = (data: any) => {
+        if (data.tempId === tempId) {
+          clearFallback();
+          console.log("✅ [Support Chat] Message ACK received, clearing fallback");
+        }
+      };
+
+      // Add ACK listener
+      socketRef.current?.on("support-chat:ack", ackHandler);
+
+      // Clean up listener after timeout
+      setTimeout(() => {
+        socketRef.current?.off("support-chat:ack", ackHandler);
+      }, 15000);
     },
-    []
+    [repo]
   );
 
   // Edit/Delete events
