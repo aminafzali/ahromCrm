@@ -48,8 +48,21 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
   useEffect(() => {
     const gid = localStorage.getItem(STORAGE_KEYS.guestId);
     const tid = localStorage.getItem(STORAGE_KEYS.ticketId);
+    const workspaceUserId = localStorage.getItem("workspaceUserId");
+    const workspaceId = localStorage.getItem("workspaceId");
+
     if (gid) setGuestId(gid);
     if (tid) setTicketId(Number(tid));
+
+    // Log workspace info for debugging
+    if (workspaceUserId && workspaceId) {
+      console.log("🔍 [Support Chat] Found workspace info:", {
+        workspaceUserId,
+        workspaceId,
+        guestId: gid,
+        ticketId: tid,
+      });
+    }
   }, []);
 
   const connect = useCallback(() => {
@@ -58,12 +71,18 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
     // Get auth data from localStorage
     const gid = localStorage.getItem(STORAGE_KEYS.guestId);
     const tid = localStorage.getItem(STORAGE_KEYS.ticketId);
+    const workspaceUserId = localStorage.getItem("workspaceUserId");
+    const workspaceId = localStorage.getItem("workspaceId");
 
     const socket = io({
       path: "/api/socket_io",
       auth: {
         guestId: gid ? parseInt(gid) : undefined,
         ticketId: tid ? parseInt(tid) : undefined,
+        workspaceUserId: workspaceUserId
+          ? parseInt(workspaceUserId)
+          : undefined,
+        workspaceId: workspaceId ? parseInt(workspaceId) : undefined,
       },
     });
     socketRef.current = socket;
@@ -206,7 +225,13 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
   }, []);
 
   const startOrResume = useCallback(async () => {
-    if (ticketId) return { ticketId, guestId };
+    if (ticketId) {
+      // If ticketId exists, ensure we join the room
+      if (socketRef.current?.connected) {
+        join(ticketId);
+      }
+      return { ticketId, guestId };
+    }
 
     // Collect enhanced client information
     const clientInfo = {
