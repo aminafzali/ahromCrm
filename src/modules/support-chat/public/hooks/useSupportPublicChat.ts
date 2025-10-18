@@ -73,7 +73,15 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
 
   // join ticket room
   const join = useCallback((id: number) => {
-    if (!id) return;
+    console.log("🎯 [Support Chat] join function called:", {
+      id,
+      connected: socketRef.current?.connected,
+    });
+
+    if (!id) {
+      console.log("❌ [Support Chat] No ticketId provided to join");
+      return;
+    }
 
     if (!socketRef.current?.connected) {
       console.log(
@@ -138,6 +146,12 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
         setTimeout(() => {
           join(ticketId);
         }, 100);
+      } else {
+        // If no ticketId, try to start or resume
+        console.log("🔄 [Support Chat] No ticketId, starting new chat...");
+        setTimeout(() => {
+          startOrResume();
+        }, 100);
       }
     });
     socket.on("disconnect", () => {
@@ -162,6 +176,20 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
     return () => {
       socketRef.current?.off("support-chat:joined", joinedHandler);
     };
+  }, []);
+
+  // Debug: Listen for all socket events
+  useEffect(() => {
+    const debugHandler = (event: string, ...args: any[]) => {
+      console.log("🔍 [Support Chat] Socket event received:", event, args);
+    };
+
+    if (socketRef.current) {
+      socketRef.current.onAny(debugHandler);
+      return () => {
+        socketRef.current?.offAny(debugHandler);
+      };
+    }
   }, []);
 
   // listen messages
@@ -272,12 +300,19 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
   }, []);
 
   const startOrResume = useCallback(async () => {
+    console.log("🚀 [Support Chat] startOrResume called:", {
+      ticketId,
+      guestId,
+    });
+
     if (ticketId) {
       // If ticketId exists, ensure we join the room
       console.log("🔄 [Support Chat] Joining existing room:", ticketId);
       join(ticketId);
       return { ticketId, guestId };
     }
+
+    console.log("🆕 [Support Chat] No existing ticket, creating new one...");
 
     // Collect enhanced client information
     const clientInfo = {

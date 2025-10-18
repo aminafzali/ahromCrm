@@ -4,8 +4,8 @@ import DIcon from "@/@Client/Components/common/DIcon";
 import { Button } from "ndui-ahrom";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import PriorityBadge from "../components/PriorityBadge";
-import StatusBadge from "../components/StatusBadge";
+import PriorityBadge from "../components/ui/PriorityBadge";
+import StatusBadge from "../components/ui/StatusBadge";
 import { useSupportChat } from "../hooks/useSupportChat";
 import { SupportTicketWithRelations } from "../types";
 
@@ -69,9 +69,9 @@ export default function CustomerView() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div className="flex items-center gap-3">
           <DIcon icon="fa-headset" classCustom="text-3xl text-primary" />
           <div>
@@ -89,7 +89,7 @@ export default function CustomerView() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4">
         <Button
           variant={filter === "all" ? "primary" : "ghost"}
           onClick={() => setFilter("all")}

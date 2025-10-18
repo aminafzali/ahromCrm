@@ -3,8 +3,8 @@
 import DIcon from "@/@Client/Components/common/DIcon";
 import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 import { useEffect, useState } from "react";
-import TicketChatWindow from "../components/TicketChatWindow";
-import TicketList from "../components/TicketList";
+import TicketChatWindow from "../components/layout/TicketChatWindow";
+import TicketList from "../components/tickets/TicketList";
 import { useSupportChat } from "../hooks/useSupportChat";
 import { SupportTicketStatus } from "../types";
 
@@ -17,8 +17,8 @@ export default function SupportChatTab() {
     connected,
     connect,
     disconnect,
-    joinTicket,
-    sendMessageRealtime,
+    joinRoom: joinTicket,
+    sendMessage: sendMessageRealtime,
     onMessage,
   } = useSupportChat();
 
@@ -161,7 +161,11 @@ export default function SupportChatTab() {
 
       // Send via Socket.IO (with HTTP fallback handled in hook)
       console.log("🔌 [Support Chat Tab] Sending via Socket.IO...");
-      sendMessageRealtime(selectedTicket.id, messageBody, tempId);
+      sendMessageRealtime({
+        ticketId: selectedTicket.id,
+        body: messageBody,
+        tempId,
+      });
       console.log("✅ [Support Chat Tab] Message sent successfully");
     } catch (error) {
       console.error("❌ [Support Chat Tab] Error sending message:", error);
@@ -183,12 +187,14 @@ export default function SupportChatTab() {
   });
 
   return (
-    <div className="h-[calc(100vh-12rem)] flex bg-gray-50">
+    <div className="h-[calc(100vh-12rem)] flex flex-col lg:flex-row bg-gray-50">
       {/* Sidebar - Ticket List */}
-      <div className="w-96 flex-shrink-0 bg-white border-l flex flex-col">
+      <div className="w-full lg:w-96 flex-shrink-0 bg-white border-l flex flex-col">
         {/* Filters Header */}
-        <div className="p-4 border-b bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <h2 className="text-lg font-bold mb-3">تیکت‌های پشتیبانی</h2>
+        <div className="p-3 sm:p-4 border-b bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <h2 className="text-base sm:text-lg font-bold mb-3">
+            تیکت‌های پشتیبانی
+          </h2>
 
           {/* Search */}
           <div className="relative mb-3">

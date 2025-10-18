@@ -54,10 +54,13 @@ export default function SupportChatWidget({
 
   // Auto-connect and join room when component mounts
   useEffect(() => {
+    console.log("🚀 [Support Chat Widget] Component mounted, initializing...");
     connect();
+    // Start or resume after connection is established
     setTimeout(() => {
+      console.log("🔄 [Support Chat Widget] Starting chat...");
       startOrResume();
-    }, 100);
+    }, 200);
   }, [connect, startOrResume]);
 
   // Handle widget open/close (no need to reconnect)

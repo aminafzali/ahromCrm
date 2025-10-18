@@ -14,7 +14,7 @@ import {
   canAccessSupportChat,
   canAssignTickets,
   canUpdateTicketStatus,
-} from "../utils/permissions";
+} from "@/modules/support-chat/utils/permissions";
 
 class Repository extends BaseRepository<any> {
   constructor() {

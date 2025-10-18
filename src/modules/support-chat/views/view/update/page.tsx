@@ -5,7 +5,7 @@ import Loading from "@/@Client/Components/common/Loading";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import NewTicketForm from "../../../components/NewTicketForm";
+import NewTicketForm from "../../../components/forms/NewTicketForm";
 import { useSupportChat } from "../../../hooks/useSupportChat";
 
 interface UpdateSupportTicketPageProps {

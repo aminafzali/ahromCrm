@@ -2,8 +2,8 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import { format } from "date-fns-jalali";
-import PriorityBadge from "./PriorityBadge";
-import StatusBadge from "./StatusBadge";
+import PriorityBadge from "../ui/PriorityBadge";
+import StatusBadge from "../ui/StatusBadge";
 
 interface TicketListProps {
   tickets: any[];
