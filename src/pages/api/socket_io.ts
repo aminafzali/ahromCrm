@@ -59,7 +59,7 @@ export default function handler(
           };
         }
         // Handle guest users
-        else if (auth && typeof auth.guestId === "number") {
+        else if (auth && auth.guestId) {
           (socket.data as any).user = {
             type: "guest",
             guestId: auth.guestId,
@@ -480,6 +480,13 @@ export default function handler(
       socket.on("support-chat:join", async (ticketId: number) => {
         // Get user info for logging
         const userInfo = socket.data.user || { type: "guest", id: "unknown" };
+
+        // Debug log for user info
+        logger.debug(`🔍 [Support Chat] User info for join:`, {
+          userInfo,
+          socketId: socket.id,
+          ticketId,
+        });
 
         // Check if user is registered (has workspaceUserId) even if type is guest
         const isRegisteredUser =

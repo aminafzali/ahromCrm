@@ -40,6 +40,7 @@ export default function SupportChatWidget({
     hasMoreMessages,
     loadingMore,
     loadMoreMessages,
+    join,
   } = useSupportPublicChat({ workspaceSlug });
 
   // Auto-scroll to bottom
@@ -51,19 +52,6 @@ export default function SupportChatWidget({
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    if (isOpen) {
-      connect();
-      // Start or resume after connection is established
-      setTimeout(() => {
-        startOrResume();
-      }, 100);
-    } else {
-      // Don't disconnect when widget is closed, just hide it
-      // This allows guest to receive messages even when widget is closed
-    }
-  }, [isOpen, connect, startOrResume]);
-
   // Auto-connect and join room when component mounts
   useEffect(() => {
     connect();
@@ -71,6 +59,27 @@ export default function SupportChatWidget({
       startOrResume();
     }, 100);
   }, [connect, startOrResume]);
+
+  // Handle widget open/close (no need to reconnect)
+  useEffect(() => {
+    if (isOpen) {
+      // Widget opened - ensure we're connected and joined
+      if (connected && ticketId) {
+        console.log(
+          "🔄 [Support Chat Widget] Widget opened, joining room:",
+          ticketId
+        );
+        join(ticketId);
+      } else if (!connected) {
+        console.log(
+          "⚠️ [Support Chat Widget] Widget opened but not connected, connecting..."
+        );
+        connect();
+      }
+    }
+    // Don't disconnect when widget is closed, just hide it
+    // This allows guest to receive messages even when widget is closed
+  }, [isOpen, connected, ticketId, join, connect]);
 
   // Play notification sound for new messages
   const playNotificationSound = () => {

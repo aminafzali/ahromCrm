@@ -1,5 +1,6 @@
 "use client";
 
+import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
@@ -27,9 +28,12 @@ export interface UseSupportPublicChatOptions {
 }
 
 export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
+  const { activeWorkspace } = useWorkspace();
   const startEndpoint = opts.startEndpoint || "/api/support-chat/public/start";
   const [ticketId, setTicketId] = useState<number | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
+  const [workspaceUserId, setWorkspaceUserId] = useState<number | null>(null);
+  const [workspaceId, setWorkspaceId] = useState<number | null>(null);
   const [messages, setMessages] = useState<PublicMessage[]>([]);
   const [connected, setConnected] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -53,6 +57,8 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
 
     if (gid) setGuestId(gid);
     if (tid) setTicketId(Number(tid));
+    if (workspaceUserId) setWorkspaceUserId(Number(workspaceUserId));
+    if (workspaceId) setWorkspaceId(Number(workspaceId));
 
     // Log workspace info for debugging
     if (workspaceUserId && workspaceId) {
@@ -65,44 +71,85 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
     }
   }, []);
 
+  // join ticket room
+  const join = useCallback((id: number) => {
+    if (!id) return;
+
+    if (!socketRef.current?.connected) {
+      console.log(
+        "⚠️ [Support Chat] Socket not connected, waiting to join room:",
+        id
+      );
+      // Wait for connection and then join
+      const checkConnection = () => {
+        if (socketRef.current?.connected) {
+          console.log("✅ [Support Chat] Socket connected, joining room:", id);
+          setJoining(true);
+          socketRef.current?.emit("support-chat:join", id);
+        } else {
+          setTimeout(checkConnection, 100);
+        }
+      };
+      checkConnection();
+      return;
+    }
+
+    setJoining(true);
+    console.log("🔌 [Support Chat] Joining ticket room:", id);
+    socketRef.current?.emit("support-chat:join", id);
+    // Don't set joining to false immediately, wait for confirmation
+  }, []);
+
   const connect = useCallback(() => {
     if (socketRef.current) return;
 
-    // Get auth data from localStorage
-    const gid = localStorage.getItem(STORAGE_KEYS.guestId);
-    const tid = localStorage.getItem(STORAGE_KEYS.ticketId);
-    const workspaceUserId = localStorage.getItem("workspaceUserId");
-    const workspaceId = localStorage.getItem("workspaceId");
+    // Get workspace info from context or state
+    const currentWorkspaceUserId = workspaceUserId || activeWorkspace?.id;
+    const currentWorkspaceId = workspaceId || activeWorkspace?.workspace?.id;
+
+    console.log("🔌 [Support Chat] Connecting with state:", {
+      guestId,
+      ticketId,
+      workspaceUserId: currentWorkspaceUserId,
+      workspaceId: currentWorkspaceId,
+      activeWorkspace: activeWorkspace,
+    });
 
     const socket = io({
       path: "/api/socket_io",
       auth: {
-        guestId: gid ? parseInt(gid) : undefined,
-        ticketId: tid ? parseInt(tid) : undefined,
-        workspaceUserId: workspaceUserId
-          ? parseInt(workspaceUserId)
-          : undefined,
-        workspaceId: workspaceId ? parseInt(workspaceId) : undefined,
+        guestId: guestId || undefined,
+        ticketId: ticketId || undefined,
+        workspaceUserId: currentWorkspaceUserId || undefined,
+        workspaceId: currentWorkspaceId || undefined,
       },
     });
     socketRef.current = socket;
-    socket.on("connect", () => setConnected(true));
-    socket.on("disconnect", () => setConnected(false));
-  }, []);
+    socket.on("connect", () => {
+      console.log("✅ [Support Chat] Socket connected");
+      setConnected(true);
+      // Auto-join room if we have ticketId
+      if (ticketId) {
+        console.log(
+          "🔄 [Support Chat] Auto-joining room after connection:",
+          ticketId
+        );
+        // Small delay to ensure socket is fully ready
+        setTimeout(() => {
+          join(ticketId);
+        }, 100);
+      }
+    });
+    socket.on("disconnect", () => {
+      console.log("❌ [Support Chat] Socket disconnected");
+      setConnected(false);
+    });
+  }, [guestId, ticketId, workspaceUserId, workspaceId, activeWorkspace, join]);
 
   const disconnect = useCallback(() => {
     socketRef.current?.disconnect();
     socketRef.current = null;
     setConnected(false);
-  }, []);
-
-  // join ticket room
-  const join = useCallback((id: number) => {
-    if (!id || !socketRef.current?.connected) return;
-    setJoining(true);
-    console.log("🔌 [Support Chat] Joining ticket room:", id);
-    socketRef.current?.emit("support-chat:join", id);
-    // Don't set joining to false immediately, wait for confirmation
   }, []);
 
   // listen for join confirmation
@@ -227,9 +274,8 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
   const startOrResume = useCallback(async () => {
     if (ticketId) {
       // If ticketId exists, ensure we join the room
-      if (socketRef.current?.connected) {
-        join(ticketId);
-      }
+      console.log("🔄 [Support Chat] Joining existing room:", ticketId);
+      join(ticketId);
       return { ticketId, guestId };
     }
 
@@ -263,13 +309,24 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
           : undefined,
     };
 
+    console.log("🚀 [Support Chat] Starting chat with info:", clientInfo);
+
     const res = await fetch(startEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(clientInfo),
     });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.error("❌ [Support Chat] Failed to start chat:", errorData);
+      throw new Error(
+        errorData?.error || `HTTP ${res.status}: Failed to start support chat`
+      );
+    }
+
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.error || "Failed to start support chat");
+    console.log("✅ [Support Chat] Chat started successfully:", data);
     if (data.guestId) {
       localStorage.setItem(STORAGE_KEYS.guestId, String(data.guestId));
       setGuestId(String(data.guestId));
@@ -277,21 +334,18 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
     if (data.ticketId) {
       localStorage.setItem(STORAGE_KEYS.ticketId, String(data.ticketId));
       setTicketId(Number(data.ticketId));
-      // Wait for socket to be connected before joining
-      if (socketRef.current?.connected) {
-        join(Number(data.ticketId));
-      } else {
-        // Wait for connection
-        const checkConnection = () => {
-          if (socketRef.current?.connected) {
-            join(Number(data.ticketId));
-          } else {
-            setTimeout(checkConnection, 100);
-          }
-        };
-        checkConnection();
-      }
+      // Join the new room
+      console.log("🔄 [Support Chat] Joining new room:", data.ticketId);
+      join(Number(data.ticketId));
     }
+    // Update workspace info if provided
+    if (data.workspaceUserId) {
+      setWorkspaceUserId(Number(data.workspaceUserId));
+    }
+    if (data.workspaceId) {
+      setWorkspaceId(Number(data.workspaceId));
+    }
+
     return {
       ticketId: data.ticketId as number,
       guestId: data.guestId as string,
