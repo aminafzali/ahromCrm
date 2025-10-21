@@ -5,7 +5,7 @@ import { SupportTicketStatus } from "../../types";
 
 // Types
 interface StatusBadgeProps {
-  status: SupportTicketStatus;
+  status: SupportTicketStatus | undefined | null;
   size?: "sm" | "md" | "lg";
   variant?: "default" | "outline" | "solid";
   className?: string;
@@ -88,9 +88,19 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({
   variant = "default",
   className = "",
 }) => {
+  // Handle undefined status
+  if (!status) {
+    return null;
+  }
+
   const config = STATUS_CONFIG[status];
   const sizeConfig = SIZE_CONFIG[size];
   const variantConfig = VARIANT_CONFIG[variant];
+
+  // Handle unknown status
+  if (!config) {
+    return null;
+  }
 
   const baseClasses =
     "inline-flex items-center gap-1.5 font-medium rounded-full transition-colors";

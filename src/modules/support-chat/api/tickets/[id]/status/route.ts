@@ -26,3 +26,24 @@ export async function PATCH(
   }
 }
 
+/**
+ * Update ticket status (Admin only) - POST method
+ */
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const context = await AuthProvider.isAuthenticated(req);
+    const ticketId = parseInt(params.id);
+    const { status } = await req.json();
+
+    const ticket = await service.updateTicketStatus(ticketId, status, context);
+    return NextResponse.json(ticket);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Internal server error" },
+      { status: error.status || 500 }
+    );
+  }
+}

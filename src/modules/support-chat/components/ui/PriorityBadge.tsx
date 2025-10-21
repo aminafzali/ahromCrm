@@ -5,7 +5,7 @@ import { SupportPriority } from "../../types";
 
 // Types
 interface PriorityBadgeProps {
-  priority: SupportPriority;
+  priority: SupportPriority | undefined | null;
   size?: "sm" | "md" | "lg";
   variant?: "default" | "outline" | "solid";
   className?: string;
@@ -74,9 +74,19 @@ const PriorityBadge: React.FC<PriorityBadgeProps> = ({
   variant = "default",
   className = "",
 }) => {
+  // Handle undefined priority
+  if (!priority) {
+    return null;
+  }
+
   const config = PRIORITY_CONFIG[priority];
   const sizeConfig = SIZE_CONFIG[size];
   const variantConfig = VARIANT_CONFIG[variant];
+
+  // Handle unknown priority
+  if (!config) {
+    return null;
+  }
 
   const baseClasses =
     "inline-flex items-center gap-1.5 font-medium rounded-full transition-colors";

@@ -2,7 +2,13 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import { format } from "date-fns-jalali";
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { SupportMessageWithRelations } from "../../types";
 
 // Types
@@ -12,6 +18,7 @@ interface TicketMessageBubbleProps {
   isAgent?: boolean;
   showAvatar?: boolean;
   showTime?: boolean;
+  currentUserId?: number;
   onReply?: (message: SupportMessageWithRelations) => void;
   onEdit?: (message: SupportMessageWithRelations) => void;
   onDelete?: (message: SupportMessageWithRelations) => void;
@@ -74,6 +81,40 @@ const scrollToMessage = (targetId: number): void => {
   }
 };
 
+// XSS Protection - Sanitize HTML content
+const sanitizeHtml = (html: string): string => {
+  // Remove potentially dangerous tags and attributes
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, "")
+    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, "")
+    .replace(/<link\b[^<]*(?:(?!<\/link>)<[^<]*)*<\/link>/gi, "")
+    .replace(/<meta\b[^<]*(?:(?!<\/meta>)<[^<]*)*<\/meta>/gi, "")
+    .replace(/on\w+="[^"]*"/gi, "")
+    .replace(/javascript:/gi, "")
+    .replace(/vbscript:/gi, "")
+    .replace(/data:/gi, "");
+};
+
+// Format message content with XSS protection
+const formatMessageContent = (content: string): string => {
+  if (!content) return "";
+
+  // First sanitize the content
+  const sanitized = sanitizeHtml(content);
+
+  // Then apply basic formatting
+  return sanitized
+    .replace(/\n/g, "<br>")
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    .replace(
+      /`(.*?)`/g,
+      '<code class="bg-gray-100 px-1 py-0.5 rounded text-sm">$1</code>'
+    );
+};
+
 // Sub-components
 const MessageAvatar: React.FC<{
   message: SupportMessageWithRelations;
@@ -105,7 +146,15 @@ const MessageContent: React.FC<{
   message: SupportMessageWithRelations;
   isOwnMessage: boolean;
   isInternal: boolean;
-}> = ({ message, isOwnMessage, isInternal }) => {
+  currentUserId?: number;
+  formattedContent: string;
+}> = ({
+  message,
+  isOwnMessage,
+  isInternal,
+  currentUserId,
+  formattedContent,
+}) => {
   if (message.isDeleted) {
     return (
       <div className="text-gray-500 dark:text-gray-400 italic text-sm">
@@ -119,18 +168,43 @@ const MessageContent: React.FC<{
     <div className="space-y-2">
       {/* Reply Reference */}
       {message.replyTo && !message.replyTo.isDeleted && (
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 border-r-4 border-blue-500">
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-            پاسخ به:
+        <div
+          className={`mb-2 text-xs rounded-md px-3 py-2 cursor-pointer ${
+            isOwnMessage
+              ? "bg-blue-600/40"
+              : "bg-gray-50 dark:bg-gray-800 border-r-4 border-blue-500"
+          }`}
+          onClick={() =>
+            message.replyTo?.id && scrollToMessage(message.replyTo.id)
+          }
+          title="نمایش پیام مرجع"
+        >
+          <div
+            className={`mb-1 ${
+              isOwnMessage ? "opacity-80" : "text-gray-500 dark:text-gray-400"
+            }`}
+          >
+            پاسخ به{" "}
+            {message.replyTo?.supportAgent?.displayName ||
+              message.replyTo?.workspaceUser?.displayName ||
+              message.replyTo?.guestUser?.name ||
+              "کاربر"}
           </div>
-          <div className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-            {message.replyTo.body}
+          <div
+            className={`line-clamp-2 ${
+              isOwnMessage ? "opacity-90" : "text-gray-700 dark:text-gray-300"
+            }`}
+          >
+            {message.replyTo.isDeleted ? "پیام حذف شده" : message.replyTo.body}
           </div>
         </div>
       )}
 
       {/* Message Body */}
-      <div className="whitespace-pre-wrap break-words">{message.body}</div>
+      <div
+        className="whitespace-pre-wrap break-words"
+        dangerouslySetInnerHTML={{ __html: formattedContent }}
+      />
 
       {/* Edit Indicator */}
       {message.isEdited && (
@@ -213,6 +287,7 @@ const TicketMessageBubble: React.FC<TicketMessageBubbleProps> = ({
   isAgent = true,
   showAvatar = true,
   showTime = true,
+  currentUserId,
   onReply,
   onEdit,
   onDelete,
@@ -226,49 +301,55 @@ const TicketMessageBubble: React.FC<TicketMessageBubbleProps> = ({
   const messageTime = formatMessageTime(message.createdAt);
   const isInternal = message.isInternal;
 
+  // Memoized formatted content with XSS protection
+  const formattedContent = useMemo(() => {
+    return formatMessageContent(message.body || "");
+  }, [message.body]);
+
+  // Memoized event handlers
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      setMenuOpen(false);
+    }
+  }, []);
+
+  const handleEscape = useCallback((event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      setMenuOpen(false);
+    }
+  }, []);
+
   // Close menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-
     if (menuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [menuOpen]);
+  }, [menuOpen, handleClickOutside]);
 
   // Close menu on escape key
   useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMenuOpen(false);
-      }
-    };
-
     if (menuOpen) {
       document.addEventListener("keydown", handleEscape);
       return () => document.removeEventListener("keydown", handleEscape);
     }
-  }, [menuOpen]);
+  }, [menuOpen, handleEscape]);
 
   const messageClasses = `
-    flex gap-3 group relative
-    ${isOwnMessage ? "flex-row-reverse" : "flex-row"}
+    flex gap-3 group relative mb-4
+    ${isOwnMessage ? "justify-start" : "justify-end"}
     ${className}
   `.trim();
 
   const bubbleClasses = `
-    max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 relative
+    max-w-[80%] sm:max-w-[70%] md:max-w-[60%] lg:max-w-[50%] xl:max-w-[45%] rounded-2xl px-4 py-3 relative shadow-md min-w-[200px]
     ${
       isOwnMessage
-        ? "bg-blue-500 text-white rounded-br-md"
+        ? "bg-blue-500 text-white rounded-bl-md pl-8"
         : isInternal
-        ? "bg-purple-100 dark:bg-purple-900/20 text-purple-900 dark:text-purple-100 rounded-bl-md"
-        : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md"
+        ? "bg-purple-100 dark:bg-purple-900/20 text-purple-900 dark:text-purple-100 rounded-br-md"
+        : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-br-md"
     }
   `.trim();
 
@@ -294,52 +375,120 @@ const TicketMessageBubble: React.FC<TicketMessageBubbleProps> = ({
 
         {/* Message Bubble */}
         <div className={bubbleClasses}>
+          {/* Kebab Menu (inside bubble for own messages) */}
+          {isOwnMessage &&
+            !message.isDeleted &&
+            (onReply || onEdit || onDelete) && (
+              <div className="absolute top-1 left-1" ref={menuRef}>
+                <button
+                  type="button"
+                  className="px-2 py-1 hover:bg-white/10 rounded"
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  title="گزینه‌ها"
+                >
+                  <DIcon icon="fa-ellipsis-v" />
+                </button>
+                {menuOpen && (
+                  <div className="absolute top-7 right-full mr-2 w-28 bg-white text-gray-700 rounded-md shadow-lg z-10">
+                    {onReply && (
+                      <button
+                        className="w-full text-right px-3 py-2 hover:bg-gray-100"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onReply(message);
+                        }}
+                      >
+                        پاسخ
+                      </button>
+                    )}
+                    {onEdit && (
+                      <button
+                        className="w-full text-right px-3 py-2 hover:bg-gray-100"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onEdit(message);
+                        }}
+                      >
+                        ویرایش
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        className="w-full text-right px-3 py-2 hover:bg-gray-100 text-red-600"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onDelete(message);
+                        }}
+                      >
+                        حذف
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
           <MessageContent
             message={message}
             isOwnMessage={isOwnMessage}
             isInternal={isInternal}
+            currentUserId={currentUserId}
+            formattedContent={formattedContent}
           />
 
-          {/* Menu Button */}
-          {(onReply || onEdit || onDelete) && (
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-            >
-              <DIcon icon="fa-ellipsis-v" classCustom="text-xs" />
-            </button>
+          {/* Status indicators for own messages */}
+          {isOwnMessage && showTime && (
+            <div className="flex items-center justify-start gap-2 mt-2 text-xs text-blue-100">
+              <span>{messageTime}</span>
+              {message.isEdited && (
+                <span className="opacity-80">ویرایش شده</span>
+              )}
+              {message.isRead ? (
+                <span title="خوانده شده">
+                  <DIcon
+                    icon="fa-check-double"
+                    classCustom="text-xs text-blue-200"
+                  />
+                </span>
+              ) : (
+                <span title="ارسال شده">
+                  <DIcon icon="fa-check" classCustom="text-xs text-blue-300" />
+                </span>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Message Time */}
-        {showTime && messageTime && (
-          <div
-            className={`text-xs text-gray-500 dark:text-gray-400 px-1 ${
-              isOwnMessage ? "text-right" : "text-left"
-            }`}
-          >
+        {/* Message Time (only for other messages) */}
+        {showTime && messageTime && !isOwnMessage && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 px-1 text-left">
             {messageTime}
           </div>
         )}
       </div>
-
-      {/* Message Menu */}
-      {menuOpen && (
-        <div ref={menuRef}>
-          <MessageMenu
-            message={message}
-            isOwnMessage={isOwnMessage}
-            isAgent={isAgent}
-            onReply={onReply}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onClose={() => setMenuOpen(false)}
-          />
-        </div>
-      )}
     </div>
   );
 };
 
-export default TicketMessageBubble;
+// Memoized component for performance
+const MemoizedTicketMessageBubble = React.memo(
+  TicketMessageBubble,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.message.id === nextProps.message.id &&
+      prevProps.message.body === nextProps.message.body &&
+      prevProps.message.isEdited === nextProps.message.isEdited &&
+      prevProps.message.isDeleted === nextProps.message.isDeleted &&
+      prevProps.isOwnMessage === nextProps.isOwnMessage &&
+      prevProps.isAgent === nextProps.isAgent &&
+      prevProps.showAvatar === nextProps.showAvatar &&
+      prevProps.showTime === nextProps.showTime &&
+      prevProps.currentUserId === nextProps.currentUserId
+    );
+  }
+);
+
+MemoizedTicketMessageBubble.displayName = "TicketMessageBubble";
+
+export default MemoizedTicketMessageBubble;
 export type { TicketMessageBubbleProps };

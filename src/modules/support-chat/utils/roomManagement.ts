@@ -51,7 +51,7 @@ export function isAuthorizedToJoinRoom(
 
   // Guest users can join their own ticket
   if (isGuest && ticket.guestUserId && userInfo.guestId) {
-    return ticket.guestUserId.toString() === userInfo.guestId;
+    return ticket.guestUserId.toString() === userInfo.guestId.toString();
   }
 
   // Registered users can join their own ticket

@@ -1,5 +1,5 @@
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSupportChat } from "../../../hooks/useSupportChat";
 import { SupportChatRepository } from "../../../repo/SupportChatRepository";
 import {
@@ -236,7 +236,7 @@ const useTicketActions = (ticketId: number, isAdmin: boolean) => {
       try {
         console.log("📝 [Ticket Detail] Changing status...");
         const repo = new SupportChatRepository();
-        const updated = await repo.updateTicketStatus(ticketId, status as any);
+        const updated = await repo.updateTicketStatus(ticketId, status);
         console.log("✅ [Ticket Detail] Status updated");
         return updated;
       } catch (error) {
@@ -294,6 +294,8 @@ export const useTicketDetailState = ({
   const router = useRouter();
   const { connect, disconnect, onMessageEdited, onMessageDeleted } =
     useSupportChat();
+  const isMountedRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Custom hooks
   const { ticketState, loadTicket } = useTicketData(ticketId);
@@ -318,22 +320,39 @@ export const useTicketDetailState = ({
   // Initialize data
   useEffect(() => {
     const initializeData = async () => {
+      if (!isMountedRef.current) return;
+
       try {
+        // Cancel any ongoing requests
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+
         connect();
         const ticketData = await loadTicket();
-        if (ticketData) {
+        if (ticketData && isMountedRef.current) {
           await loadMessages(ticketData);
         }
       } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return; // Request was cancelled
+        }
         console.error("❌ [Ticket Detail] Initialization error:", error);
-        alert("خطا در بارگذاری تیکت");
-        router.push(backUrl);
+        if (isMountedRef.current) {
+          alert("خطا در بارگذاری تیکت");
+          router.push(backUrl);
+        }
       }
     };
 
     initializeData();
 
     return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       disconnect();
     };
   }, [
@@ -416,18 +435,35 @@ export const useTicketDetailState = ({
     };
   }, [ticketId, updateMessage, onMessageEdited, onMessageDeleted]);
 
-  return {
-    ticketState,
-    messageState,
-    loadTicket,
-    loadMessages,
-    loadMoreMessages,
-    sendMessage,
-    updateMessage,
-    assignTicket,
-    updateTicketStatus,
-    editMessage,
-    deleteMessage,
-    handleBack,
-  };
+  // Memoized return value
+  return useMemo(
+    () => ({
+      ticketState,
+      messageState,
+      loadTicket,
+      loadMessages,
+      loadMoreMessages,
+      sendMessage,
+      updateMessage,
+      assignTicket,
+      updateTicketStatus,
+      editMessage,
+      deleteMessage,
+      handleBack,
+    }),
+    [
+      ticketState,
+      messageState,
+      loadTicket,
+      loadMessages,
+      loadMoreMessages,
+      sendMessage,
+      updateMessage,
+      assignTicket,
+      updateTicketStatus,
+      editMessage,
+      deleteMessage,
+      handleBack,
+    ]
+  );
 };

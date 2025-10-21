@@ -2,8 +2,8 @@ import React from "react";
 import TicketChatWindow from "../../../components/layout/TicketChatWindow";
 import TicketDetailPanel from "../../../components/tickets/TicketDetailPanel";
 import {
-    SupportMessageWithRelations,
-    SupportTicketWithRelations,
+  SupportMessageWithRelations,
+  SupportTicketWithRelations,
 } from "../../../types";
 
 interface TicketDetailLayoutProps {
@@ -17,6 +17,9 @@ interface TicketDetailLayoutProps {
   autoScrollSignal: number;
   onAssign: (assignToId: number) => Promise<void>;
   onChangeStatus: (status: string) => Promise<void>;
+  onReply?: (message: SupportMessageWithRelations) => void;
+  onEdit?: (message: SupportMessageWithRelations) => void;
+  onDelete?: (message: SupportMessageWithRelations) => void;
   onClose: () => void;
 }
 
@@ -31,6 +34,9 @@ export const TicketDetailLayout: React.FC<TicketDetailLayoutProps> = ({
   autoScrollSignal,
   onAssign,
   onChangeStatus,
+  onReply,
+  onEdit,
+  onDelete,
   onClose,
 }) => {
   return (
@@ -46,6 +52,9 @@ export const TicketDetailLayout: React.FC<TicketDetailLayoutProps> = ({
           hasMore={hasMore}
           onLoadMore={onLoadMore}
           autoScrollSignal={autoScrollSignal}
+          onReplyMessage={onReply}
+          onEditMessage={onEdit}
+          onDeleteMessage={onDelete}
         />
       </div>
 

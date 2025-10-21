@@ -30,6 +30,8 @@ export default function TicketDetailWrapper({
     loadMoreMessages,
     assignTicket,
     updateTicketStatus,
+    editMessage,
+    deleteMessage,
     handleBack,
   } = useTicketDetailState({
     ticketId: id,
@@ -77,6 +79,40 @@ export default function TicketDetailWrapper({
     [updateTicketStatus]
   );
 
+  const handleReply = useCallback((message: any) => {
+    console.log("Reply to message:", message);
+    // Implement reply functionality
+  }, []);
+
+  const handleEdit = useCallback(
+    async (message: any) => {
+      try {
+        const newText = prompt("ویرایش پیام:", message.body);
+        if (newText && newText !== message.body) {
+          await editMessage(message.id, newText);
+          console.log("✅ [Ticket Detail] Message edited successfully");
+        }
+      } catch (error) {
+        alert("خطا در ویرایش پیام");
+      }
+    },
+    [editMessage]
+  );
+
+  const handleDelete = useCallback(
+    async (message: any) => {
+      try {
+        if (confirm("آیا مطمئن هستید که می‌خواهید این پیام را حذف کنید؟")) {
+          await deleteMessage(message.id);
+          console.log("✅ [Ticket Detail] Message deleted successfully");
+        }
+      } catch (error) {
+        alert("خطا در حذف پیام");
+      }
+    },
+    [deleteMessage]
+  );
+
   // Render states
   if (ticketState.loading) {
     return <LoadingSpinner />;
@@ -98,6 +134,9 @@ export default function TicketDetailWrapper({
       autoScrollSignal={messageState.autoScrollSignal}
       onAssign={handleAssign}
       onChangeStatus={handleStatusChange}
+      onReply={handleReply}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
       onClose={handleBack}
     />
   );

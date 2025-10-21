@@ -111,8 +111,106 @@ export async function POST(req: NextRequest) {
       bodyKeys: Object.keys(body),
     });
 
+    // Check for registered user first (from request body, not cookies)
+    const workspaceUserId = body.workspaceUserId;
+    const workspaceId = body.workspaceId;
+
     let guestId = cookieStore.get("support_guest_id")?.value || body.guestId;
     let guest: any = null;
+
+    // If we have a registered user, create ticket for them
+    if (workspaceUserId && workspaceId) {
+      console.log("👤 [Support Chat API] Registered user detected", {
+        workspaceUserId,
+        workspaceId,
+      });
+
+      // Try to find existing ticket for this user
+      let ticket = await prisma.supportChatTicket.findFirst({
+        where: {
+          workspaceUserId: parseInt(workspaceUserId),
+          status: { in: ["OPEN", "IN_PROGRESS"] },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      // If no registered ticket found, check for guest ticket with same user
+      if (!ticket && guestId) {
+        console.log(
+          "🔍 [Support Chat API] Checking for guest ticket to convert",
+          {
+            guestId,
+            workspaceUserId,
+          }
+        );
+
+        const guestTicket = await prisma.supportChatTicket.findFirst({
+          where: {
+            guestUserId: parseInt(guestId),
+            status: { in: ["OPEN", "IN_PROGRESS"] },
+            workspaceUserId: null, // Not already converted
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        if (guestTicket) {
+          console.log(
+            "🔄 [Support Chat API] Converting guest ticket to registered",
+            {
+              guestTicketId: guestTicket.id,
+              workspaceUserId,
+              workspaceId,
+            }
+          );
+
+          // Convert guest ticket to registered user ticket
+          ticket = await prisma.supportChatTicket.update({
+            where: { id: guestTicket.id },
+            data: {
+              workspaceUserId: parseInt(workspaceUserId),
+              workspaceId: parseInt(workspaceId),
+              guestUserId: null, // Clear guest association
+            },
+          });
+        }
+      }
+
+      if (!ticket) {
+        // Create new ticket for registered user
+        const ticketNumber = `TKT-${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 6)
+          .toUpperCase()}`;
+
+        ticket = await prisma.supportChatTicket.create({
+          data: {
+            workspaceId: parseInt(workspaceId),
+            workspaceUserId: parseInt(workspaceUserId),
+            ticketNumber,
+            subject: "پشتیبانی آنلاین",
+            description: "درخواست پشتیبانی از طریق چت آنلاین",
+            status: "OPEN",
+            priority: "MEDIUM",
+          },
+        });
+      }
+
+      const res = NextResponse.json({
+        guestId: null,
+        ticketId: ticket.id,
+        guestInfo: null,
+        isRegisteredUser: true,
+      });
+
+      res.cookies.set("support_ticket_id", ticket.id.toString(), {
+        path: "/",
+        httpOnly: false,
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+
+      return res;
+    }
 
     // If we have a guestId, try to find existing guest
     if (guestId) {

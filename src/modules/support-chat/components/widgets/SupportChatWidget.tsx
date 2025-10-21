@@ -4,6 +4,7 @@ import DIcon from "@/@Client/Components/common/DIcon";
 import React, { useCallback, useEffect, useState } from "react";
 import { SupportTicketWithRelations } from "../../types";
 import NewTicketForm from "../forms/NewTicketForm";
+import CustomerChatWindow from "../layout/CustomerChatWindow";
 import TicketCard from "../tickets/TicketCard";
 
 // Types
@@ -24,10 +25,10 @@ interface WidgetState {
 
 // Constants
 const POSITION_CLASSES = {
-  "bottom-right": "bottom-4 right-4",
-  "bottom-left": "bottom-4 left-4",
-  "top-right": "top-4 right-4",
-  "top-left": "top-4 left-4",
+  "bottom-right": "bottom-2 sm:bottom-4 right-2 sm:right-4",
+  "bottom-left": "bottom-2 sm:bottom-4 left-2 sm:left-4",
+  "top-right": "top-2 sm:top-4 right-2 sm:right-4",
+  "top-left": "top-2 sm:top-4 left-2 sm:left-4",
 } as const;
 
 const THEME_CLASSES = {
@@ -60,7 +61,7 @@ const WidgetToggle: React.FC<{
     onClick={onClick}
     className={`
       fixed ${POSITION_CLASSES[position]} z-50
-      w-14 h-14 rounded-full shadow-lg transition-all duration-300
+      w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg transition-all duration-300
       ${isOpen ? "scale-90" : "scale-100 hover:scale-110"}
       ${THEME_CLASSES[theme]} border-2
       flex items-center justify-center
@@ -68,7 +69,10 @@ const WidgetToggle: React.FC<{
     `}
     title={isOpen ? "بستن چت" : "باز کردن چت"}
   >
-    <DIcon icon={isOpen ? "fa-times" : "fa-comments"} classCustom="text-xl" />
+    <DIcon
+      icon={isOpen ? "fa-times" : "fa-comments"}
+      classCustom="text-lg sm:text-xl"
+    />
   </button>
 );
 
@@ -158,77 +162,6 @@ const TicketsList: React.FC<{
         <DIcon icon="fa-plus" classCustom="ml-2" />
         ایجاد تیکت جدید
       </button>
-    </div>
-  );
-};
-
-const ChatView: React.FC<{
-  ticket: SupportTicketWithRelations;
-  onBack: () => void;
-  theme: keyof typeof THEME_CLASSES;
-}> = ({ ticket, onBack, theme }) => {
-  const [messages, setMessages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Load messages for the selected ticket
-    const loadMessages = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(
-          `/api/support-chat/tickets/${ticket.id}/messages`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setMessages(data.messages || []);
-        }
-      } catch (error) {
-        console.error("Error loading messages:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadMessages();
-  }, [ticket.id]);
-
-  return (
-    <div className="flex flex-col h-full">
-      <WidgetHeader
-        title={`تیکت #${ticket.ticketNumber}`}
-        onBack={onBack}
-        onClose={() => {}} // Will be handled by parent
-        theme={theme}
-      />
-
-      <div className="flex-1 overflow-y-auto p-4">
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              در حال بارگذاری پیام‌ها...
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`p-3 rounded-lg ${
-                  message.isOwnMessage
-                    ? "bg-blue-500 text-white ml-auto max-w-[80%]"
-                    : "bg-gray-100 dark:bg-slate-700 mr-auto max-w-[80%]"
-                }`}
-              >
-                <p className="text-sm">{message.body}</p>
-                <p className="text-xs opacity-70 mt-1">
-                  {new Date(message.createdAt).toLocaleTimeString("fa-IR")}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 };
@@ -336,7 +269,8 @@ const SupportChatWidget: React.FC<SupportChatWidgetProps> = ({
         <div
           className={`
           fixed ${POSITION_CLASSES[position]} z-40
-          w-80 sm:w-96 h-96 sm:h-[500px]
+          w-[calc(100vw-1rem)] sm:w-80 md:w-96 h-96 sm:h-[500px]
+          max-w-sm sm:max-w-none
           rounded-lg shadow-2xl border-2
           ${THEME_CLASSES[theme]}
           transform transition-all duration-300
@@ -379,11 +313,25 @@ const SupportChatWidget: React.FC<SupportChatWidgetProps> = ({
           )}
 
           {state.view === "chat" && state.selectedTicket && (
-            <ChatView
-              ticket={state.selectedTicket}
-              onBack={handleBack}
-              theme={theme}
-            />
+            <div className="flex-1 flex flex-col">
+              <WidgetHeader
+                title={`تیکت #${state.selectedTicket.ticketNumber}`}
+                onBack={handleBack}
+                onClose={handleClose}
+                theme={theme}
+              />
+              <div className="flex-1">
+                <CustomerChatWindow
+                  ticket={state.selectedTicket}
+                  onTicketUpdate={(updatedTicket) => {
+                    setState((prev) => ({
+                      ...prev,
+                      selectedTicket: updatedTicket,
+                    }));
+                  }}
+                />
+              </div>
+            </div>
           )}
         </div>
       )}

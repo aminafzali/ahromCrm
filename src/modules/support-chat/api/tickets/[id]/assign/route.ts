@@ -26,3 +26,24 @@ export async function PATCH(
   }
 }
 
+/**
+ * Assign ticket to support agent (Admin only) - POST method
+ */
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const context = await AuthProvider.isAuthenticated(req);
+    const ticketId = parseInt(params.id);
+    const { assignToId } = await req.json();
+
+    const ticket = await service.assignTicket(ticketId, assignToId, context);
+    return NextResponse.json(ticket);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Internal server error" },
+      { status: error.status || 500 }
+    );
+  }
+}

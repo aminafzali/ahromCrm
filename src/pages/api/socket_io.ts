@@ -124,6 +124,12 @@ export default async function handler(
         supportChatHandlers.handleMessage(socket, payload);
       });
 
+      // Support Chat Send Message
+      socket.on("support-chat:send-message", (payload: any) => {
+        SocketMiddleware.updateActivity(socket);
+        supportChatHandlers.handleSendMessage(socket, payload);
+      });
+
       // Support Chat Typing
       socket.on(SOCKET_EVENTS.TYPING, (payload: any) => {
         SocketMiddleware.updateActivity(socket);
@@ -140,6 +146,24 @@ export default async function handler(
       socket.on(SOCKET_EVENTS.MESSAGE_DELETE, (payload: any) => {
         SocketMiddleware.updateActivity(socket);
         supportChatHandlers.handleMessageDelete(socket, payload);
+      });
+
+      // Support Chat Message Edit (alternative event name)
+      socket.on("support-chat:message-edit", (payload: any) => {
+        SocketMiddleware.updateActivity(socket);
+        supportChatHandlers.handleMessageEdit(socket, payload);
+      });
+
+      // Support Chat Message Delete (alternative event name)
+      socket.on("support-chat:message-delete", (payload: any) => {
+        SocketMiddleware.updateActivity(socket);
+        supportChatHandlers.handleMessageDelete(socket, payload);
+      });
+
+      // Support Chat User Type Change
+      socket.on("support-chat:user-type-change", (payload: any) => {
+        SocketMiddleware.updateActivity(socket);
+        supportChatHandlers.handleUserTypeChange(socket, payload);
       });
 
       // ==================== DISCONNECT ====================

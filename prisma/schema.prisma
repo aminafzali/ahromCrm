@@ -162,12 +162,13 @@ model WorkspaceUser {
   SupportInfoAsAssignee SupportInfo[] @relation("SupportInfo_assignedAdmin")
 
   // Support Chat module (new)
-  SupportChatAsUser           SupportChatTicket[]     @relation("SupportChatTicket_user")
-  SupportChatAsAssignee       SupportChatTicket[]     @relation("SupportChatTicket_assignee")
-  SupportChatMessages         SupportChatMessage[]    @relation("SupportChatAgent_messages")
-  SupportChatCustomerMessages SupportChatMessage[]    @relation("SupportChatCustomer_messages")
-  SupportChatHistoryChanges   SupportChatHistory[]    @relation("SupportChatHistory_changedBy")
-  SupportChatUploads          SupportChatAttachment[] @relation("SupportChatAttachment_uploadedBy")
+  SupportChatAsUser           SupportChatTicket[]      @relation("SupportChatTicket_user")
+  SupportChatAsAssignee       SupportChatTicket[]      @relation("SupportChatTicket_assignee")
+  SupportChatMessages         SupportChatMessage[]     @relation("SupportChatAgent_messages")
+  SupportChatCustomerMessages SupportChatMessage[]     @relation("SupportChatCustomer_messages")
+  SupportChatHistoryChanges   SupportChatHistory[]     @relation("SupportChatHistory_changedBy")
+  SupportChatUploads          SupportChatAttachment[]  @relation("SupportChatAttachment_uploadedBy")
+  SupportChatMessageReads     SupportChatMessageRead[] @relation("SupportChatMessageRead_workspaceUser")
 
   @@unique([workspaceId, userId])
 }
@@ -1579,10 +1580,11 @@ model SupportChatTicket {
   isPublic       Boolean @default(true)
   notifyCustomer Boolean @default(true)
 
-  messages    SupportChatMessage[]
-  labels      SupportChatLabel[]      @relation("SupportChatTicketLabels")
-  attachments SupportChatAttachment[]
-  history     SupportChatHistory[]
+  messages     SupportChatMessage[]
+  labels       SupportChatLabel[]       @relation("SupportChatTicketLabels")
+  attachments  SupportChatAttachment[]
+  history      SupportChatHistory[]
+  messageReads SupportChatMessageRead[]
 
   linkedTasks     SupportChatTask[]
   linkedDocuments SupportChatDocument[]
@@ -1644,6 +1646,20 @@ model SupportChatMessage {
 
   @@index([ticketId])
   @@index([createdAt])
+}
+
+model SupportChatMessageRead {
+  id              Int               @id @default(autoincrement())
+  ticketId        Int
+  ticket          SupportChatTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser     @relation("SupportChatMessageRead_workspaceUser", fields: [workspaceUserId], references: [id], onDelete: Cascade)
+  readAt          DateTime          @default(now())
+
+  @@unique([ticketId, workspaceUserId])
+  @@index([ticketId])
+  @@index([workspaceUserId])
+  @@index([readAt])
 }
 
 model SupportChatAttachment {

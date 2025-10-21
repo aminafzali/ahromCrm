@@ -70,22 +70,30 @@ export function isRegisteredUser(userInfo: SocketUser): boolean {
  * Determines if user is guest based on user info
  */
 export function isGuestUser(userInfo: SocketUser): boolean {
-  return (
-    !isRegisteredUser(userInfo) &&
-    (userInfo.type === "guest" || userInfo.type === "anonymous")
-  );
+  return userInfo.type === "guest";
+}
+
+/**
+ * Determines if user is anonymous based on user info
+ */
+export function isAnonymousUser(userInfo: SocketUser): boolean {
+  return userInfo.type === "anonymous";
 }
 
 /**
  * Gets user type for logging
  */
 export function getUserType(userInfo: SocketUser): string {
-  return isGuestUser(userInfo) ? "مهمان" : "کاربر ثبت‌نام‌شده";
+  if (isRegisteredUser(userInfo)) return "کاربر ثبت‌نام‌شده";
+  if (isGuestUser(userInfo)) return "مهمان";
+  return "ناشناس";
 }
 
 /**
  * Gets user ID for logging
  */
 export function getUserId(userInfo: SocketUser): string | number | undefined {
-  return isGuestUser(userInfo) ? userInfo.guestId : userInfo.workspaceUserId;
+  if (isRegisteredUser(userInfo)) return userInfo.workspaceUserId;
+  if (isGuestUser(userInfo)) return userInfo.guestId;
+  return userInfo.id;
 }

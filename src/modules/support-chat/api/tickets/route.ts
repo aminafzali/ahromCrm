@@ -10,15 +10,15 @@ const service = new SupportChatServiceApi();
 export async function GET(req: NextRequest) {
   try {
     const context = await AuthProvider.isAuthenticated(req);
-    
+
     const url = new URL(req.url);
     const params = {
       page: parseInt(url.searchParams.get("page") || "1"),
       limit: parseInt(url.searchParams.get("limit") || "20"),
-      status: url.searchParams.get("status") || undefined,
-      priority: url.searchParams.get("priority") || undefined,
-      assignedToId: url.searchParams.get("assignedToId") 
-        ? parseInt(url.searchParams.get("assignedToId")!) 
+      status: (url.searchParams.get("status") as any) || undefined,
+      priority: (url.searchParams.get("priority") as any) || undefined,
+      assignedToId: url.searchParams.get("assignedToId")
+        ? parseInt(url.searchParams.get("assignedToId")!)
         : undefined,
       categoryId: url.searchParams.get("categoryId")
         ? parseInt(url.searchParams.get("categoryId")!)
@@ -26,7 +26,29 @@ export async function GET(req: NextRequest) {
     };
 
     const tickets = await service.getAllTickets(params, context);
-    return NextResponse.json(tickets);
+
+    // Get unread counts for each ticket
+    const unreadCounts: { [key: number]: number } = {};
+    for (const ticket of tickets.data || []) {
+      try {
+        const unreadCount = await service.getUnreadMessageCount(
+          ticket.id,
+          context
+        );
+        unreadCounts[ticket.id] = unreadCount;
+      } catch (error) {
+        console.error(
+          `Error getting unread count for ticket ${ticket.id}:`,
+          error
+        );
+        unreadCounts[ticket.id] = 0;
+      }
+    }
+
+    return NextResponse.json({
+      ...tickets,
+      unreadCounts,
+    });
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Internal server error" },
@@ -52,4 +74,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

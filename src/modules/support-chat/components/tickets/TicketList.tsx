@@ -10,6 +10,7 @@ interface TicketListProps {
   selectedTicketId?: number | null;
   onSelectTicket: (ticket: any) => void;
   loading?: boolean;
+  unreadCounts?: { [key: number]: number };
 }
 
 export default function TicketList({
@@ -17,6 +18,7 @@ export default function TicketList({
   selectedTicketId,
   onSelectTicket,
   loading = false,
+  unreadCounts = {},
 }: TicketListProps) {
   if (loading) {
     return (
@@ -49,6 +51,7 @@ export default function TicketList({
           : "کاربر ناشناس";
 
         const lastMessageTime = ticket.lastActivityAt || ticket.createdAt;
+        const unreadCount = unreadCounts[ticket.id] || 0;
 
         return (
           <button
@@ -64,10 +67,22 @@ export default function TicketList({
                   <span className="text-xs text-gray-500 font-mono">
                     #{ticket.ticketNumber}
                   </span>
-                  <StatusBadge status={ticket.status} />
-                  <PriorityBadge priority={ticket.priority} />
+                  <StatusBadge status={ticket.status || "OPEN"} />
+                  <PriorityBadge priority={ticket.priority || "MEDIUM"} />
+                  {/* Unread count badge */}
+                  {unreadCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
                 </div>
-                <h4 className="font-semibold text-gray-900 truncate">
+                <h4
+                  className={`font-semibold truncate ${
+                    unreadCount > 0
+                      ? "text-gray-900 font-bold"
+                      : "text-gray-700"
+                  }`}
+                >
                   {ticket.subject}
                 </h4>
               </div>

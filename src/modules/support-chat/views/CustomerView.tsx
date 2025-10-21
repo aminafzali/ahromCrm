@@ -157,8 +157,8 @@ export default function CustomerView() {
                     <span className="text-xs font-mono text-gray-500 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded">
                       #{ticket.ticketNumber}
                     </span>
-                    <StatusBadge status={ticket.status} />
-                    <PriorityBadge priority={ticket.priority} />
+                    <StatusBadge status={ticket.status || "OPEN"} />
+                    <PriorityBadge priority={ticket.priority || "MEDIUM"} />
                   </div>
                   <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-1">
                     {ticket.subject}

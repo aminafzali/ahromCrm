@@ -137,7 +137,7 @@ export class SupportChatRepository extends BaseRepository<
     ticketId: number,
     status: string
   ): Promise<SupportTicket> {
-    const response = await apiClient.patch(
+    const response = await apiClient.post(
       `/support-chat/tickets/${ticketId}/status`,
       {
         status,

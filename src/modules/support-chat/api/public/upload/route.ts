@@ -2,6 +2,36 @@ import { mkdir, writeFile } from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import { join } from "path";
 
+// Helper function to determine user type from request
+function getUserInfoFromRequest(request: NextRequest, formData?: FormData) {
+  const cookieStore = request.cookies;
+
+  // Get guest info from cookies (for guest users)
+  const guestId = cookieStore.get("support_guest_id")?.value;
+
+  // For registered users, we need to get info from form data
+  // since we don't use cookies for workspace info
+  const workspaceUserId = formData?.get("workspaceUserId");
+  const workspaceId = formData?.get("workspaceId");
+
+  if (workspaceUserId && workspaceId) {
+    return {
+      type: "registered" as const,
+      workspaceUserId: parseInt(workspaceUserId.toString()),
+      workspaceId: parseInt(workspaceId.toString()),
+    };
+  } else if (guestId) {
+    return {
+      type: "guest" as const,
+      guestId: parseInt(guestId),
+    };
+  }
+
+  return {
+    type: "anonymous" as const,
+  };
+}
+
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
@@ -25,6 +55,38 @@ export async function POST(request: NextRequest) {
         { error: "File and ticketId are required" },
         { status: 400 }
       );
+    }
+
+    // Get current user info from request
+    const currentUser = getUserInfoFromRequest(request, formData);
+
+    // Get ticket to verify access
+    const ticket = await prisma.supportChatTicket.findUnique({
+      where: { id: parseInt(ticketId) },
+      include: {
+        workspaceUser: true,
+        guestUser: true,
+      },
+    });
+
+    if (!ticket) {
+      return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
+    }
+
+    // Verify user has access to this ticket
+    if (currentUser.type === "registered") {
+      if (ticket.workspaceUserId !== currentUser.workspaceUserId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      }
+    } else if (currentUser.type === "guest") {
+      if (ticket.guestUserId !== currentUser.guestId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      }
+    } else {
+      // Anonymous users can only access guest tickets
+      if (!ticket.guestUserId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      }
     }
 
     // Validate file size (max 10MB)
@@ -72,15 +134,6 @@ export async function POST(request: NextRequest) {
 
     // Create file URL
     const fileUrl = `/uploads/support-chat/${fileName}`;
-
-    // Resolve workspaceId from ticket to scope documents correctly
-    const ticket = await prisma.supportChatTicket.findUnique({
-      where: { id: parseInt(ticketId) },
-      select: { workspaceId: true },
-    });
-    if (!ticket) {
-      return NextResponse.json({ error: "Invalid ticketId" }, { status: 400 });
-    }
 
     const workspaceId = ticket.workspaceId;
 

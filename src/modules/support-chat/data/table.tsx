@@ -3,8 +3,8 @@ import DIcon from "@/@Client/Components/common/DIcon";
 import DateDisplay from "@/@Client/Components/DateTime/DateDisplay";
 import { Column } from "ndui-ahrom/dist/components/Table/Table";
 import Link from "next/link";
-import PriorityBadge from "../components/PriorityBadge";
-import StatusBadge from "../components/StatusBadge";
+import PriorityBadge from "../components/ui/PriorityBadge";
+import StatusBadge from "../components/ui/StatusBadge";
 
 export const columnsForAdmin: Column[] = [
   {
@@ -49,13 +49,13 @@ export const columnsForAdmin: Column[] = [
     name: "status",
     field: "status",
     label: "وضعیت",
-    render: (row) => <StatusBadge status={row.status} />,
+    render: (row) => <StatusBadge status={row.status || "OPEN"} />,
   },
   {
     name: "priority",
     field: "priority",
     label: "اولویت",
-    render: (row) => <PriorityBadge priority={row.priority} />,
+    render: (row) => <PriorityBadge priority={row.priority || "MEDIUM"} />,
   },
   {
     name: "assignedTo",
@@ -119,8 +119,8 @@ export const listItemRender = (row: any) => {
             <span className="text-xs text-gray-500 font-mono">
               #{row.ticketNumber}
             </span>
-            <StatusBadge status={row.status} />
-            <PriorityBadge priority={row.priority} />
+            <StatusBadge status={row.status || "OPEN"} />
+            <PriorityBadge priority={row.priority || "MEDIUM"} />
           </div>
           <h3 className="font-semibold">{row.subject}</h3>
           {row.description && (

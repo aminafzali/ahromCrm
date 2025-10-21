@@ -3,9 +3,9 @@
 import DIcon from "@/@Client/Components/common/DIcon";
 import DateDisplay from "@/@Client/Components/DateTime/DateDisplay";
 import React from "react";
-import PriorityBadge from "../../components/ui/PriorityBadge";
-import StatusBadge from "../../components/ui/StatusBadge";
 import { SupportTicketWithRelations } from "../../types";
+import PriorityBadge from "../ui/PriorityBadge";
+import StatusBadge from "../ui/StatusBadge";
 
 // Types
 interface TicketCardProps {
@@ -48,8 +48,8 @@ const TicketHeader: React.FC<{
         <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
           #{ticket.ticketNumber}
         </span>
-        <StatusBadge status={ticket.status} />
-        <PriorityBadge priority={ticket.priority} />
+        <StatusBadge status={ticket.status || "OPEN"} />
+        <PriorityBadge priority={ticket.priority || "MEDIUM"} />
       </div>
       <h3
         className={`font-semibold text-gray-900 dark:text-white line-clamp-2 ${

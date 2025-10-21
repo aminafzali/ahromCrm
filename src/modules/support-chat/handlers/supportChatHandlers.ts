@@ -6,6 +6,7 @@
 import { Server as IOServer, Socket } from "socket.io";
 import { ERROR_MESSAGES, SOCKET_EVENTS, SUCCESS_MESSAGES } from "../constants";
 import { SocketMiddleware } from "../middleware/socketMiddleware";
+import { RateLimitService } from "../services/RateLimitService";
 import { SupportChatService } from "../services/SupportChatService";
 import {
   logger,
@@ -84,6 +85,25 @@ export class SupportChatHandlers {
         }
       }
 
+      // Handle case where guest user becomes registered
+      if (
+        ticket &&
+        isRegistered &&
+        userInfo.workspaceUserId &&
+        userInfo.workspaceId &&
+        ticket.guestUserId &&
+        !ticket.workspaceUserId
+      ) {
+        // Update ticket to associate with registered user
+        await this.service.updateTicketUser(ticketId, {
+          workspaceUserId: userInfo.workspaceUserId,
+          workspaceId: userInfo.workspaceId,
+        });
+
+        // Refresh ticket info
+        ticket = await this.service.getTicketInfo(ticketId);
+      }
+
       if (!ticket) {
         logger.error("Ticket not found", { ticketId, userType, userId });
         SocketMiddleware.emitError(socket, ERROR_MESSAGES.TICKET_NOT_FOUND);
@@ -91,7 +111,23 @@ export class SupportChatHandlers {
       }
 
       // Validate user authorization
-      if (!this.service.validateUserAuthorization(userInfo, ticket)) {
+      const isAuthorized = this.service.validateUserAuthorization(
+        userInfo,
+        ticket
+      );
+      logger.info("Authorization check", {
+        ticketId,
+        userType,
+        userId,
+        isAuthorized,
+        ticketGuestUserId: ticket.guestUserId,
+        ticketWorkspaceUserId: ticket.workspaceUserId,
+        userGuestId: userInfo.guestId,
+        userWorkspaceUserId: userInfo.workspaceUserId,
+        socketId: socket.id,
+      });
+
+      if (!isAuthorized) {
         roomLogger.unauthorized(socket.id, ticketId);
         SocketMiddleware.emitError(socket, ERROR_MESSAGES.UNAUTHORIZED);
         return;
@@ -164,6 +200,26 @@ export class SupportChatHandlers {
       const userType = getUserType(userInfo);
       const userId = getUserId(userInfo);
 
+      // Check rate limiting
+      const rateLimitUserId = isRegisteredUser(userInfo)
+        ? `registered_${userInfo.workspaceUserId}`
+        : isGuest
+        ? `guest_${userInfo.guestId}`
+        : `anonymous_${socket.id}`;
+
+      if (!RateLimitService.canSendMessage(rateLimitUserId)) {
+        const status = RateLimitService.getRateLimitStatus(rateLimitUserId);
+        SocketMiddleware.emitError(
+          socket,
+          "Rate limit exceeded. Please wait before sending another message.",
+          {
+            remaining: status.remaining,
+            timeUntilReset: status.timeUntilReset,
+          }
+        );
+        return;
+      }
+
       logger.info("Support chat message received", {
         ticketId,
         userType,
@@ -194,6 +250,7 @@ export class SupportChatHandlers {
       const recipientsCount =
         this.io.sockets.adapter.rooms.get(roomKey)?.size || 0;
 
+      // Broadcast message to room
       this.io.to(roomKey).emit(SOCKET_EVENTS.MESSAGE_RECEIVED, savedMessage);
 
       messageLogger.sent(ticketId, savedMessage.id, recipientsCount);
@@ -307,12 +364,16 @@ export class SupportChatHandlers {
 
       // Broadcast edit to room
       const roomKey = generateRoomKey(ticketId);
-      this.io.to(roomKey).emit(SOCKET_EVENTS.MESSAGE_EDITED, {
+      const editData = {
         messageId: payload.messageId,
         body: this.service.sanitizeMessage(payload.newBody),
         isEdited: true,
         editCount: 1, // This should be fetched from DB in real implementation
-      });
+      };
+
+      // Emit both event names for compatibility
+      this.io.to(roomKey).emit(SOCKET_EVENTS.MESSAGE_EDITED, editData);
+      this.io.to(roomKey).emit("support-chat:message-edited", editData);
 
       logger.info("Message edited successfully", {
         messageId: payload.messageId,
@@ -360,11 +421,15 @@ export class SupportChatHandlers {
 
       // Broadcast delete to room
       const roomKey = generateRoomKey(ticketId);
-      this.io.to(roomKey).emit(SOCKET_EVENTS.MESSAGE_DELETED, {
+      const deleteData = {
         messageId: payload.messageId,
         isDeleted: true,
         deletedAt: new Date().toISOString(),
-      });
+      };
+
+      // Emit both event names for compatibility
+      this.io.to(roomKey).emit(SOCKET_EVENTS.MESSAGE_DELETED, deleteData);
+      this.io.to(roomKey).emit("support-chat:message-deleted", deleteData);
 
       logger.info("Message deleted successfully", {
         messageId: payload.messageId,
@@ -377,6 +442,121 @@ export class SupportChatHandlers {
         socketId: socket.id,
       });
       SocketMiddleware.emitError(socket, "Failed to delete message");
+    }
+  }
+
+  /**
+   * Handles support-chat:send-message event
+   */
+  async handleSendMessage(socket: Socket, payload: any): Promise<void> {
+    try {
+      const { ticketId, body, messageType = "TEXT" } = payload;
+
+      if (!ticketId || !body) {
+        SocketMiddleware.emitError(socket, "Invalid message data");
+        return;
+      }
+
+      // Get ticket info
+      const ticket = await this.service.getTicketById(ticketId);
+      if (!ticket) {
+        SocketMiddleware.emitError(socket, "Ticket not found");
+        return;
+      }
+
+      // Create message
+      const message = await this.service.createMessage({
+        ticketId,
+        body,
+        messageType,
+        isInternal: false,
+        isVisible: true,
+        workspaceUserId: ticket.workspaceUserId,
+        guestUserId: ticket.guestUserId,
+      });
+
+      // Broadcast to room
+      const roomKey = generateRoomKey(ticketId);
+      this.io.to(roomKey).emit(SOCKET_EVENTS.MESSAGE, message);
+
+      logger.info("Message sent via socket", {
+        ticketId,
+        messageId: message.id,
+        body: message.body,
+        socketId: socket.id,
+        roomKey,
+      });
+    } catch (error: any) {
+      logger.error("Error in send-message handler", {
+        error: error?.message,
+        stack: error?.stack,
+        socketId: socket.id,
+      });
+      SocketMiddleware.emitError(socket, "Failed to send message");
+    }
+  }
+
+  /**
+   * Handles user type change (guest to registered)
+   */
+  async handleUserTypeChange(socket: Socket, payload: any): Promise<void> {
+    try {
+      const validation = SocketMiddleware.validateSocketData(socket);
+      if (!validation.isValid) {
+        SocketMiddleware.emitError(socket, validation.error!);
+        return;
+      }
+
+      const userInfo = SocketMiddleware.getUserInfo(socket)!;
+      const ticketId = SocketMiddleware.getTicketId(socket);
+
+      if (!ticketId) {
+        SocketMiddleware.emitError(
+          socket,
+          "No ticket associated with this connection"
+        );
+        return;
+      }
+
+      // Check if user is now registered
+      if (
+        isRegisteredUser(userInfo) &&
+        userInfo.workspaceUserId &&
+        userInfo.workspaceId
+      ) {
+        const ticket = await this.service.getTicketInfo(ticketId);
+
+        if (ticket && ticket.guestUserId && !ticket.workspaceUserId) {
+          // Update ticket to associate with registered user
+          const success = await this.service.updateTicketUser(ticketId, {
+            workspaceUserId: userInfo.workspaceUserId,
+            workspaceId: userInfo.workspaceId,
+          });
+
+          if (success) {
+            // Notify all users in the room about the change
+            this.io
+              .to(`ticket_${ticketId}`)
+              .emit("support-chat:user-type-changed", {
+                ticketId,
+                newUserType: "registered",
+                workspaceUserId: userInfo.workspaceUserId,
+              });
+
+            logger.info("User type changed from guest to registered", {
+              ticketId,
+              workspaceUserId: userInfo.workspaceUserId,
+              socketId: socket.id,
+            });
+          }
+        }
+      }
+    } catch (error: any) {
+      logger.error("Error handling user type change", {
+        error: error?.message,
+        socketId: socket.id,
+      });
+      SocketMiddleware.emitError(socket, "Failed to update user type");
     }
   }
 

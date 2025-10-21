@@ -264,7 +264,7 @@ const StatusSection: React.FC<{
       </h3>
 
       <div className="flex items-center gap-2">
-        <StatusBadge status={ticket.status} />
+        <StatusBadge status={ticket.status || "OPEN"} />
         <Button
           onClick={() => onChangeStatus(ticket.status)}
           variant="ghost"
@@ -301,7 +301,7 @@ const TicketMeta: React.FC<{
 
       <div className="flex items-center justify-between">
         <span className="text-gray-500 dark:text-gray-400">اولویت</span>
-        <PriorityBadge priority={ticket.priority} />
+        <PriorityBadge priority={ticket.priority || "MEDIUM"} />
       </div>
 
       {ticket.category && (
@@ -356,8 +356,8 @@ const TicketDetailPanel: React.FC<TicketDetailPanelProps> = ({
             <span className="text-sm text-gray-500 dark:text-gray-400">
               #{ticket.ticketNumber}
             </span>
-            <StatusBadge status={ticket.status} />
-            <PriorityBadge priority={ticket.priority} />
+            <StatusBadge status={ticket.status || "OPEN"} />
+            <PriorityBadge priority={ticket.priority || "MEDIUM"} />
           </div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-2">
             {ticket.subject}

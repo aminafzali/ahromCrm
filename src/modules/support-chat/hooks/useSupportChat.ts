@@ -8,7 +8,7 @@
 import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { SUPPORT_SOCKET_EVENTS } from "../constants";
+import { SOCKET_EVENTS } from "../constants";
 import { SupportChatRepository } from "../repo/SupportChatRepository";
 import {
   SupportAssignPayload,
@@ -68,13 +68,13 @@ export function useSupportChat(): UseSupportChatReturn {
   // Join a support ticket room
   const joinRoom = useCallback((ticketId: number) => {
     console.log("📥 Joining support ticket:", ticketId);
-    socketRef.current?.emit(SUPPORT_SOCKET_EVENTS.JOIN, ticketId);
+    socketRef.current?.emit(SOCKET_EVENTS.JOIN, ticketId);
   }, []);
 
   // Leave a support ticket room
   const leaveRoom = useCallback((ticketId: number) => {
     console.log("📤 Leaving support ticket:", ticketId);
-    socketRef.current?.emit(SUPPORT_SOCKET_EVENTS.LEAVE, ticketId);
+    socketRef.current?.emit(SOCKET_EVENTS.LEAVE, ticketId);
   }, []);
 
   // Send message via Socket.IO (real-time)
@@ -84,24 +84,24 @@ export function useSupportChat(): UseSupportChatReturn {
       bodyLength: payload.body?.length,
       tempId: payload.tempId,
     });
-    socketRef.current?.emit(SUPPORT_SOCKET_EVENTS.MESSAGE, payload);
+    socketRef.current?.emit(SOCKET_EVENTS.MESSAGE, payload);
   }, []);
 
   // Edit message
   const editMessage = useCallback((payload: SupportMessageEditPayload) => {
     console.log("✏️ [useSupportChat] Editing message:", payload);
-    socketRef.current?.emit(SUPPORT_SOCKET_EVENTS.MESSAGE_EDIT, payload);
+    socketRef.current?.emit(SOCKET_EVENTS.MESSAGE_EDIT, payload);
   }, []);
 
   // Delete message
   const deleteMessage = useCallback((payload: SupportMessageDeletePayload) => {
     console.log("🗑️ [useSupportChat] Deleting message:", payload);
-    socketRef.current?.emit(SUPPORT_SOCKET_EVENTS.MESSAGE_DELETE, payload);
+    socketRef.current?.emit(SOCKET_EVENTS.MESSAGE_DELETE, payload);
   }, []);
 
   // Send typing indicator
   const sendTyping = useCallback((ticketId: number, isTyping: boolean) => {
-    socketRef.current?.emit(SUPPORT_SOCKET_EVENTS.TYPING, {
+    socketRef.current?.emit(SOCKET_EVENTS.TYPING, {
       ticketId,
       isTyping,
     });
@@ -114,9 +114,9 @@ export function useSupportChat(): UseSupportChatReturn {
         console.log("📨 [useSupportChat] Message received:", message);
         callback(message);
       };
-      socketRef.current?.on(SUPPORT_SOCKET_EVENTS.MESSAGE_RECEIVED, handler);
+      socketRef.current?.on(SOCKET_EVENTS.MESSAGE_RECEIVED, handler);
       return () => {
-        socketRef.current?.off(SUPPORT_SOCKET_EVENTS.MESSAGE_RECEIVED, handler);
+        socketRef.current?.off(SOCKET_EVENTS.MESSAGE_RECEIVED, handler);
       };
     },
     []
@@ -128,9 +128,9 @@ export function useSupportChat(): UseSupportChatReturn {
         console.log("✅ [useSupportChat] ACK received:", data);
         callback(data);
       };
-      socketRef.current?.on(SUPPORT_SOCKET_EVENTS.MESSAGE_ACK, handler);
+      socketRef.current?.on(SOCKET_EVENTS.MESSAGE_ACK, handler);
       return () => {
-        socketRef.current?.off(SUPPORT_SOCKET_EVENTS.MESSAGE_ACK, handler);
+        socketRef.current?.off(SOCKET_EVENTS.MESSAGE_ACK, handler);
       };
     },
     []
@@ -142,9 +142,9 @@ export function useSupportChat(): UseSupportChatReturn {
         console.log("⌨️ [useSupportChat] Typing received:", data);
         callback(data);
       };
-      socketRef.current?.on(SUPPORT_SOCKET_EVENTS.TYPING_RECEIVED, handler);
+      socketRef.current?.on(SOCKET_EVENTS.TYPING_RECEIVED, handler);
       return () => {
-        socketRef.current?.off(SUPPORT_SOCKET_EVENTS.TYPING_RECEIVED, handler);
+        socketRef.current?.off(SOCKET_EVENTS.TYPING_RECEIVED, handler);
       };
     },
     []
@@ -155,9 +155,9 @@ export function useSupportChat(): UseSupportChatReturn {
       console.log("✏️ [useSupportChat] Message edited:", data);
       callback(data);
     };
-    socketRef.current?.on(SUPPORT_SOCKET_EVENTS.MESSAGE_EDITED, handler);
+    socketRef.current?.on(SOCKET_EVENTS.MESSAGE_EDITED, handler);
     return () => {
-      socketRef.current?.off(SUPPORT_SOCKET_EVENTS.MESSAGE_EDITED, handler);
+      socketRef.current?.off(SOCKET_EVENTS.MESSAGE_EDITED, handler);
     };
   }, []);
 
@@ -166,9 +166,9 @@ export function useSupportChat(): UseSupportChatReturn {
       console.log("🗑️ [useSupportChat] Message deleted:", data);
       callback(data);
     };
-    socketRef.current?.on(SUPPORT_SOCKET_EVENTS.MESSAGE_DELETED, handler);
+    socketRef.current?.on(SOCKET_EVENTS.MESSAGE_DELETED, handler);
     return () => {
-      socketRef.current?.off(SUPPORT_SOCKET_EVENTS.MESSAGE_DELETED, handler);
+      socketRef.current?.off(SOCKET_EVENTS.MESSAGE_DELETED, handler);
     };
   }, []);
 
@@ -178,9 +178,9 @@ export function useSupportChat(): UseSupportChatReturn {
         console.log("🔄 [useSupportChat] Status changed:", data);
         callback(data);
       };
-      socketRef.current?.on(SUPPORT_SOCKET_EVENTS.STATUS_CHANGED, handler);
+      socketRef.current?.on(SOCKET_EVENTS.STATUS_CHANGED, handler);
       return () => {
-        socketRef.current?.off(SUPPORT_SOCKET_EVENTS.STATUS_CHANGED, handler);
+        socketRef.current?.off(SOCKET_EVENTS.STATUS_CHANGED, handler);
       };
     },
     []
@@ -192,9 +192,9 @@ export function useSupportChat(): UseSupportChatReturn {
         console.log("👤 [useSupportChat] Ticket assigned:", data);
         callback(data);
       };
-      socketRef.current?.on(SUPPORT_SOCKET_EVENTS.ASSIGNED, handler);
+      socketRef.current?.on(SOCKET_EVENTS.ASSIGNED, handler);
       return () => {
-        socketRef.current?.off(SUPPORT_SOCKET_EVENTS.ASSIGNED, handler);
+        socketRef.current?.off(SOCKET_EVENTS.ASSIGNED, handler);
       };
     },
     []
@@ -205,9 +205,37 @@ export function useSupportChat(): UseSupportChatReturn {
       console.error("❌ [useSupportChat] Error received:", error);
       callback(error);
     };
-    socketRef.current?.on(SUPPORT_SOCKET_EVENTS.ERROR, handler);
+    socketRef.current?.on(SOCKET_EVENTS.ERROR, handler);
     return () => {
-      socketRef.current?.off(SUPPORT_SOCKET_EVENTS.ERROR, handler);
+      socketRef.current?.off(SOCKET_EVENTS.ERROR, handler);
+    };
+  }, []);
+
+  // User online/offline status
+  const setUserOnline = useCallback((workspaceUserId: number) => {
+    console.log("🟢 [useSupportChat] Set user online:", workspaceUserId);
+    socketRef.current?.emit("support-chat:user-status", workspaceUserId);
+  }, []);
+
+  const onUserOnline = useCallback((callback: (data: any) => void) => {
+    const handler = (data: any) => {
+      console.log("🟢 [useSupportChat] User online:", data);
+      callback(data);
+    };
+    socketRef.current?.on("support-chat:user-online", handler);
+    return () => {
+      socketRef.current?.off("support-chat:user-online", handler);
+    };
+  }, []);
+
+  const onUserOffline = useCallback((callback: (data: any) => void) => {
+    const handler = (data: any) => {
+      console.log("⚫ [useSupportChat] User offline:", data);
+      callback(data);
+    };
+    socketRef.current?.on("support-chat:user-offline", handler);
+    return () => {
+      socketRef.current?.off("support-chat:user-offline", handler);
     };
   }, []);
 
@@ -239,11 +267,15 @@ export function useSupportChat(): UseSupportChatReturn {
     // Typing
     sendTyping,
 
+    // User status
+    setUserOnline,
+    onUserOnline,
+    onUserOffline,
+
     // Additional methods for compatibility
     joinTicket: joinRoom,
     leaveTicket: leaveRoom,
     sendMessageRealtime: sendMessage,
-    setUserOnline: () => {}, // Placeholder
     emitEditMessage: (ticketId: number, messageId: number, text: string) => {
       editMessage({ ticketId, messageId, newBody: text });
     },

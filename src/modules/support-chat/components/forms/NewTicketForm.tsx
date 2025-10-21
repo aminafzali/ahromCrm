@@ -4,7 +4,13 @@ import DIcon from "@/@Client/Components/common/DIcon";
 import Input2 from "@/@Client/Components/ui/Input2";
 import Select3 from "@/@Client/Components/ui/Select3";
 import { Button } from "ndui-ahrom";
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { SupportPriority } from "../../types";
 
 // Types
@@ -21,6 +27,14 @@ interface TicketFormData {
   priority: SupportPriority;
   categoryId?: number;
   attachments?: File[];
+}
+
+interface FormErrors {
+  subject?: string;
+  description?: string;
+  priority?: string;
+  attachments?: string;
+  general?: string;
 }
 
 interface Category {
@@ -50,43 +64,64 @@ const ALLOWED_FILE_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
-// Helper Functions
-const validateForm = (
-  data: TicketFormData
-): { isValid: boolean; errors: string[] } => {
-  const errors: string[] = [];
+// Validation functions
+const validateFile = (file: File): { isValid: boolean; error?: string } => {
+  if (file.size > MAX_FILE_SIZE) {
+    return {
+      isValid: false,
+      error: `فایل باید کمتر از ${Math.round(
+        MAX_FILE_SIZE / (1024 * 1024)
+      )} مگابایت باشد`,
+    };
+  }
+
+  if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+    return {
+      isValid: false,
+      error: "نوع فایل پشتیبانی نمی‌شود",
+    };
+  }
+
+  return { isValid: true };
+};
+
+const validateForm = (data: TicketFormData): FormErrors => {
+  const errors: FormErrors = {};
 
   if (!data.subject.trim()) {
-    errors.push("عنوان تیکت الزامی است");
-  } else if (data.subject.trim().length < 5) {
-    errors.push("عنوان تیکت باید حداقل 5 کاراکتر باشد");
+    errors.subject = "موضوع تیکت الزامی است";
+  } else if (data.subject.trim().length < 3) {
+    errors.subject = "موضوع باید حداقل 3 کاراکتر باشد";
+  } else if (data.subject.trim().length > 200) {
+    errors.subject = "موضوع نمی‌تواند بیش از 200 کاراکتر باشد";
   }
 
   if (!data.description.trim()) {
-    errors.push("توضیحات تیکت الزامی است");
+    errors.description = "توضیحات تیکت الزامی است";
   } else if (data.description.trim().length < 10) {
-    errors.push("توضیحات تیکت باید حداقل 10 کاراکتر باشد");
+    errors.description = "توضیحات باید حداقل 10 کاراکتر باشد";
+  } else if (data.description.trim().length > 2000) {
+    errors.description = "توضیحات نمی‌تواند بیش از 2000 کاراکتر باشد";
+  }
+
+  if (!data.priority) {
+    errors.priority = "اولویت تیکت الزامی است";
   }
 
   if (data.attachments && data.attachments.length > MAX_ATTACHMENTS) {
-    errors.push(`حداکثر ${MAX_ATTACHMENTS} فایل قابل آپلود است`);
+    errors.attachments = `حداکثر ${MAX_ATTACHMENTS} فایل قابل آپلود است`;
   }
 
-  if (data.attachments) {
-    for (const file of data.attachments) {
-      if (file.size > MAX_FILE_SIZE) {
-        errors.push(`فایل ${file.name} بیش از حد مجاز است (حداکثر 10MB)`);
-      }
-      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-        errors.push(`نوع فایل ${file.name} پشتیبانی نمی‌شود`);
-      }
-    }
-  }
+  return errors;
+};
 
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
+// Helper Functions
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
 // Sub-components
@@ -254,8 +289,10 @@ const NewTicketForm: React.FC<NewTicketFormProps> = ({
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMounted, setIsMounted] = useState(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Load categories
   useEffect(() => {
@@ -277,50 +314,82 @@ const NewTicketForm: React.FC<NewTicketFormProps> = ({
   const handleInputChange = useCallback(
     (field: keyof TicketFormData, value: any) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
-      // Clear errors when user starts typing
-      if (errors.length > 0) {
-        setErrors([]);
+      // Clear specific field error when user starts typing
+      if (errors[field]) {
+        setErrors((prev) => ({ ...prev, [field]: undefined }));
       }
     },
-    [errors.length]
+    [errors]
   );
 
   const handleFilesChange = useCallback(
     (files: File[]) => {
       setFormData((prev) => ({ ...prev, attachments: files }));
-      // Clear errors when user adds files
-      if (errors.length > 0) {
-        setErrors([]);
+      // Clear attachment errors when user adds files
+      if (errors.attachments) {
+        setErrors((prev) => ({ ...prev, attachments: undefined }));
       }
     },
-    [errors.length]
+    [errors.attachments]
   );
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
 
-      const validation = validateForm(formData);
-      if (!validation.isValid) {
-        setErrors(validation.errors);
+      if (!isMounted) return;
+
+      // Clear previous errors
+      setErrors({});
+
+      // Validate form
+      const validationErrors = validateForm(formData);
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
         return;
       }
 
       setIsSubmitting(true);
+
       try {
+        // Cancel any ongoing requests
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+
         // Upload files if any
         const uploadedFiles: any[] = [];
         if (formData.attachments && formData.attachments.length > 0) {
           for (const file of formData.attachments) {
-            const formData = new FormData();
-            formData.append("file", file);
-            // Note: This would need a proper upload endpoint
-            // const response = await fetch("/api/support-chat/upload", {
-            //   method: "POST",
-            //   body: formData,
-            // });
-            // const result = await response.json();
-            // uploadedFiles.push(result);
+            const validation = validateFile(file);
+            if (!validation.isValid) {
+              setErrors({ attachments: validation.error });
+              return;
+            }
+
+            const uploadFormData = new FormData();
+            uploadFormData.append("file", file);
+
+            try {
+              const response = await fetch("/api/support-chat/public/upload", {
+                method: "POST",
+                body: uploadFormData,
+                signal: abortControllerRef.current.signal,
+              });
+
+              if (!response.ok) {
+                throw new Error(`Upload failed: ${response.statusText}`);
+              }
+
+              const result = await response.json();
+              uploadedFiles.push(result);
+            } catch (error) {
+              if (error instanceof Error && error.name === "AbortError") {
+                return; // Request was cancelled
+              }
+              throw error;
+            }
           }
         }
 
@@ -339,6 +408,7 @@ const NewTicketForm: React.FC<NewTicketFormProps> = ({
             "Content-Type": "application/json",
           },
           body: JSON.stringify(ticketData),
+          signal: abortControllerRef.current.signal,
         });
 
         if (!response.ok) {
@@ -346,20 +416,44 @@ const NewTicketForm: React.FC<NewTicketFormProps> = ({
         }
 
         const ticket = await response.json();
-        onSubmit(ticket);
+
+        if (isMounted) {
+          onSubmit(ticket);
+        }
       } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return; // Request was cancelled
+        }
         console.error("Error creating ticket:", error);
-        setErrors(["خطا در ایجاد تیکت. لطفاً دوباره تلاش کنید."]);
+        if (isMounted) {
+          setErrors({
+            general: "خطا در ایجاد تیکت. لطفاً دوباره تلاش کنید.",
+          });
+        }
       } finally {
-        setIsSubmitting(false);
+        if (isMounted) {
+          setIsSubmitting(false);
+        }
       }
     },
-    [formData, onSubmit]
+    [formData, onSubmit, isMounted]
   );
 
-  const isFormValid =
-    formData.subject.trim().length >= 5 &&
-    formData.description.trim().length >= 10;
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      setIsMounted(false);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // Memoized form validation
+  const isFormValid = useMemo(() => {
+    const validationErrors = validateForm(formData);
+    return Object.keys(validationErrors).length === 0;
+  }, [formData]);
 
   return (
     <form
@@ -370,7 +464,7 @@ const NewTicketForm: React.FC<NewTicketFormProps> = ({
         <FormHeader onCancel={onCancel} />
 
         {/* Error Messages */}
-        {errors.length > 0 && (
+        {Object.keys(errors).length > 0 && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
             <div className="flex items-start gap-2">
               <DIcon
@@ -382,8 +476,8 @@ const NewTicketForm: React.FC<NewTicketFormProps> = ({
                   خطاهای زیر را برطرف کنید:
                 </h4>
                 <ul className="mt-2 text-sm text-red-700 dark:text-red-300 list-disc list-inside">
-                  {errors.map((error, index) => (
-                    <li key={index}>{error}</li>
+                  {Object.entries(errors).map(([field, error]) => (
+                    <li key={field}>{error}</li>
                   ))}
                 </ul>
               </div>
@@ -392,16 +486,19 @@ const NewTicketForm: React.FC<NewTicketFormProps> = ({
         )}
 
         {/* Subject */}
-        <Input2
-          name="subject"
-          label="عنوان تیکت"
-          value={formData.subject}
-          onChange={(e) => handleInputChange("subject", e.target.value)}
-          placeholder="موضوع تیکت خود را وارد کنید"
-          required
-          disabled={loading || isSubmitting}
-          className="w-full"
-        />
+        <div>
+          <Input2
+            name="subject"
+            label="عنوان تیکت"
+            value={formData.subject}
+            onChange={(e) => handleInputChange("subject", e.target.value)}
+            placeholder="موضوع تیکت خود را وارد کنید"
+            required
+            disabled={loading || isSubmitting}
+            className="w-full"
+            errorClassName={errors.subject ? "text-red-500" : ""}
+          />
+        </div>
 
         {/* Description */}
         <div>
@@ -415,27 +512,41 @@ const NewTicketForm: React.FC<NewTicketFormProps> = ({
             required
             disabled={loading || isSubmitting}
             rows={6}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed ${
+              errors.description
+                ? "border-red-300 dark:border-red-600"
+                : "border-gray-300 dark:border-slate-600"
+            }`}
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            {formData.description.length}/1000 کاراکتر
+          <p
+            className={`mt-1 text-xs ${
+              errors.description
+                ? "text-red-500"
+                : "text-gray-500 dark:text-gray-400"
+            }`}
+          >
+            {errors.description ||
+              `${formData.description.length}/1000 کاراکتر`}
           </p>
         </div>
 
         {/* Priority */}
-        <Select3
-          name="priority"
-          label="اولویت"
-          value={formData.priority}
-          onChange={(e) =>
-            handleInputChange("priority", e.target.value as SupportPriority)
-          }
-          options={PRIORITY_OPTIONS.map((option) => ({
-            value: option.value,
-            label: option.label,
-          }))}
-          disabled={loading || isSubmitting}
-        />
+        <div>
+          <Select3
+            name="priority"
+            label="اولویت"
+            value={formData.priority}
+            onChange={(e) =>
+              handleInputChange("priority", e.target.value as SupportPriority)
+            }
+            options={PRIORITY_OPTIONS.map((option) => ({
+              value: option.value,
+              label: option.label,
+            }))}
+            disabled={loading || isSubmitting}
+            onError={(error) => handleInputChange("priority", error)}
+          />
+        </div>
 
         {/* Category */}
         {categories.length > 0 && (
@@ -461,11 +572,16 @@ const NewTicketForm: React.FC<NewTicketFormProps> = ({
         )}
 
         {/* File Upload */}
-        <FileUpload
-          files={formData.attachments || []}
-          onFilesChange={handleFilesChange}
-          disabled={loading || isSubmitting}
-        />
+        <div>
+          <FileUpload
+            files={formData.attachments || []}
+            onFilesChange={handleFilesChange}
+            disabled={loading || isSubmitting}
+          />
+          {errors.attachments && (
+            <p className="mt-1 text-xs text-red-500">{errors.attachments}</p>
+          )}
+        </div>
       </div>
 
       <FormFooter
@@ -478,5 +594,18 @@ const NewTicketForm: React.FC<NewTicketFormProps> = ({
   );
 };
 
-export default NewTicketForm;
+// Memoized component for performance
+const MemoizedNewTicketForm = React.memo(
+  NewTicketForm,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.loading === nextProps.loading &&
+      prevProps.className === nextProps.className
+    );
+  }
+);
+
+MemoizedNewTicketForm.displayName = "NewTicketForm";
+
+export default MemoizedNewTicketForm;
 export type { NewTicketFormProps };

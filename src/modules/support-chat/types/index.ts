@@ -185,6 +185,11 @@ export interface UseSupportChatReturn {
   // Typing
   sendTyping: (ticketId: number, isTyping: boolean) => void;
 
+  // User status
+  setUserOnline: (workspaceUserId: number) => void;
+  onUserOnline: (callback: (data: any) => void) => () => void;
+  onUserOffline: (callback: (data: any) => void) => () => void;
+
   // Repository
   repo: any;
 
@@ -192,7 +197,6 @@ export interface UseSupportChatReturn {
   joinTicket: (ticketId: number) => void;
   leaveTicket: (ticketId: number) => void;
   sendMessageRealtime: (payload: SupportMessagePayload) => void;
-  setUserOnline: (status: number) => void;
   emitEditMessage: (ticketId: number, messageId: number, text: string) => void;
   emitDeleteMessage: (ticketId: number, messageId: number) => void;
 }

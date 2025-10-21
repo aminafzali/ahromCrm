@@ -2,6 +2,11 @@ import { AuthContext } from "@/@Server/Http/Controller/BaseController";
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
 import prisma from "@/lib/prisma";
+import {
+  canAccessSupportChat,
+  canAssignTickets,
+  canUpdateTicketStatus,
+} from "@/modules/support-chat/utils/permissions";
 import { SupportPriority, SupportTicketStatus } from "@prisma/client";
 import {
   connects,
@@ -10,11 +15,6 @@ import {
   relations,
   searchFields,
 } from "../data/fetch";
-import {
-  canAccessSupportChat,
-  canAssignTickets,
-  canUpdateTicketStatus,
-} from "@/modules/support-chat/utils/permissions";
 
 class Repository extends BaseRepository<any> {
   constructor() {
@@ -740,5 +740,87 @@ export class SupportChatServiceApi extends BaseService<any> {
     });
 
     return labels;
+  }
+
+  /**
+   * Get support agents
+   */
+  async getSupportAgents(context: AuthContext) {
+    const agents = await prisma.workspaceUser.findMany({
+      where: {
+        workspaceId: context.workspaceId!,
+        role: {
+          name: {
+            in: ["SUPPORT_AGENT", "ADMIN", "SUPER_ADMIN"],
+          },
+        },
+      },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        role: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        user: {
+          name: "asc",
+        },
+      },
+    });
+
+    return agents.map((agent) => ({
+      id: agent.id,
+      displayName: agent.displayName || agent.user.name || "کاربر ناشناس",
+      user: agent.user,
+      role: agent.role,
+    }));
+  }
+
+  /**
+   * Get unread message count for a ticket
+   */
+  async getUnreadMessageCount(
+    ticketId: number,
+    context: AuthContext
+  ): Promise<number> {
+    // Get the last time agent read messages for this ticket
+    const lastRead = await prisma.supportChatMessageRead.findFirst({
+      where: {
+        ticketId: ticketId,
+        workspaceUserId: context.workspaceUser?.id,
+      },
+      orderBy: {
+        readAt: "desc",
+      },
+    });
+
+    const lastReadTime = lastRead?.readAt || new Date(0);
+
+    // Count messages after last read time
+    const unreadCount = await prisma.supportChatMessage.count({
+      where: {
+        ticketId: ticketId,
+        createdAt: {
+          gt: lastReadTime,
+        },
+        // Only count messages from customers, not from agents
+        OR: [
+          { workspaceUser: { isNot: null } },
+          { guestUser: { isNot: null } },
+        ],
+        // Exclude internal messages
+        isInternal: false,
+        isVisible: true,
+      },
+    });
+
+    return unreadCount;
   }
 }

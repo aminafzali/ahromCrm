@@ -1,7 +1,7 @@
 "use client";
 
 import { useWorkspace } from "@/@Client/context/WorkspaceProvider";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
 const STORAGE_KEYS = {
@@ -14,12 +14,29 @@ export interface PublicMessage {
   body: string;
   isInternal?: boolean;
   createdAt: string;
-  sender?: { name?: string };
+  sender?: {
+    name?: string;
+    type?: "registered" | "guest" | "support";
+    workspaceUserId?: number;
+    guestId?: number;
+  };
   status?: "sending" | "sent" | "delivered" | "failed";
   replyToId?: number;
   replySnapshot?: string;
   isEdited?: boolean;
   isDeleted?: boolean;
+}
+
+// Helper function to validate sender object
+export function isValidSender(
+  sender: any
+): sender is NonNullable<PublicMessage["sender"]> {
+  return (
+    sender &&
+    typeof sender === "object" &&
+    typeof sender.type === "string" &&
+    ["registered", "guest", "support"].includes(sender.type)
+  );
 }
 
 export interface UseSupportPublicChatOptions {
@@ -32,8 +49,6 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
   const startEndpoint = opts.startEndpoint || "/api/support-chat/public/start";
   const [ticketId, setTicketId] = useState<number | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
-  const [workspaceUserId, setWorkspaceUserId] = useState<number | null>(null);
-  const [workspaceId, setWorkspaceId] = useState<number | null>(null);
   const [messages, setMessages] = useState<PublicMessage[]>([]);
   const [connected, setConnected] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -48,28 +63,148 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
   const pendingTempRef = useRef<Map<string, number>>(new Map());
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // load persisted ids
+  // Setup all socket event listeners in one place
+  const setupSocketEventListeners = useCallback((socket: Socket) => {
+    // Join confirmation handler
+    const joinedHandler = (data: any) => {
+      console.log("✅ [Support Chat] Successfully joined ticket room:", data);
+      setJoining(false);
+    };
+    socket.on("support-chat:joined", joinedHandler);
+
+    // Message handler
+    const messageHandler = (msg: any) => {
+      console.log("📨 [Support Chat] New message received:", msg);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        // replace temp if matches by body+createdAt proximity
+        if (typeof msg.id === "number") {
+          for (const [tempId, ts] of pendingTempRef.current.entries()) {
+            if (Date.now() - ts < 15000) {
+              const idx = prev.findIndex((m) => m.id === tempId);
+              if (idx !== -1) {
+                const clone = prev.slice();
+                clone[idx] = { ...msg, status: "delivered" };
+                pendingTempRef.current.delete(tempId);
+                return clone;
+              }
+            }
+          }
+        }
+        return [...prev, { ...msg, status: "delivered" }];
+      });
+    };
+    socket.on("support-chat:message-received", messageHandler);
+
+    // Typing handler
+    const typingHandler = (data: { isTyping: boolean; senderId?: string }) => {
+      console.log("⌨️ [Support Chat] Typing event:", data);
+      if (data.senderId && data.senderId !== "me") {
+        setOtherTyping(data.isTyping);
+      }
+    };
+    socket.on("support-chat:typing", typingHandler);
+
+    // Message status handler
+    const statusHandler = (data: { messageId: string; status: string }) => {
+      console.log("📊 [Support Chat] Message status:", data);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id.toString() === data.messageId
+            ? { ...msg, status: data.status as any }
+            : msg
+        )
+      );
+    };
+    socket.on("support-chat:message-status", statusHandler);
+
+    // Message edit handler
+    const editHandler = (data: {
+      messageId: number;
+      body: string;
+      isEdited: boolean;
+      editedAt: string;
+      editCount: number;
+    }) => {
+      console.log("✏️ [Support Chat] Message edited:", data);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === data.messageId
+            ? {
+                ...msg,
+                body: data.body,
+                isEdited: data.isEdited,
+                editedAt: data.editedAt,
+                editCount: data.editCount,
+              }
+            : msg
+        )
+      );
+    };
+    socket.on("support-chat:message-edited", editHandler);
+
+    // Message delete handler
+    const deleteHandler = (data: {
+      messageId: number;
+      isDeleted: boolean;
+      deletedAt: string;
+    }) => {
+      console.log("🗑️ [Support Chat] Message deleted:", data);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === data.messageId
+            ? { ...msg, isDeleted: data.isDeleted, body: "پیام حذف شده" }
+            : msg
+        )
+      );
+    };
+    socket.on("support-chat:message-deleted", deleteHandler);
+
+    // Return cleanup function
+    return () => {
+      socket.off("support-chat:joined", joinedHandler);
+      socket.off("support-chat:message-received", messageHandler);
+      socket.off("support-chat:typing", typingHandler);
+      socket.off("support-chat:message-status", statusHandler);
+      socket.off("support-chat:message-edited", editHandler);
+      socket.off("support-chat:message-deleted", deleteHandler);
+    };
+  }, []);
+
+  // load persisted guest and ticket ids (workspace info comes from WorkspaceProvider)
   useEffect(() => {
     const gid = localStorage.getItem(STORAGE_KEYS.guestId);
     const tid = localStorage.getItem(STORAGE_KEYS.ticketId);
-    const workspaceUserId = localStorage.getItem("workspaceUserId");
-    const workspaceId = localStorage.getItem("workspaceId");
 
     if (gid) setGuestId(gid);
     if (tid) setTicketId(Number(tid));
-    if (workspaceUserId) setWorkspaceUserId(Number(workspaceUserId));
-    if (workspaceId) setWorkspaceId(Number(workspaceId));
 
     // Log workspace info for debugging
-    if (workspaceUserId && workspaceId) {
-      console.log("🔍 [Support Chat] Found workspace info:", {
-        workspaceUserId,
-        workspaceId,
+    if (activeWorkspace) {
+      console.log("🔍 [Support Chat] Found workspace info from context:", {
+        workspaceUserId: activeWorkspace.id,
+        workspaceId: activeWorkspace.workspaceId,
         guestId: gid,
         ticketId: tid,
       });
     }
-  }, []);
+  }, []); // Remove activeWorkspace dependency to avoid race condition
+
+  // Handle workspace changes separately
+  useEffect(() => {
+    if (activeWorkspace) {
+      console.log(
+        "🔄 [Support Chat] Workspace changed, clearing guest session:",
+        {
+          workspaceUserId: activeWorkspace.id,
+          workspaceId: activeWorkspace.workspaceId,
+        }
+      );
+      // Clear guest session when user becomes registered
+      setGuestId(null);
+      localStorage.removeItem(STORAGE_KEYS.guestId);
+    }
+  }, [activeWorkspace]);
 
   // join ticket room
   const join = useCallback((id: number) => {
@@ -111,9 +246,9 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
   const connect = useCallback(() => {
     if (socketRef.current) return;
 
-    // Get workspace info from context or state
-    const currentWorkspaceUserId = workspaceUserId || activeWorkspace?.id;
-    const currentWorkspaceId = workspaceId || activeWorkspace?.workspace?.id;
+    // Get workspace info from context
+    const currentWorkspaceUserId = activeWorkspace?.id;
+    const currentWorkspaceId = activeWorkspace?.workspaceId;
 
     console.log("🔌 [Support Chat] Connecting with state:", {
       guestId,
@@ -133,6 +268,10 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
       },
     });
     socketRef.current = socket;
+
+    // Set up all event listeners immediately
+    setupSocketEventListeners(socket);
+
     socket.on("connect", () => {
       console.log("✅ [Support Chat] Socket connected");
       setConnected(true);
@@ -158,7 +297,7 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
       console.log("❌ [Support Chat] Socket disconnected");
       setConnected(false);
     });
-  }, [guestId, ticketId, workspaceUserId, workspaceId, activeWorkspace, join]);
+  }, [guestId, ticketId, activeWorkspace, join]);
 
   const disconnect = useCallback(() => {
     socketRef.current?.disconnect();
@@ -178,52 +317,21 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
     };
   }, []);
 
-  // Debug: Listen for all socket events
-  useEffect(() => {
-    const debugHandler = (event: string, ...args: any[]) => {
-      console.log("🔍 [Support Chat] Socket event received:", event, args);
-    };
+  // Debug handler removed for better performance
 
-    if (socketRef.current) {
-      socketRef.current.onAny(debugHandler);
-      return () => {
-        socketRef.current?.offAny(debugHandler);
-      };
-    }
-  }, []);
+  // listen messages - improved with better logging
+  // This is handled in the main useEffect above, removing duplicate
 
-  // listen messages
-  useEffect(() => {
-    const handler = (msg: any) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        // replace temp if matches by body+createdAt proximity
-        if (typeof msg.id === "number") {
-          for (const [tempId, ts] of pendingTempRef.current.entries()) {
-            if (Date.now() - ts < 15000) {
-              const idx = prev.findIndex((m) => m.id === tempId);
-              if (idx !== -1) {
-                const clone = prev.slice();
-                clone[idx] = { ...msg, status: "delivered" };
-                pendingTempRef.current.delete(tempId);
-                return clone;
-              }
-            }
-          }
-        }
-        return [...prev, { ...msg, status: "delivered" }];
-      });
-    };
-    socketRef.current?.on("support-chat:message", handler);
-    return () => {
-      socketRef.current?.off("support-chat:message", handler);
-    };
-  }, []);
-
-  // listen typing indicators
+  // listen typing indicators - only show for others, not self
   useEffect(() => {
     const typingHandler = (data: { isTyping: boolean; senderId?: string }) => {
-      if (data.senderId !== guestId) {
+      console.log("⌨️ [Support Chat] Typing event:", data, "guestId:", guestId);
+      // Only show typing for others, not for current user
+      if (
+        data.senderId &&
+        data.senderId !== guestId &&
+        data.senderId !== "me"
+      ) {
         setOtherTyping(data.isTyping);
       }
     };
@@ -257,8 +365,8 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
       body: string;
       isEdited: boolean;
       editedAt: string;
-      editCount: number;
     }) => {
+      console.log("✏️ [Support Chat Widget] Message edited:", data);
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === data.messageId
@@ -266,7 +374,6 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
                 ...msg,
                 body: data.body,
                 isEdited: data.isEdited,
-                editCount: data.editCount,
               }
             : msg
         )
@@ -317,7 +424,9 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
     // Collect enhanced client information
     const clientInfo = {
       guestId: guestId || undefined,
-      workspaceSlug: opts.workspaceSlug,
+      workspaceUserId: activeWorkspace?.id || undefined,
+      workspaceId: activeWorkspace?.workspaceId || undefined,
+      workspaceSlug: opts.workspaceSlug || activeWorkspace?.workspace?.slug,
       userAgent:
         typeof navigator !== "undefined" ? navigator.userAgent : undefined,
       locale: typeof navigator !== "undefined" ? navigator.language : undefined,
@@ -373,20 +482,21 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
       console.log("🔄 [Support Chat] Joining new room:", data.ticketId);
       join(Number(data.ticketId));
     }
-    // Update workspace info if provided
-    if (data.workspaceUserId) {
-      setWorkspaceUserId(Number(data.workspaceUserId));
-    }
-    if (data.workspaceId) {
-      setWorkspaceId(Number(data.workspaceId));
-    }
+    // Workspace info comes from WorkspaceProvider, no need to update state
 
     return {
       ticketId: data.ticketId as number,
       guestId: data.guestId as string,
       guestInfo: data.guestInfo,
     };
-  }, [ticketId, guestId, startEndpoint, opts.workspaceSlug, join]);
+  }, [
+    ticketId,
+    guestId,
+    startEndpoint,
+    opts.workspaceSlug,
+    join,
+    activeWorkspace,
+  ]);
 
   // Rate limiting check
   const canSendMessage = useCallback(() => {
@@ -495,39 +605,6 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
     [ticketId, validateMessage, canSendMessage, stopTyping]
   );
 
-  // Edit message
-  const editMessage = useCallback(
-    async (messageId: number, newBody: string) => {
-      if (!ticketId || !newBody?.trim()) return;
-
-      // Validate message
-      const validationError = validateMessage(newBody);
-      if (validationError) {
-        throw new Error(validationError);
-      }
-
-      socketRef.current?.emit("support-chat:message-edit", {
-        ticketId,
-        messageId,
-        body: newBody,
-      });
-    },
-    [ticketId, validateMessage]
-  );
-
-  // Delete message
-  const deleteMessage = useCallback(
-    async (messageId: number) => {
-      if (!ticketId) return;
-
-      socketRef.current?.emit("support-chat:message-delete", {
-        ticketId,
-        messageId,
-      });
-    },
-    [ticketId]
-  );
-
   // Upload file
   const uploadFile = useCallback(
     async (file: File) => {
@@ -558,6 +635,12 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("ticketId", ticketId.toString());
+
+      // Add workspace info for registered users
+      if (activeWorkspace?.id && activeWorkspace?.workspaceId) {
+        formData.append("workspaceUserId", activeWorkspace.id.toString());
+        formData.append("workspaceId", activeWorkspace.workspaceId.toString());
+      }
 
       const response = await fetch("/api/support-chat/public/upload", {
         method: "POST",
@@ -607,6 +690,87 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
     }
   }, [ticketId, loadingMore, hasMoreMessages, currentPage]);
 
+  // Edit message
+  const editMessage = useCallback(
+    async (messageId: number, newBody: string) => {
+      if (!ticketId || !socketRef.current) return;
+
+      try {
+        console.log(
+          "✏️ [Support Chat Widget] Editing message:",
+          messageId,
+          newBody
+        );
+
+        // Send edit request via socket
+        socketRef.current.emit("support-chat:message-edit", {
+          ticketId,
+          messageId,
+          newBody,
+        });
+
+        // Optimistically update local state
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId
+              ? { ...msg, body: newBody, isEdited: true }
+              : msg
+          )
+        );
+      } catch (error) {
+        console.error("Error editing message:", error);
+        throw error;
+      }
+    },
+    [ticketId]
+  );
+
+  // Delete message
+  const deleteMessage = useCallback(
+    async (messageId: number) => {
+      if (!ticketId || !socketRef.current) return;
+
+      try {
+        console.log("🗑️ [Support Chat Widget] Deleting message:", messageId);
+
+        // Send delete request via socket
+        socketRef.current.emit("support-chat:message-delete", {
+          ticketId,
+          messageId,
+        });
+
+        // Optimistically update local state
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId
+              ? { ...msg, isDeleted: true, body: "پیام حذف شده" }
+              : msg
+          )
+        );
+      } catch (error) {
+        console.error("Error deleting message:", error);
+        throw error;
+      }
+    },
+    [ticketId]
+  );
+
+  // Determine current user type
+  const currentUser = useMemo(() => {
+    if (activeWorkspace?.id && activeWorkspace?.workspaceId) {
+      return {
+        type: "registered" as const,
+        id: activeWorkspace.id,
+      };
+    } else if (guestId) {
+      return {
+        type: "guest" as const,
+        id: guestId,
+      };
+    }
+    return undefined;
+  }, [activeWorkspace, guestId]);
+
   return {
     connect,
     disconnect,
@@ -631,5 +795,7 @@ export function useSupportPublicChat(opts: UseSupportPublicChatOptions = {}) {
     hasMoreMessages,
     loadingMore,
     loadMoreMessages,
+    // User info
+    currentUser,
   };
 }

@@ -17,7 +17,7 @@ export const SOCKET_EVENTS = {
 
   // Server to Client
   JOINED: "support-chat:joined",
-  MESSAGE_RECEIVED: "support-chat:message",
+  MESSAGE_RECEIVED: "support-chat:message-received",
   MESSAGE_ACK: "support-chat:ack",
   MESSAGE_EDITED: "support-chat:message-edited",
   MESSAGE_DELETED: "support-chat:message-deleted",
