@@ -13,6 +13,7 @@ export default function InternalChatPage() {
     connect,
     disconnect,
     joinRoom,
+    leaveRoom,
     sendMessageRealtime,
     onMessage,
     onAck,
@@ -122,7 +123,7 @@ export default function InternalChatPage() {
     return () => {
       if (cleanup) cleanup();
     };
-  }, [selectedRoom?.id, onMessage]);
+  }, [selectedRoom?.id]);
 
   // Listen for server ACK to replace temp messages reliably
   useEffect(() => {
@@ -148,7 +149,7 @@ export default function InternalChatPage() {
     return () => {
       if (off) off();
     };
-  }, [selectedRoom?.id, onAck]);
+  }, [selectedRoom?.id]);
 
   // Listen for read receipts and merge only if needed (also flip local flags up to lastReadMessageId)
   useEffect(() => {
@@ -191,14 +192,7 @@ export default function InternalChatPage() {
       }
     );
     return () => off?.();
-  }, [
-    selectedRoom?.id,
-    page,
-    composerMode,
-    onReadReceipt,
-    repo,
-    activeWorkspace?.id,
-  ]);
+  }, [selectedRoom?.id, page, composerMode, repo, activeWorkspace?.id]);
 
   // Listen for message edited/deleted realtime
   useEffect(() => {
@@ -230,7 +224,7 @@ export default function InternalChatPage() {
         offDeleted();
       }
     };
-  }, [selectedRoom?.id, onMessageEdited, onMessageDeleted]);
+  }, [selectedRoom?.id]);
 
   /**
    * Load admin workspace users and teams
@@ -354,6 +348,9 @@ export default function InternalChatPage() {
   const handleSelectUser = async (user: any) => {
     setLoading(true);
     try {
+      if (selectedRoom?.id) {
+        leaveRoom(selectedRoom.id);
+      }
       const room: any = await repo.getOrCreateDirectRoom(user.id);
       setSelectedRoom(room);
       setSelectedType("user");
@@ -375,6 +372,9 @@ export default function InternalChatPage() {
   const handleSelectTeam = async (team: any) => {
     setLoading(true);
     try {
+      if (selectedRoom?.id) {
+        leaveRoom(selectedRoom.id);
+      }
       const room: any = await repo.getOrCreateTeamRoom(team.id);
       setSelectedRoom(room);
       setSelectedType("team");

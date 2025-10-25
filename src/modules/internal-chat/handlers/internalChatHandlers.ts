@@ -3,7 +3,7 @@
  * Handles all internal chat related socket events
  */
 
-import { logger } from "@/modules/support-chat/utils/logger";
+import { logger } from "@/utils/socketUtils";
 import { Server as IOServer, Socket } from "socket.io";
 import { INTERNAL_SOCKET_EVENTS } from "../constants";
 import {
@@ -29,13 +29,20 @@ export class InternalChatHandlers {
    */
   async handleJoin(socket: Socket, roomId: number): Promise<void> {
     try {
+      console.log("🏠 [InternalChat] User joining room:", roomId);
+      console.log("🏠 [InternalChat] Socket ID:", socket.id);
+
       if (!roomId) {
+        console.log("❌ [InternalChat] Invalid room ID");
         this.emitError(socket, "INVALID_ROOM_ID", "roomId is required");
         return;
       }
 
       const currentUserId = this.onlineUsers.get(socket.id);
+      console.log("🏠 [InternalChat] Current user ID:", currentUserId);
+
       if (!currentUserId) {
+        console.log("❌ [InternalChat] Unknown user trying to join");
         this.emitError(socket, "UNAUTHORIZED", "Unknown user");
         return;
       }
@@ -95,7 +102,12 @@ export class InternalChatHandlers {
     payload: InternalMessagePayload
   ): Promise<void> {
     try {
+      console.log("💬 [InternalChat] New message received");
+      console.log("💬 [InternalChat] Socket ID:", socket.id);
+      console.log("💬 [InternalChat] Payload:", payload);
+
       if (!payload?.roomId || !payload?.body) {
+        console.log("❌ [InternalChat] Invalid message payload");
         this.emitError(
           socket,
           "INVALID_PAYLOAD",
@@ -374,7 +386,12 @@ export class InternalChatHandlers {
    * Handles socket disconnection
    */
   handleDisconnect(socket: Socket): void {
+    console.log("👋 [InternalChat] User disconnecting");
+    console.log("👋 [InternalChat] Socket ID:", socket.id);
+
     const userId = this.onlineUsers.get(socket.id);
+    console.log("👋 [InternalChat] User ID:", userId);
+
     if (userId) {
       this.onlineUsers.delete(socket.id);
       const userSocketSet = this.userSockets.get(userId);
@@ -387,11 +404,13 @@ export class InternalChatHandlers {
           socket.broadcast.emit(INTERNAL_SOCKET_EVENTS.USER_OFFLINE, {
             userId: userId,
           });
+          console.log("👋 [InternalChat] User went offline:", userId);
           logger.debug("Internal chat user offline", { userId });
         }
       }
     }
 
+    console.log("👋 [InternalChat] User disconnected successfully");
     logger.info("Internal chat user disconnected", {
       socketId: socket.id,
       userId,

@@ -5,10 +5,7 @@
 
 import { INTERNAL_SOCKET_EVENTS } from "@/modules/internal-chat/constants";
 import { InternalChatHandlers } from "@/modules/internal-chat/handlers/internalChatHandlers";
-import { SOCKET_EVENTS } from "@/modules/support-chat/constants";
-import { SupportChatHandlers } from "@/modules/support-chat/handlers/supportChatHandlers";
-import { SocketMiddleware } from "@/modules/support-chat/middleware/socketMiddleware";
-import { logger, socketLogger } from "@/modules/support-chat/utils/logger";
+import { logger, socketLogger, SocketMiddleware } from "@/utils/socketUtils";
 import type { NextApiRequest } from "next";
 import { Server as IOServer } from "socket.io";
 import type { NextApiResponseServerIO } from "./types";
@@ -50,20 +47,32 @@ export default async function handler(
     res.socket.server.io = io;
 
     // Initialize chat handlers
-    const supportChatHandlers = new SupportChatHandlers(io);
     const internalChatHandlers = new InternalChatHandlers(io);
 
-    // Apply authentication middleware
+    // Apply authentication and workspace verification middleware
     io.use(SocketMiddleware.authenticate);
+    io.use(SocketMiddleware.verifyWorkspaceAccess);
 
     // Handle connections
     io.on("connection", (socket) => {
+      console.log("✅ [Socket.IO] Socket connected successfully:", socket.id);
+      console.log("✅ [Socket.IO] Socket user:", (socket as any).user);
+      console.log(
+        "✅ [Socket.IO] Socket workspaceId:",
+        (socket as any).workspaceId
+      );
+      console.log(
+        "✅ [Socket.IO] Socket workspaceUserId:",
+        (socket as any).workspaceUserId
+      );
+      console.log("✅ [Socket.IO] Socket userRole:", (socket as any).userRole);
       socketLogger.connection(socket.id);
 
       // ==================== INTERNAL CHAT EVENTS ====================
 
       // Internal Chat Join
       socket.on(INTERNAL_SOCKET_EVENTS.JOIN, (roomId: number) => {
+        console.log("🏠 [Socket.IO] User trying to join room:", roomId);
         SocketMiddleware.updateActivity(socket);
         internalChatHandlers.handleJoin(socket, roomId);
       });
@@ -109,69 +118,10 @@ export default async function handler(
         SocketMiddleware.updateActivity(socket);
         internalChatHandlers.handleUserStatus(socket, userId);
       });
-
-      // ==================== SUPPORT CHAT EVENTS ====================
-
-      // Support Chat Join
-      socket.on(SOCKET_EVENTS.JOIN, (ticketId: number) => {
-        SocketMiddleware.updateActivity(socket);
-        supportChatHandlers.handleJoin(socket, ticketId);
-      });
-
-      // Support Chat Message
-      socket.on(SOCKET_EVENTS.MESSAGE, (payload: any) => {
-        SocketMiddleware.updateActivity(socket);
-        supportChatHandlers.handleMessage(socket, payload);
-      });
-
-      // Support Chat Send Message
-      socket.on("support-chat:send-message", (payload: any) => {
-        SocketMiddleware.updateActivity(socket);
-        supportChatHandlers.handleSendMessage(socket, payload);
-      });
-
-      // Support Chat Typing
-      socket.on(SOCKET_EVENTS.TYPING, (payload: any) => {
-        SocketMiddleware.updateActivity(socket);
-        supportChatHandlers.handleTyping(socket, payload);
-      });
-
-      // Support Chat Message Edit
-      socket.on(SOCKET_EVENTS.MESSAGE_EDIT, (payload: any) => {
-        SocketMiddleware.updateActivity(socket);
-        supportChatHandlers.handleMessageEdit(socket, payload);
-      });
-
-      // Support Chat Message Delete
-      socket.on(SOCKET_EVENTS.MESSAGE_DELETE, (payload: any) => {
-        SocketMiddleware.updateActivity(socket);
-        supportChatHandlers.handleMessageDelete(socket, payload);
-      });
-
-      // Support Chat Message Edit (alternative event name)
-      socket.on("support-chat:message-edit", (payload: any) => {
-        SocketMiddleware.updateActivity(socket);
-        supportChatHandlers.handleMessageEdit(socket, payload);
-      });
-
-      // Support Chat Message Delete (alternative event name)
-      socket.on("support-chat:message-delete", (payload: any) => {
-        SocketMiddleware.updateActivity(socket);
-        supportChatHandlers.handleMessageDelete(socket, payload);
-      });
-
-      // Support Chat User Type Change
-      socket.on("support-chat:user-type-change", (payload: any) => {
-        SocketMiddleware.updateActivity(socket);
-        supportChatHandlers.handleUserTypeChange(socket, payload);
-      });
-
-      // ==================== DISCONNECT ====================
-
       // Handle disconnection
       socket.on("disconnect", () => {
         internalChatHandlers.handleDisconnect(socket);
-        supportChatHandlers.handleDisconnect(socket);
+        // supportChatHandlers.handleDisconnect(socket); // Removed - support-chat module deleted
       });
 
       // Error handling

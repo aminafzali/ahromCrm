@@ -32,6 +32,10 @@ export function useInternalChat() {
 
     socket.on("connect", () => {
       console.log("✅ Internal Chat connected to Socket.IO");
+      // ensure presence is re-announced after (re)connect
+      if (activeWorkspace?.id) {
+        socket.emit("internal-chat:user-status", activeWorkspace.id);
+      }
       setConnected(true);
     });
 

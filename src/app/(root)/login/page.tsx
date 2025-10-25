@@ -1,4 +1,4 @@
-// src/app/(root)/login/page.tsx
+
 // src/app/(root)/login/page.tsx
 "use client";
 
@@ -44,7 +44,7 @@ export default function LoginPage() {
         } else if (result?.ok) {
           // Give NextAuth a moment to set the session cookie
           await new Promise((resolve) => setTimeout(resolve, 100));
-          const callbackUrl = searchParams.get("callbackUrl") || "/workspaces";
+          const callbackUrl = searchParams?.get("callbackUrl") || "/workspaces";
           router.push(callbackUrl);
           router.refresh();
         }
@@ -79,7 +79,7 @@ export default function LoginPage() {
     } else if (result?.ok) {
       // Give NextAuth a moment to set the session cookie
       await new Promise((resolve) => setTimeout(resolve, 100));
-      const callbackUrl = searchParams.get("callbackUrl") || "/workspaces";
+      const callbackUrl = searchParams?.get("callbackUrl") || "/workspaces";
       router.push(callbackUrl);
       router.refresh();
     }
