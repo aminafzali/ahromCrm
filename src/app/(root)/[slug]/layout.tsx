@@ -7,10 +7,7 @@ import BaseToolBar from "@/components/home/BaseToolBar";
 import Footer from "@/components/home/Footer";
 import dynamic from "next/dynamic";
 
-const SupportChatWidget = dynamic(
-  () => import("@/modules/support-chat/public/SupportChatWidget"),
-  { ssr: false }
-);
+// SupportChatWidget removed - support-chat module deleted
 
 export default function WorkspaceLayout({
   children,
@@ -25,7 +22,7 @@ export default function WorkspaceLayout({
         <BaseToolBar />
         <main className="flex-grow container mx-auto px-2">{children}</main>
         <Footer />
-        <SupportChatWidget workspaceSlug={params.slug} />
+        {/* SupportChatWidget removed */}
       </div>
     </WorkspaceProvider>
   );
