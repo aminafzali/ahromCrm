@@ -89,7 +89,7 @@ src/
 │
 ├── pages/
 │   └── api/
-│       ├── socket.ts         # Socket.IO Server
+│       ├── socket_io.ts      # Socket.IO Server
 │       └── types.ts          # Socket Types
 │
 └── lib/

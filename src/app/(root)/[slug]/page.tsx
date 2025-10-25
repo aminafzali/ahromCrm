@@ -63,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const pageTitle = `${workspace.name} | اهرم`;
   const pageDescription =
     workspace.description || `خدمات و محصولات ${workspace.name}`;
-  const pageUrl = `http://localhost:4010/${slug}`; // آدرس دامنه خود را جایگزین کنید
+  const pageUrl = `http://localhost:3000/${slug}`; // آدرس دامنه خود را جایگزین کنید
 
   return {
     title: pageTitle,
@@ -106,7 +106,7 @@ export default async function WorkspacePage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": "Organization", // یا "LocalBusiness" اگر کسب‌وکار محلی است
     name: workspace.name,
-    url: `http://localhost:4010/${slug}`, // آدرس دامنه خود را جایگزین کنید
+    url: `http://localhost:3000/${slug}`, // آدرس دامنه خود را جایگزین کنید
     // "logo": workspace.logoUrl, // آدرس لوگوی ورک‌اسپیس
     description: workspace.description || "",
   };
