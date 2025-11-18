@@ -1,6 +1,6 @@
 "use client";
 
-import RichTextEditor from "@/@Client/Components/ui/RichTextEditor2";
+import RichTextEditorTiptap from "@/@Client/Components/ui/RichTextEditorTiptap";
 import Select3 from "@/@Client/Components/ui/Select3";
 import { useKnowledgeCategory } from "@/modules/knowledge-categories/hooks/useKnowledgeCategory";
 import { Button, Input } from "ndui-ahrom";
@@ -84,7 +84,7 @@ export default function KnowledgeForm({
           <label className="label">
             <span className="label-text">محتوا</span>
           </label>
-          <RichTextEditor
+          <RichTextEditorTiptap
             value={content}
             onChange={setContent}
             placeholder="محتوای دانش را اینجا بنویسید..."

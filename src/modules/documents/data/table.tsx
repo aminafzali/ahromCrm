@@ -4,7 +4,7 @@ import DateDisplay from "@/@Client/Components/DateTime/DateDisplay";
 import { Column } from "ndui-ahrom/dist/components/Table/Table";
 import Link from "next/link";
 import React, { useState } from "react";
-import PdfViewer from "../components/PdfViewer";
+import FileViewer from "../components/FileViewer";
 
 export const columnsForAdmin: Column[] = [
   {
@@ -224,7 +224,7 @@ const ImageModal = ({
         </button>
       </div>
 
-      {/* Image */}
+      {/* Image/SVG */}
       <img
         src={src}
         alt={alt}
@@ -247,25 +247,66 @@ const ImageModal = ({
 const DocumentCard = ({ item }: { item: any }) => {
   const [showImage, setShowImage] = useState(false);
   const [showPdf, setShowPdf] = useState(false);
+  const [showFileViewer, setShowFileViewer] = useState(false);
+
   const type = (() => {
     const mt = (item.mimeType || "").toLowerCase();
+    const ext = (item.originalName || "").split(".").pop()?.toLowerCase() || "";
+    // Check SVG first (before image) - be more specific
+    if (
+      mt === "image/svg+xml" ||
+      mt === "image/svg" ||
+      ext === "svg" ||
+      item.originalName?.toLowerCase().endsWith(".svg")
+    )
+      return "svg";
     if (mt.startsWith("image/")) return "image";
-    if (mt.includes("pdf")) return "pdf";
-    if (mt.includes("excel") || mt.includes("spreadsheet")) return "excel";
+    if (mt.includes("pdf") || ext === "pdf") return "pdf";
+    if (mt.includes("excel") || mt.includes("spreadsheet") || ext === "xlsx")
+      return "excel";
     if (
       mt.includes("word") ||
       mt.includes("msword") ||
-      mt.includes("officedocument")
+      mt.includes("officedocument") ||
+      ext === "doc" ||
+      ext === "docx"
     )
       return "doc";
     if (mt.includes("video")) return "video";
-    if (mt.includes("text")) return "text";
+    if (mt.includes("text") || ext === "txt" || ext === "csv") return "text";
+    if (ext === "csv") return "csv";
     return "other";
   })();
+
+  // Check if file type is supported by FileViewer
+  // Note: DOC, DOCX, PDF, and SVG files are NOT supported for viewing
+  const isSupportedByFileViewer = () => {
+    const mt = (item.mimeType || "").toLowerCase();
+    const ext = (item.originalName || "").split(".").pop()?.toLowerCase() || "";
+    const isDoc = ext === "doc" || mt.includes("application/msword");
+    const isDocx = ext === "docx" || mt.includes("wordprocessingml");
+    const isPdf = ext === "pdf" || mt.includes("pdf");
+    const isSvg = ext === "svg" || mt.includes("image/svg+xml");
+    // Exclude DOC, DOCX, PDF, and SVG files - no viewing support
+    if (isDoc || isDocx || isPdf || isSvg) return false;
+
+    return (
+      mt.includes("text/plain") ||
+      ext === "txt" ||
+      mt.includes("spreadsheetml") ||
+      ext === "xlsx" ||
+      mt.includes("text/csv") ||
+      ext === "csv" ||
+      mt.includes("video/") ||
+      ["mp4", "webm", "ogg", "mov"].includes(ext)
+    );
+  };
 
   const squareBg =
     type === "image"
       ? "bg-slate-200"
+      : type === "svg"
+      ? "bg-purple-400"
       : type === "pdf"
       ? "bg-red-500"
       : type === "excel"
@@ -279,6 +320,8 @@ const DocumentCard = ({ item }: { item: any }) => {
   const icon =
     type === "image"
       ? "fa-image"
+      : type === "svg"
+      ? "fa-file-code"
       : type === "pdf"
       ? "fa-file-pdf"
       : type === "excel"
@@ -302,6 +345,11 @@ const DocumentCard = ({ item }: { item: any }) => {
             src={item.url}
             alt={item.originalName}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              console.error("Image load error:", e);
+              // Fallback to icon if image fails to load
+              e.currentTarget.style.display = "none";
+            }}
           />
         ) : (
           <DIcon icon={icon} classCustom="text-white text-7xl md:text-8xl" />
@@ -314,14 +362,19 @@ const DocumentCard = ({ item }: { item: any }) => {
             مشاهده تمام صفحه
           </button>
         )}
-        {type === "pdf" && (
-          <button
-            className="absolute bottom-2 left-2 right-2 bg-black/50 text-white text-xs py-1 rounded-lg hover:bg-black/60 transition-colors"
-            onClick={() => setShowPdf(true)}
-          >
-            مشاهده فایل
-          </button>
-        )}
+        {/* PDF, DOCX, DOC, and SVG don't have view buttons - only download */}
+        {isSupportedByFileViewer() &&
+          type !== "pdf" &&
+          type !== "image" &&
+          type !== "svg" &&
+          type !== "doc" && (
+            <button
+              className="absolute bottom-2 left-2 right-2 bg-black/50 text-white text-xs py-1 rounded-lg hover:bg-black/60 transition-colors"
+              onClick={() => setShowFileViewer(true)}
+            >
+              مشاهده فایل
+            </button>
+          )}
       </div>
       <div className="p-3 flex flex-col gap-2 flex-grow">
         <div
@@ -354,7 +407,7 @@ const DocumentCard = ({ item }: { item: any }) => {
         </div>
       </div>
 
-      {showImage && (
+      {showImage && type === "image" && (
         <ImageModal
           src={item.url}
           alt={item.originalName}
@@ -362,8 +415,14 @@ const DocumentCard = ({ item }: { item: any }) => {
         />
       )}
 
-      {showPdf && (
-        <PdfViewer url={item.url} onClose={() => setShowPdf(false)} />
+      {/* PDF and DOCX viewers removed - only download available */}
+      {showFileViewer && (
+        <FileViewer
+          url={item.url}
+          mimeType={item.mimeType || ""}
+          fileName={item.originalName || "فایل"}
+          onClose={() => setShowFileViewer(false)}
+        />
       )}
     </div>
   );

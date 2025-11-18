@@ -2,12 +2,10 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 // import { useChat } from "@/modules/chat/hooks/useChat"; // Removed: Chat module deprecated
-import CommentsThread from "@/modules/comments/components/Thread";
 // Documents temporarily disabled per request
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import KnowledgeACLForm from "../../components/KnowledgeACLForm";
 import { useKnowledge } from "../../hooks/useKnowledge";
 
 export default function KnowledgeViewPage({ id }: { id: number }) {
@@ -123,18 +121,18 @@ export default function KnowledgeViewPage({ id }: { id: number }) {
           </div>
         </div>
       </div>
-      {item?.id && (
+      {/* TODO: Add comments thread */}
+      {/* {item?.id && (
         <div className="mt-8">
           <CommentsThread entityType="Knowledge" entityId={Number(item.id)} />
         </div>
-      )}
+      )} */}
       {/* attachments disabled */}
-
       {/* documents modals disabled */}
       {/* TODO: Add internal-chat link for this knowledge */}
-      <div className="mt-8">
+      {/* <div className="mt-8">
         <KnowledgeACLForm id={id} initial={item} />
-      </div>
+      </div> */}
     </div>
   );
 }
