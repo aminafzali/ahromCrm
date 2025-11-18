@@ -2017,12 +2017,15 @@ model Project {
   endDate   DateTime?
 
   statusId Int
-  status   PMStatus @relation(fields: [statusId], references: [id])
+  status   PMStatus @relation("ProjectGlobalStatuses", fields: [statusId], references: [id])
 
   tasks Task[]
 
   assignedUsers WorkspaceUser[] @relation("AssignedWorkspaceUsersToProject")
   assignedTeams Team[]          @relation("AssignedTeamsToProject")
+
+  // وضعیت‌های خاص این پروژه (برای وظایف)
+  specificStatuses PMStatus[] @relation("ProjectSpecificStatuses")
 
   // Internal Chat
   chatRooms ChatRoom[]
@@ -2105,7 +2108,10 @@ model PMStatus {
   color                String              @default("#cccccc")
   order                Int                 @default(0)
   type                 PMStatusType
-  projects             Project[]
+  // وضعیت‌های خاص پروژه: اگر projectId null باشد = وضعیت کلی، اگر مشخص باشد = وضعیت خاص آن پروژه
+  projectId            Int?
+  project              Project?            @relation("ProjectSpecificStatuses", fields: [projectId], references: [id], onDelete: Cascade)
+  projects             Project[]           @relation("ProjectGlobalStatuses")
   tasks                Task[]
   TaskStatusHistoryNew TaskStatusHistory[] @relation(name: "newStatus")
   TaskStatusHistoryOld TaskStatusHistory[] @relation(name: "oldStatus")
@@ -2113,7 +2119,7 @@ model PMStatus {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([name, workspaceId, type])
+  @@unique([name, workspaceId, type, projectId])
 }
 
 model TaskStatusHistory {

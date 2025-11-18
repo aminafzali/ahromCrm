@@ -129,3 +129,11 @@ export const listItemRender = (item: ProjectWithRelations): React.ReactNode => (
     </div>
   </div>
 );
+
+export const columnsForSelect: Column[] = [
+  {
+    name: "name",
+    field: "name",
+    label: "نام پروژه",
+  },
+];

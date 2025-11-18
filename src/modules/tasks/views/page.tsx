@@ -1,6 +1,7 @@
 // // مسیر: src/modules/tasks/views/page.tsx
 "use client";
 
+import DIcon from "@/@Client/Components/common/DIcon";
 import DataTableWrapper5, {
   CustomFilterItem,
 } from "@/@Client/Components/wrappers/DataTableWrapper5";
@@ -101,7 +102,9 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
   const [tasks, setTasks] = useState<TaskWithRelations[]>([]);
   const [groupedTasks, setGroupedTasks] = useState<GroupedTasks>({});
 
-  const [taskStatuses, setTaskStatuses] = useState<PMStatus[]>([]);
+  const [taskStatuses, setTaskStatuses] = useState<
+    (PMStatus & { projectId?: number | null })[]
+  >([]);
   const [userProjects, setUserProjects] = useState<
     { label: string; value: number }[]
   >([]);
@@ -112,18 +115,26 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
   const [selectedProjectIds, setSelectedProjectIds] = useState<
     (string | number)[]
   >([]);
+  // نوع وضعیت نمایش: "global" = وضعیت کلی، "project" = وضعیت خاص پروژه
+  const [statusType, setStatusType] = useState<"global" | "project">("global");
+  const [allStatuses, setAllStatuses] = useState<
+    (PMStatus & { projectId?: number | null })[]
+  >([]);
 
   // ref برای جلوگیری از ارسال همزمان چند PATCH روی یک آیتم
   const pendingRef = useRef<Set<string>>(new Set());
   // ref برای debounce refetch کلی (در صورت نیاز)
   const refetchTimerRef = useRef<any>(null);
 
+  // بارگذاری همه وضعیت‌ها (کلی و خاص)
   useEffect(() => {
     getAllStatuses({ page: 1, limit: 200, type: "TASK" }).then((res) => {
-      const list = res.data || [];
+      const list = (res.data || []) as (PMStatus & {
+        projectId?: number | null;
+      })[];
       // مرتب‌سازی بر اساس فیلد order در مدل PMStatus
-      list.sort((a: PMStatus, b: PMStatus) => (a.order ?? 0) - (b.order ?? 0));
-      setTaskStatuses(list);
+      list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      setAllStatuses(list);
     });
     getAllProjects({ page: 1, limit: 1000, assignedTo: "me" }).then((res) => {
       const projectsForSelect = (res.data || []).map((p) => ({
@@ -133,6 +144,34 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
       setUserProjects(projectsForSelect);
     });
   }, []);
+
+  // فیلتر کردن وضعیت‌ها بر اساس نوع انتخاب شده و پروژه‌های انتخاب شده
+  useEffect(() => {
+    let filtered = allStatuses;
+
+    if (statusType === "global") {
+      // فقط وضعیت‌های کلی (projectId === null)
+      filtered = allStatuses.filter((s) => !s.projectId);
+    } else if (statusType === "project") {
+      // فقط وضعیت‌های خاص پروژه‌های انتخاب شده
+      if (selectedProjectIds.length > 0) {
+        filtered = allStatuses.filter(
+          (s) =>
+            s.projectId &&
+            selectedProjectIds.some(
+              (pid) => Number(s.projectId) === Number(pid)
+            )
+        );
+      } else {
+        // اگر پروژه‌ای انتخاب نشده، هیچ وضعیت خاصی نمایش نمی‌دهیم
+        filtered = [];
+      }
+    }
+
+    // مرتب‌سازی بر اساس order
+    filtered.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    setTaskStatuses(filtered);
+  }, [allStatuses, statusType, selectedProjectIds]);
 
   // گروه‌بندی تسک‌ها براساس statusId — هر بار tasks یا taskStatuses تغییر کرد
   useEffect(() => {
@@ -177,8 +216,32 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
     return filters;
   }, [selectedUsers, selectedTeams]);
 
-  // fetcher که DataTableWrapper4 از آن استفاده می‌کند
+  // fetcher که DataTableWrapper5 از آن استفاده می‌کند
   const fetchData = async (params: any) => {
+    // استخراج projectId_in از params برای ردیابی انتخاب پروژه
+    const projectFilter = params.projectId_in;
+    if (projectFilter) {
+      if (typeof projectFilter === "string") {
+        // اگر string است، ممکن است چند مقدار جدا شده با کاما باشد
+        const filtered = projectFilter
+          .split(",")
+          .filter((p: string) => p !== "all" && p !== null && p !== "");
+        setSelectedProjectIds(filtered);
+      } else if (Array.isArray(projectFilter)) {
+        // اگر array است، مستقیماً استفاده می‌کنیم
+        const filtered = projectFilter.filter(
+          (p: any) => p !== "all" && p !== null && p !== ""
+        );
+        setSelectedProjectIds(filtered);
+      } else if (projectFilter !== "all") {
+        setSelectedProjectIds([projectFilter]);
+      } else {
+        setSelectedProjectIds([]);
+      }
+    } else {
+      setSelectedProjectIds([]);
+    }
+
     const result = await getAll(params);
     if (result.data) {
       setTasks(result.data);
@@ -539,8 +602,41 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
     }
   };
 
+  // نمایش دکمه‌های نوع وضعیت فقط زمانی که پروژه انتخاب شده باشد
+  const showStatusTypeButtons = selectedProjectIds.length > 0;
+
   return (
     <div className="w-full">
+      {/* دکمه‌های انتخاب نوع وضعیت */}
+      {showStatusTypeButtons && (
+        <div className="mb-4 flex items-center gap-2 p-3 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            نمایش بر اساس:
+          </span>
+          <button
+            onClick={() => setStatusType("global")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center ${
+              statusType === "global"
+                ? "bg-primary text-white shadow-md"
+                : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+            }`}
+          >
+            <DIcon icon="fa-globe" className="ml-2" />
+            وضعیت کلی
+          </button>
+          <button
+            onClick={() => setStatusType("project")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center ${
+              statusType === "project"
+                ? "bg-primary text-white shadow-md"
+                : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+            }`}
+          >
+            <DIcon icon="fa-project-diagram" className="ml-2" />
+            وضعیت خاص پروژه
+          </button>
+        </div>
+      )}
       <DataTableWrapper5<TaskWithRelations>
         columns={columnsForAdmin}
         createUrl="/dashboard/tasks/create"
