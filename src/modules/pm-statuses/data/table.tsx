@@ -16,6 +16,18 @@ export const columns: Column[] = [
     render: (row) => (row.type === "PROJECT" ? "پروژه" : "وظیفه"),
   },
   {
+    name: "project",
+    label: "پروژه",
+    render: (row) =>
+      row.project ? (
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          {row.project.name} (خاص)
+        </span>
+      ) : (
+        <span className="text-sm text-gray-500 dark:text-gray-500">کلی</span>
+      ),
+  },
+  {
     name: "color",
     label: "رنگ",
     render: (row) => (

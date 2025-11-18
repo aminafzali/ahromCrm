@@ -3,13 +3,13 @@
  * Handles all internal chat related socket events
  */
 
-import { logger } from "@/modules/support-chat/utils/logger";
 import { Server as IOServer, Socket } from "socket.io";
 import { INTERNAL_SOCKET_EVENTS } from "../constants";
 import {
   InternalChatService,
   InternalMessagePayload,
 } from "../services/InternalChatService";
+import { logger } from "../utils/logger";
 
 export class InternalChatHandlers {
   private io: IOServer;

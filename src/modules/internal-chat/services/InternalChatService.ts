@@ -4,7 +4,7 @@
  */
 
 import prisma from "@/lib/prisma";
-import { logger } from "@/modules/support-chat/utils/logger";
+import { logger } from "../utils/logger";
 
 export interface InternalMessagePayload {
   roomId: number;

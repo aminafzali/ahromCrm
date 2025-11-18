@@ -5,7 +5,6 @@ import Select3 from "@/@Client/Components/ui/Select3";
 import { useDocument } from "@/modules/documents/hooks/useDocument";
 import { useKnowledge } from "@/modules/knowledge/hooks/useKnowledge";
 import { useProject } from "@/modules/projects/hooks/useProject";
-import { useSupportInfo } from "@/modules/support-info/hooks/useSupports";
 import { useTask } from "@/modules/tasks/hooks/useTask";
 import { Button } from "ndui-ahrom";
 import Link from "next/link";
@@ -18,7 +17,6 @@ const ENTITY_TYPES = [
   { value: "Project", label: "پروژه" },
   { value: "Knowledge", label: "دانش" },
   { value: "Document", label: "سند" },
-  { value: "Support", label: "پشتیبانی" },
 ];
 
 export default function CommentsCreatePage() {
@@ -29,7 +27,6 @@ export default function CommentsCreatePage() {
   const { getAll: getAllProjects } = useProject();
   const { getAll: getAllKnowledge } = useKnowledge();
   const { getAll: getAllDocuments } = useDocument();
-  const { getAll: getAllSupports } = useSupportInfo();
 
   const [entityType, setEntityType] = useState<string>("");
   const [entityId, setEntityId] = useState<number | null>(null);
@@ -66,11 +63,6 @@ export default function CommentsCreatePage() {
             value: d.id,
             label: d.originalName || `سند #${d.id}`,
           }))
-        );
-      } else if (entityType === "Support") {
-        res = await getAllSupports({ page: 1, limit: 100 });
-        setOptions(
-          (res?.data || []).map((s: any) => ({ value: s.id, label: s.title }))
         );
       }
     }

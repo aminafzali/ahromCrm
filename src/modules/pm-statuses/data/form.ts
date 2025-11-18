@@ -1,6 +1,7 @@
 // مسیر فایل: src/modules/pm-statuses/data/form.ts
 
 import { FormConfig } from "@/@Client/types/form";
+import { columnsForSelect as columnsForSelectProject } from "@/modules/projects/data/table";
 import {
   createPMStatusSchema,
   updatePMStatusSchema,
@@ -11,7 +12,7 @@ const statusTypes = [
   { label: "وظیفه", value: "TASK" },
 ];
 
-export const getCreateFormConfig = (): FormConfig => ({
+export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
   fields: [
     {
       name: "name",
@@ -31,12 +32,21 @@ export const getCreateFormConfig = (): FormConfig => ({
       label: "رنگ",
       type: "color",
       required: true,
+    },
+    {
+      name: "project",
+      label: "پروژه (اختیاری - برای وضعیت خاص)",
+      type: "dataTable",
+      data: data?.get("projects") || [],
+      columns: columnsForSelectProject,
+      placeholder:
+        "اگر خالی بماند، وضعیت کلی خواهد بود. در صورت انتخاب پروژه، این وضعیت فقط برای وظایف آن پروژه اعمال می‌شود.",
     },
   ],
   validation: createPMStatusSchema,
 });
 
-export const getUpdateFormConfig = (): FormConfig => ({
+export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
   fields: [
     {
       name: "name",
@@ -56,6 +66,15 @@ export const getUpdateFormConfig = (): FormConfig => ({
       label: "رنگ",
       type: "color",
       required: true,
+    },
+    {
+      name: "project",
+      label: "پروژه (اختیاری - برای وضعیت خاص)",
+      type: "dataTable",
+      data: data?.get("projects") || [],
+      columns: columnsForSelectProject,
+      placeholder:
+        "اگر خالی بماند، وضعیت کلی خواهد بود. در صورت انتخاب پروژه، این وضعیت فقط برای وظایف آن پروژه اعمال می‌شود.",
     },
   ],
   validation: updatePMStatusSchema,

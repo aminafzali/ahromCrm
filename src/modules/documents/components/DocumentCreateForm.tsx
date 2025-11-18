@@ -278,15 +278,24 @@ export default function DocumentCreateForm({
                   setFiles(fl);
                   if (fl && fl.length > 0) {
                     const mime = (fl[0] as any).type || "";
+                    const fileName = fl[0].name || "";
+                    const ext = fileName.split(".").pop()?.toLowerCase() || "";
                     let t = "other";
-                    if (mime.startsWith("image/")) t = "image";
-                    else if (mime === "application/pdf") t = "pdf";
-                    else if (
+                    if (mime === "image/svg+xml" || ext === "svg") {
+                      t = "svg";
+                    } else if (mime.startsWith("image/")) {
+                      t = "image";
+                    } else if (mime === "application/pdf" || ext === "pdf") {
+                      t = "pdf";
+                    } else if (
                       mime.includes("word") ||
                       mime.includes("msword") ||
-                      mime.includes("officedocument")
-                    )
+                      mime.includes("officedocument") ||
+                      ext === "doc" ||
+                      ext === "docx"
+                    ) {
                       t = "doc";
+                    }
                     setType(t);
                   } else {
                     setType("");
