@@ -73,10 +73,9 @@ export const columnsForAdmin: Column[] = [
     ),
   },
   {
-    name: "userGroups",
-    label: "گروه‌ها",
-    render: (row: any) =>
-      row.userGroups?.map((item: any) => item.name).join(", ") || "-",
+    name: "userGroup",
+    label: "گروه کاربری",
+    render: (row: any) => row.userGroup?.name || "-", // تغییر به one-to-one
   },
   // ===== پایان اصلاحیه کلیدی =====
   {

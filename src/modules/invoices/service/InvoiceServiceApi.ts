@@ -1,7 +1,15 @@
 import { AuthContext } from "@/@Server/Http/Controller/BaseController";
 import { BaseRepository } from "@/@Server/Http/Repository/BaseRepository";
 import { BaseService } from "@/@Server/Http/Service/BaseService";
+import prisma from "@/lib/prisma";
+import { InventoryServiceApi } from "@/modules/inventory/service/InventoryServiceApi";
 import { NotificationServiceApi } from "@/modules/notifications/service/NotificationServiceApi";
+import { SalesNotificationHelper } from "@/modules/sales-notifications/service/SalesNotificationHelper";
+import {
+  InvoicePaymentStatus,
+  InvoiceStatus,
+  StockMovementType,
+} from "@prisma/client";
 import { connect, relations, searchFileds } from "../data/fetch";
 import { createInvoiceSchema, updateInvoiceSchema } from "../validation/schema";
 
@@ -23,6 +31,8 @@ class Repository extends BaseRepository<any> {
 
 export class InvoiceServiceApi extends BaseService<any> {
   protected notifRepo: NotificationServiceApi;
+  protected inventoryService: InventoryServiceApi;
+  protected salesNotificationHelper: SalesNotificationHelper;
 
   constructor() {
     const repository = new Repository(); // یک نمونه از ریپازیتوری سفارشی خودمان می‌سازیم
@@ -36,17 +46,32 @@ export class InvoiceServiceApi extends BaseService<any> {
     this.connect = connect;
     this.repository = repository;
     this.notifRepo = new NotificationServiceApi();
+    this.inventoryService = new InventoryServiceApi();
+    this.salesNotificationHelper = new SalesNotificationHelper();
 
     // Initialize hooks
     this.afterCreate = this.handleAfterCreate;
-    // this.afterStatusChange = this.handleAfterStatusChange;
+    this.beforeUpdate = this.handleBeforeUpdate;
+    this.afterUpdate = this.handleAfterUpdate;
   }
 
   /**
-  //  * Handle after create hook
-  //  */
+   * Handle after create hook
+   */
   private async handleAfterCreate(entity: any): Promise<void> {
-    // واکشی فاکتور با اطلاعات workspaceUser
+    try {
+      await this.salesNotificationHelper.notifyInvoiceCreated(
+        entity.id,
+        entity.workspaceId
+      );
+    } catch (error) {
+      console.error(
+        `[InvoiceService] Failed to send notifications for invoice ${entity.id}:`,
+        error
+      );
+    }
+
+    // واکشی فاکتور با اطلاعات workspaceUser برای اعلان legacy (request-based)
     const invoice = await this.getById(entity.id, {
       include: {
         request: {
@@ -158,4 +183,191 @@ export class InvoiceServiceApi extends BaseService<any> {
   //     });
   //   }
   // }
+
+  /**
+   * Hook قبل از آپدیت: ذخیره وضعیت قبلی فاکتور برای مقایسه
+   */
+  private async handleBeforeUpdate(
+    id: number | string,
+    data: any
+  ): Promise<any> {
+    const numericId = typeof id === "string" ? parseInt(id, 10) : id;
+    const oldInvoice = await prisma.invoice.findUnique({
+      where: { id: numericId },
+      include: { items: true },
+    });
+
+    // ذخیره وضعیت قبلی در data برای استفاده در afterUpdate
+    if (oldInvoice) {
+      (data as any)._oldInvoiceStatus = oldInvoice.invoiceStatus;
+      (data as any)._oldInvoice = oldInvoice;
+    }
+
+    return data;
+  }
+
+  /**
+   * Hook بعد از آپدیت: بررسی تغییر وضعیت فاکتور و به‌روزرسانی موجودی
+   */
+  private async handleAfterUpdate(entity: any): Promise<void> {
+    const invoice = await this.getById(entity.id, {
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+        workspaceUser: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    // بررسی اینکه آیا وضعیت فاکتور به APPROVED تغییر کرده است
+    const oldStatus = (entity as any)._oldInvoiceStatus;
+    const newStatus = invoice.invoiceStatus;
+
+    if (
+      oldStatus !== InvoiceStatus.APPROVED &&
+      newStatus === InvoiceStatus.APPROVED
+    ) {
+      // فاکتور تایید شده است - باید موجودی را به‌روزرسانی کنیم
+      await this.updateInventoryForInvoice(invoice);
+    } else if (
+      oldStatus === InvoiceStatus.APPROVED &&
+      newStatus !== InvoiceStatus.APPROVED
+    ) {
+      // فاکتور از APPROVED خارج شده - باید موجودی را برگردانیم (معکوس کنیم)
+      await this.reverseInventoryForInvoice(invoice);
+    }
+
+    // ارسال اعلان پرداخت فاکتور
+    // نکته: paymentStatus جداست و باید آن را چک کنیم نه invoiceStatus
+    const oldPaymentStatus = (entity as any)._oldInvoice?.paymentStatus;
+    const newPaymentStatus = invoice.paymentStatus;
+
+    if (
+      oldPaymentStatus !== InvoicePaymentStatus.PAID &&
+      newPaymentStatus === InvoicePaymentStatus.PAID
+    ) {
+      try {
+        await this.salesNotificationHelper.notifyInvoicePaid(
+          invoice.id,
+          invoice.workspaceId
+        );
+      } catch (error) {
+        console.error(
+          `[InvoiceService] Failed to send payment notification for invoice ${invoice.id}:`,
+          error
+        );
+      }
+    }
+  }
+
+  /**
+   * به‌روزرسانی موجودی بر اساس فاکتور تایید شده
+   */
+  private async updateInventoryForInvoice(invoice: any): Promise<void> {
+    if (!invoice.items || invoice.items.length === 0) {
+      return;
+    }
+
+    // تعیین نوع حرکت بر اساس نوع فاکتور
+    let movementType: StockMovementType;
+    let quantityMultiplier: number;
+
+    if (invoice.type === "PURCHASE" || invoice.type === "RETURN_SALES") {
+      // فاکتور خرید یا مرجوعی فروش = ورود کالا
+      movementType = StockMovementType.PURCHASE;
+      quantityMultiplier = 1;
+    } else if (invoice.type === "SALES" || invoice.type === "RETURN_PURCHASE") {
+      // فاکتور فروش یا مرجوعی خرید = خروج کالا
+      movementType = StockMovementType.SALE;
+      quantityMultiplier = -1;
+    } else {
+      // سایر انواع فاکتور (PROFORMA) نیازی به به‌روزرسانی موجودی ندارند
+      return;
+    }
+
+    // پیدا کردن انبار پیش‌فرض برای این workspace
+    // در صورت نیاز می‌توانی از یک فیلد در Invoice یا تنظیمات workspace استفاده کنی
+    const defaultWarehouse = await prisma.warehouse.findFirst({
+      where: { workspaceId: invoice.workspaceId },
+    });
+
+    if (!defaultWarehouse) {
+      console.warn(
+        `[InvoiceService] No warehouse found for workspace ${invoice.workspaceId}. Skipping inventory update.`
+      );
+      return;
+    }
+
+    // به‌روزرسانی موجودی برای هر آیتم
+    for (const item of invoice.items) {
+      if (item.itemType === "PRODUCT" && item.productId) {
+        const quantity = item.quantity * quantityMultiplier;
+
+        await this.inventoryService.adjustStock(
+          {
+            workspaceId: invoice.workspaceId,
+            warehouseId: defaultWarehouse.id,
+            productId: item.productId,
+            quantity,
+            movementType,
+            invoiceId: invoice.id,
+            description: `فاکتور ${invoice.type} - شماره ${invoice.invoiceNumberName}`,
+          },
+          undefined
+        );
+      }
+    }
+  }
+
+  /**
+   * برگرداندن موجودی (معکوس کردن) وقتی فاکتور از APPROVED خارج می‌شود
+   */
+  private async reverseInventoryForInvoice(invoice: any): Promise<void> {
+    if (!invoice.items || invoice.items.length === 0) {
+      return;
+    }
+
+    const defaultWarehouse = await prisma.warehouse.findFirst({
+      where: { workspaceId: invoice.workspaceId },
+    });
+
+    if (!defaultWarehouse) {
+      return;
+    }
+
+    // معکوس کردن حرکت‌های قبلی
+    for (const item of invoice.items) {
+      if (item.itemType === "PRODUCT" && item.productId) {
+        // پیدا کردن حرکت‌های قبلی برای این فاکتور
+        const movements = await prisma.stockMovement.findMany({
+          where: {
+            invoiceId: invoice.id,
+            productId: item.productId,
+            warehouseId: defaultWarehouse.id,
+          },
+        });
+
+        // معکوس کردن هر حرکت
+        for (const movement of movements) {
+          await this.inventoryService.adjustStock(
+            {
+              workspaceId: invoice.workspaceId,
+              warehouseId: defaultWarehouse.id,
+              productId: item.productId,
+              quantity: -movement.quantity, // معکوس
+              movementType: movement.movementType,
+              description: `برگرداندن موجودی - فاکتور ${invoice.invoiceNumberName}`,
+            },
+            undefined
+          );
+        }
+      }
+    }
+  }
 }

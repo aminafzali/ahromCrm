@@ -16,6 +16,7 @@ export const createDocumentSchema = z.object({
   category: relatedEntity.optional().nullable(),
   entityType: z.string().optional().nullable(),
   entityId: z.coerce.number().int().positive().optional().nullable(),
+  task: relatedEntity.optional().nullable(),
 });
 
 export const updateDocumentSchema = z.object({
@@ -24,4 +25,5 @@ export const updateDocumentSchema = z.object({
   category: relatedEntity.optional().nullable(),
   entityType: z.string().optional().nullable(),
   entityId: z.coerce.number().int().positive().optional().nullable(),
+  task: relatedEntity.optional().nullable(),
 });

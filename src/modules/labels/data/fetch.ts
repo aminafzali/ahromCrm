@@ -21,7 +21,7 @@ export const include = {
 };
 
 export const searchFileds = ["name"];
-export const relations = ["workspaceUsers", "userGroups"];
+export const relations = ["workspaceUsers"];
 export const connects = [];
 
 //"workspaceUsers", "userGroups"

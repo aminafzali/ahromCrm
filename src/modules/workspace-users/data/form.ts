@@ -1,6 +1,7 @@
 // مسیر فایل: src/modules/workspace-users/data/form.ts
 
 import { FormConfig } from "@/@Client/types/form";
+import { IRAN_PROVINCES } from "@/lib/iran-regions";
 import { columnsForSelect as columnsForSelectLabel } from "@/modules/labels/data/table";
 import { columnsForSelect as columnsForSelectRole } from "@/modules/roles/data/table";
 import { columnsForSelect as columnsForSelectGroup } from "@/modules/user-groups/data/table";
@@ -27,7 +28,6 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
       label: "نام نمایشی (در این ورک‌اسپیس)",
       type: "text",
       placeholder: "نام نمایشی عضو را وارد کنید",
-      required: true,
       col: 2,
     },
     {
@@ -38,7 +38,6 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
       required: true,
       col: 2,
     },
-    // ویرگول اضافی در اینجا حذف شد که باعث بروز خطا شده بود
     {
       name: "labels",
       label: "برچسب‌ها (اختیاری)",
@@ -49,12 +48,12 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
       col: 2,
     },
     {
-      name: "userGroups",
-      label: "گروه‌ها (اختیاری)",
+      name: "userGroupId",
+      label: "گروه کاربری (اختیاری)",
       type: "dataTable",
-      data: data?.get("userGroups") || [],
+      data: data?.get("userGroup") ? [data.get("userGroup")] : [],
       columns: columnsForSelectGroup,
-      multiple: true,
+      multiple: false, // تغییر به one-to-one
       col: 2,
     },
     {
@@ -64,6 +63,77 @@ export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
       data: data?.get("roles") || [],
       columns: columnsForSelectRole,
       required: true,
+      col: 2,
+    },
+
+    // --- فیلدهای اطلاعات تکمیلی ---
+    {
+      name: "address",
+      label: "آدرس",
+      type: "textarea",
+      placeholder: "آدرس کامل مخاطب را وارد کنید",
+      col: 2,
+    },
+    {
+      name: "postalCode",
+      label: "کد پستی",
+      type: "text",
+      placeholder: "کد پستی ۱۰ رقمی",
+      col: 1,
+    },
+    {
+      name: "province",
+      label: "استان",
+      type: "select",
+      options: IRAN_PROVINCES.map((p) => ({
+        value: p.code,
+        label: p.name,
+      })),
+      col: 1,
+    },
+    {
+      name: "city",
+      label: "شهر",
+      type: "text",
+      placeholder: "نام شهر",
+      col: 1,
+    },
+    {
+      name: "economicCode",
+      label: "شماره اقتصادی",
+      type: "text",
+      col: 1,
+    },
+    {
+      name: "registrationNumber",
+      label: "شماره ثبت",
+      type: "text",
+      col: 1,
+    },
+    {
+      name: "nationalId",
+      label: "کد ملی / شناسه ملی",
+      type: "text",
+      col: 1,
+    },
+    {
+      name: "otherPhones",
+      label: "شماره تلفن‌های دیگر",
+      type: "textarea",
+      placeholder: "هر شماره را در یک خط وارد کنید",
+      col: 2,
+    },
+    {
+      name: "bankAccounts",
+      label: "شماره حساب / کارت‌ها (یادداشت سریع)",
+      type: "textarea",
+      placeholder: "هر حساب/کارت را در یک خط وارد کنید",
+      col: 2,
+    },
+    {
+      name: "description",
+      label: "توضیحات",
+      type: "textarea",
       col: 2,
     },
   ],
@@ -84,13 +154,12 @@ export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
       label: "نام نمایشی (در این ورک‌اسپیس)",
       type: "text",
       placeholder: "نام نمایشی عضو را وارد کنید",
-      required: true,
       col: 2,
     },
     {
       name: "role",
       label: " ( به مشتریان و کاربران عادی نقش کاربر عادی بدهید = User) نقش",
-      type: "dataTable", // از دیتا تیبل برای هماهنگی استفاده می‌کنیم
+      type: "dataTable",
       data: data?.get("roles") || [],
       columns: columnsForSelectRole,
       required: true,
@@ -106,12 +175,76 @@ export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
       col: 2,
     },
     {
-      name: "userGroups",
-      label: "گروه‌ها",
+      name: "userGroupId",
+      label: "گروه کاربری",
       type: "dataTable",
-      data: data?.get("userGroups") || [],
+      data: data?.get("userGroup") ? [data.get("userGroup")] : [],
       columns: columnsForSelectGroup,
-      multiple: true,
+      multiple: false, // تغییر به one-to-one
+      col: 2,
+    },
+    {
+      name: "address",
+      label: "آدرس",
+      type: "textarea",
+      col: 2,
+    },
+    {
+      name: "postalCode",
+      label: "کد پستی",
+      type: "text",
+      col: 1,
+    },
+    {
+      name: "province",
+      label: "استان",
+      type: "select",
+      options: IRAN_PROVINCES.map((p) => ({
+        value: p.code,
+        label: p.name,
+      })),
+      col: 1,
+    },
+    {
+      name: "city",
+      label: "شهر",
+      type: "text",
+      col: 1,
+    },
+    {
+      name: "economicCode",
+      label: "شماره اقتصادی",
+      type: "text",
+      col: 1,
+    },
+    {
+      name: "registrationNumber",
+      label: "شماره ثبت",
+      type: "text",
+      col: 1,
+    },
+    {
+      name: "nationalId",
+      label: "کد ملی / شناسه ملی",
+      type: "text",
+      col: 1,
+    },
+    {
+      name: "otherPhones",
+      label: "شماره تلفن‌های دیگر",
+      type: "textarea",
+      col: 2,
+    },
+    {
+      name: "bankAccounts",
+      label: "شماره حساب / کارت‌ها (یادداشت سریع)",
+      type: "textarea",
+      col: 2,
+    },
+    {
+      name: "description",
+      label: "توضیحات",
+      type: "textarea",
       col: 2,
     },
   ],

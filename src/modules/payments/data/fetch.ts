@@ -26,6 +26,26 @@ export const include = {
     },
   },
   paymentCategory: true,
+  customerBankAccount: {
+    select: {
+      id: true,
+      title: true,
+      bankName: true,
+      iban: true,
+      accountNumber: true,
+      cardNumber: true,
+    },
+  },
+  adminBankAccount: {
+    select: {
+      id: true,
+      title: true,
+      bankName: true,
+      iban: true,
+      accountNumber: true,
+      cardNumber: true,
+    },
+  },
 };
 
 export const searchFileds = [];

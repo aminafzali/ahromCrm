@@ -87,6 +87,46 @@ export default function DetailPage({ id, isAdmin }: PaymentDetailsViewProps) {
       ) : (
         "بدون فاکتور"
       ),
+    customerBankAccount: (value: any) =>
+      value ? (
+        <div className="p-3 bg-gray-50 rounded-lg">
+          <p className="font-semibold">{value.title}</p>
+          {value.bankName && (
+            <p className="text-sm text-gray-600">بانک: {value.bankName}</p>
+          )}
+          {value.cardNumber && (
+            <p className="text-sm text-gray-600">کارت: {value.cardNumber}</p>
+          )}
+          {value.accountNumber && (
+            <p className="text-sm text-gray-600">حساب: {value.accountNumber}</p>
+          )}
+          {value.iban && (
+            <p className="text-sm text-gray-600">شبا: {value.iban}</p>
+          )}
+        </div>
+      ) : (
+        "-"
+      ),
+    adminBankAccount: (value: any) =>
+      value ? (
+        <div className="p-3 bg-gray-50 rounded-lg">
+          <p className="font-semibold">{value.title}</p>
+          {value.bankName && (
+            <p className="text-sm text-gray-600">بانک: {value.bankName}</p>
+          )}
+          {value.cardNumber && (
+            <p className="text-sm text-gray-600">کارت: {value.cardNumber}</p>
+          )}
+          {value.accountNumber && (
+            <p className="text-sm text-gray-600">حساب: {value.accountNumber}</p>
+          )}
+          {value.iban && (
+            <p className="text-sm text-gray-600">شبا: {value.iban}</p>
+          )}
+        </div>
+      ) : (
+        "-"
+      ),
   };
 
   if (dataLoading) return <Loading />;

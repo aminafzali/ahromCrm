@@ -92,10 +92,21 @@ export class TaskServiceApi extends BaseService<any> {
       throw new Error("Invalid payload: expected object for creating Task");
     }
 
-    // پشتیبانی از statusId/projectId که ممکن است از فرانت ارسال شوند
-    if ("statusId" in data && !("status" in data)) {
-      data.status = { id: Number(data.statusId) };
+    // پشتیبانی از globalStatusId/statusId/projectStatusId که ممکن است از فرانت ارسال شوند
+    if ("globalStatusId" in data && !("globalStatus" in data)) {
+      data.globalStatus = { id: Number(data.globalStatusId) };
+      delete data.globalStatusId;
+    }
+    if ("statusId" in data && !("globalStatus" in data)) {
+      data.globalStatus = { id: Number(data.statusId) };
       delete data.statusId;
+    }
+    if ("projectStatusId" in data && !("projectStatus" in data)) {
+      const value = data.projectStatusId;
+      if (value !== null && value !== undefined) {
+        data.projectStatus = { id: Number(value) };
+      }
+      delete data.projectStatusId;
     }
     if ("projectId" in data && !("project" in data)) {
       data.project = { id: Number(data.projectId) };
@@ -119,20 +130,29 @@ export class TaskServiceApi extends BaseService<any> {
     const validatedData = this.validate(this.createSchema, data);
     console.debug("[TaskServiceApi.create] validatedData", { validatedData });
 
-    const { assignedUsers, assignedTeams, status, project, ...taskData } =
-      validatedData;
+    const {
+      assignedUsers,
+      assignedTeams,
+      globalStatus,
+      projectStatus,
+      project,
+      ...taskData
+    } = validatedData;
     const dateNormal = this.normalizeDates(taskData);
+
+    if (!globalStatus) {
+      throw new Error("globalStatus is required for creating a task");
+    }
 
     const finalData: any = {
       ...taskData,
       ...dateNormal,
       workspaceId: workspaceIdNumber,
-      ...(status && typeof status.id !== "undefined"
-        ? { statusId: Number(status.id) }
-        : {}),
+      statusId: Number(globalStatus.id),
       ...(project && typeof project.id !== "undefined"
         ? { projectId: Number(project.id) }
         : {}),
+      projectStatusId: projectStatus ? Number(projectStatus.id) : null,
       assignedUsers: assignedUsers
         ? { connect: assignedUsers.map((u: any) => ({ id: Number(u.id) })) }
         : undefined,
@@ -141,18 +161,21 @@ export class TaskServiceApi extends BaseService<any> {
         : undefined,
     };
 
+    if (finalData.projectStatusId === null) {
+      finalData.projectOrderInStatus = null;
+    }
+
     // اگر orderInStatus داده نشده، آن را بعد از بیشینه فعلی قرار بده
     try {
       if (
         (finalData.orderInStatus === undefined ||
           finalData.orderInStatus === null) &&
-        status &&
-        typeof status.id !== "undefined"
+        finalData.statusId
       ) {
         const maxItem = await prisma.task.findFirst({
           where: {
             workspaceId: workspaceIdNumber,
-            statusId: Number(status.id),
+            statusId: Number(finalData.statusId),
           },
           orderBy: { orderInStatus: "desc" },
           select: { orderInStatus: true },
@@ -163,13 +186,45 @@ export class TaskServiceApi extends BaseService<any> {
             : 0;
         finalData.orderInStatus = maxVal + 1;
         console.debug("[TaskServiceApi.create] computed orderInStatus", {
-          statusId: status.id,
+          statusId: finalData.statusId,
           computed: finalData.orderInStatus,
         });
       }
     } catch (e) {
       console.warn(
         "[TaskServiceApi.create] failed to compute orderInStatus",
+        e
+      );
+    }
+
+    // ترتیب مخصوص وضعیت پروژه
+    try {
+      if (
+        finalData.projectStatusId &&
+        (finalData.projectOrderInStatus === undefined ||
+          finalData.projectOrderInStatus === null)
+      ) {
+        const maxItem = await prisma.task.findFirst({
+          where: {
+            workspaceId: workspaceIdNumber,
+            projectStatusId: Number(finalData.projectStatusId),
+          },
+          orderBy: { projectOrderInStatus: "desc" },
+          select: { projectOrderInStatus: true },
+        });
+        const maxVal =
+          typeof maxItem?.projectOrderInStatus === "number"
+            ? maxItem.projectOrderInStatus
+            : 0;
+        finalData.projectOrderInStatus = maxVal + 1;
+        console.debug("[TaskServiceApi.create] computed projectOrderInStatus", {
+          projectStatusId: finalData.projectStatusId,
+          computed: finalData.projectOrderInStatus,
+        });
+      }
+    } catch (e) {
+      console.warn(
+        "[TaskServiceApi.create] failed to compute projectOrderInStatus",
         e
       );
     }
@@ -206,20 +261,46 @@ export class TaskServiceApi extends BaseService<any> {
     }
 
     // ---------- استخراج مستقیم از payload اصلی (پیش از validate) ----------
-    // پشتیبانی از statusId یا status: { id }
-    let incomingStatusId: number | undefined;
+    // پشتیبانی از globalStatusId/statusId یا globalStatus: { id }
+    let incomingGlobalStatusId: number | undefined;
     if (
+      "globalStatusId" in data &&
+      data.globalStatusId !== null &&
+      data.globalStatusId !== undefined
+    ) {
+      incomingGlobalStatusId = Number(data.globalStatusId);
+    } else if (
       "statusId" in data &&
       data.statusId !== null &&
       data.statusId !== undefined
     ) {
-      incomingStatusId = Number(data.statusId);
+      incomingGlobalStatusId = Number(data.statusId);
+    } else if (
+      data.globalStatus &&
+      typeof data.globalStatus === "object" &&
+      "id" in data.globalStatus
+    ) {
+      incomingGlobalStatusId = Number(data.globalStatus.id);
     } else if (
       data.status &&
       typeof data.status === "object" &&
       "id" in data.status
     ) {
-      incomingStatusId = Number(data.status.id);
+      incomingGlobalStatusId = Number(data.status.id);
+    }
+
+    // پشتیبانی از projectStatusId یا projectStatus
+    let incomingProjectStatusId: number | null | undefined;
+    if ("projectStatusId" in data) {
+      const raw = data.projectStatusId;
+      incomingProjectStatusId =
+        raw === null || raw === undefined ? null : Number(raw);
+    } else if (
+      data.projectStatus &&
+      typeof data.projectStatus === "object" &&
+      "id" in data.projectStatus
+    ) {
+      incomingProjectStatusId = Number(data.projectStatus.id);
     }
 
     // پشتیبانی از projectId یا project
@@ -240,8 +321,8 @@ export class TaskServiceApi extends BaseService<any> {
 
     // اگر statusId یا projectId موجود نبودند، incomingStatusId/incomingProjectId خواهند بود undefined
     console.debug(
-      "[TaskServiceApi.update] incomingStatusId / incomingProjectId (from raw payload)",
-      { incomingStatusId, incomingProjectId }
+      "[TaskServiceApi.update] incoming status/project ids (from raw payload)",
+      { incomingGlobalStatusId, incomingProjectStatusId, incomingProjectId }
     );
 
     // حال validate را اجرا کن (برای فیلدهای مجاز و دیگر تغییرها)
@@ -252,7 +333,8 @@ export class TaskServiceApi extends BaseService<any> {
     const {
       assignedUsers,
       assignedTeams,
-      status: validatedStatus,
+      globalStatus,
+      projectStatus,
       project: validatedProject,
       ...taskData
     } = validatedData;
@@ -262,12 +344,20 @@ export class TaskServiceApi extends BaseService<any> {
     const finalData: any = {
       ...taskData,
       ...dateNormal,
-      // اگر در payload اصلی statusId ارسال شده بود، استفاده کن — این تضمین می‌کند که status تغییر کند
-      ...(typeof incomingStatusId !== "undefined"
-        ? { statusId: incomingStatusId }
+      ...(typeof incomingGlobalStatusId !== "undefined"
+        ? { statusId: incomingGlobalStatusId }
+        : globalStatus
+        ? { statusId: Number(globalStatus.id) }
         : {}),
       ...(typeof incomingProjectId !== "undefined"
         ? { projectId: incomingProjectId }
+        : validatedProject && validatedProject.id
+        ? { projectId: validatedProject.id }
+        : {}),
+      ...(incomingProjectStatusId !== undefined
+        ? { projectStatusId: incomingProjectStatusId }
+        : projectStatus
+        ? { projectStatusId: Number(projectStatus.id) }
         : {}),
       // اگر validatedData شامل assignedUsers/assignedTeams بود، از آن استفاده کن
       assignedUsers: assignedUsers
@@ -286,6 +376,10 @@ export class TaskServiceApi extends BaseService<any> {
         : undefined,
     };
 
+    if (finalData.projectStatusId === null) {
+      finalData.projectOrderInStatus = null;
+    }
+
     console.debug(
       "[TaskServiceApi.update] pre-order computation finalData (before computing order if needed)",
       { finalData }
@@ -297,8 +391,6 @@ export class TaskServiceApi extends BaseService<any> {
       const effectiveStatusId =
         typeof finalData.statusId !== "undefined"
           ? Number(finalData.statusId)
-          : validatedStatus && validatedStatus.id
-          ? Number(validatedStatus.id)
           : undefined;
 
       if (
@@ -324,6 +416,44 @@ export class TaskServiceApi extends BaseService<any> {
     } catch (e) {
       console.warn(
         "[TaskServiceApi.update] failed to compute orderInStatus on update",
+        e
+      );
+    }
+
+    // اگر وضعیت پروژه تغییر کرد و ترتیبش ارسال نشده بود، محاسبه کن
+    try {
+      const effectiveProjectStatusId =
+        typeof finalData.projectStatusId !== "undefined"
+          ? finalData.projectStatusId
+          : undefined;
+
+      if (
+        effectiveProjectStatusId &&
+        (finalData.projectOrderInStatus === undefined ||
+          finalData.projectOrderInStatus === null)
+      ) {
+        const maxItem = await prisma.task.findFirst({
+          where: { projectStatusId: effectiveProjectStatusId },
+          orderBy: { projectOrderInStatus: "desc" },
+          select: { projectOrderInStatus: true },
+        });
+        const maxVal =
+          typeof maxItem?.projectOrderInStatus === "number"
+            ? maxItem.projectOrderInStatus
+            : 0;
+        finalData.projectOrderInStatus = maxVal + 1;
+        console.debug(
+          "[TaskServiceApi.update] computed projectOrderInStatus for moved task",
+          {
+            taskId: id,
+            effectiveProjectStatusId,
+            newOrder: finalData.projectOrderInStatus,
+          }
+        );
+      }
+    } catch (e) {
+      console.warn(
+        "[TaskServiceApi.update] failed to compute projectOrderInStatus on update",
         e
       );
     }

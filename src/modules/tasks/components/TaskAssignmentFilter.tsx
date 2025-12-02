@@ -86,7 +86,9 @@ const TaskAssignmentFilter: React.FC<TaskAssignmentFilterProps> = ({
 
   const [allTeams, setAllTeams] = useState<TeamWithRelations[]>([]);
   const [allUsers, setAllUsers] = useState<WorkspaceUserWithRelations[]>([]);
-  const [userProjects, setUserProjects] = useState<ProjectWithRelations[]>([]);
+  const [projectsWithAssignments, setProjectsWithAssignments] = useState<
+    ProjectWithRelations[]
+  >([]);
 
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null); // این خط درست است و نوع آن RefObject<HTMLButtonElement> است
@@ -111,8 +113,8 @@ const TaskAssignmentFilter: React.FC<TaskAssignmentFilterProps> = ({
       setAllUsers(res.data || [])
     );
 
-    getAllProjects({ page: 1, limit: 1000, assignedTo: "me" }).then((res) =>
-      setUserProjects(res.data || [])
+    getAllProjects({ page: 1, limit: 1000 }).then((res) =>
+      setProjectsWithAssignments(res.data || [])
     );
   }, []);
 
@@ -126,8 +128,10 @@ const TaskAssignmentFilter: React.FC<TaskAssignmentFilterProps> = ({
   const filteredUsers = useMemo(() => {
     const relevantProjects =
       selectedProjectIds.length > 0
-        ? userProjects.filter((p) => selectedProjectIds.includes(p.id))
-        : userProjects;
+        ? projectsWithAssignments.filter((p) =>
+            selectedProjectIds.map((id) => Number(id)).includes(Number(p.id))
+          )
+        : projectsWithAssignments;
 
     const userMap = new Map<number, WorkspaceUserWithRelations>();
     relevantProjects.forEach((project) => {
@@ -136,7 +140,7 @@ const TaskAssignmentFilter: React.FC<TaskAssignmentFilterProps> = ({
       });
     });
     return Array.from(userMap.values());
-  }, [selectedProjectIds, userProjects]);
+  }, [selectedProjectIds, projectsWithAssignments]);
 
   // ... (تمام توابع handle... بدون تغییر)
   const handleUserToggle = (user: WorkspaceUserWithRelations) => {

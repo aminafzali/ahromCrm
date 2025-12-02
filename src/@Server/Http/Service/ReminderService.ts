@@ -81,7 +81,7 @@ export class ReminderService extends BaseService<any> {
         const targets = await prisma.workspaceUser.findMany({
           where: {
             ...(groupIds.length > 0 && {
-              userGroups: { some: { id: { in: groupIds } } },
+              userGroupId: { in: groupIds },
             }),
             ...(labelIds.length > 0 && {
               labels: { some: { id: { in: labelIds } } },

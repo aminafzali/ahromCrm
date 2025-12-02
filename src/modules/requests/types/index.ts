@@ -21,7 +21,7 @@ type WorkspaceUserProfile = WorkspaceUser & {
   user: User;
   role?: Role; // نقش ممکن است همیشه include نشود
   labels?: Label[];
-  userGroups?: UserGroup[];
+  userGroup?: UserGroup | null; // تغییر به one-to-one
 };
 
 // اینترفیس جدول واسط را برای شامل شدن خود خدمت واقعی، گسترش می‌دهیم

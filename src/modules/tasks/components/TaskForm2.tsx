@@ -4,21 +4,26 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import Loading from "@/@Client/Components/common/Loading";
-import RichTextEditor from "@/@Client/Components/ui/RichTextEditor";
+import RichTextEditorTiptap from "@/@Client/Components/ui/RichTextEditorTiptap";
 import Select3 from "@/@Client/Components/ui/Select3";
 import StandaloneDatePicker from "@/@Client/Components/ui/StandaloneDatePicker2";
+import { DocumentWithRelations } from "@/modules/documents/types";
 import { usePMStatus } from "@/modules/pm-statuses/hooks/usePMStatus";
 import { useProject } from "@/modules/projects/hooks/useProject";
 import { TeamWithRelations } from "@/modules/teams/types";
 import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
 import { Button, Input } from "ndui-ahrom";
+import Link from "next/link";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createTaskSchema, updateTaskSchema } from "../validation/schema";
+import TaskAttachmentsSection from "./TaskAttachmentsSection";
 
 interface TaskFormProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any, attachments: DocumentWithRelations[]) => void;
   loading?: boolean;
   initialData?: any;
+  initialAttachments?: DocumentWithRelations[];
+  taskId?: number;
 }
 
 // helper: ساده برای مقایسه آرایه id ها
@@ -34,6 +39,8 @@ export default function TaskForm({
   onSubmit,
   loading = false,
   initialData,
+  initialAttachments,
+  taskId,
 }: TaskFormProps) {
   // --- state فرم ---
   const [title, setTitle] = useState(initialData?.title || "");
@@ -43,8 +50,11 @@ export default function TaskForm({
   const [projectId, setProjectId] = useState<number | undefined>(
     initialData?.project?.id
   );
-  const [statusId, setStatusId] = useState<number | undefined>(
+  const [globalStatusId, setGlobalStatusId] = useState<number | undefined>(
     initialData?.status?.id
+  );
+  const [projectStatusId, setProjectStatusId] = useState<number | undefined>(
+    initialData?.projectStatus?.id
   );
   const [priority, setPriority] = useState<string>(
     initialData?.priority || "medium"
@@ -67,9 +77,13 @@ export default function TaskForm({
   const [projectOptions, setProjectOptions] = useState<
     { label: string; value: number }[]
   >([]);
-  const [statusOptions, setStatusOptions] = useState<
+  const [globalStatusOptions, setGlobalStatusOptions] = useState<
     { label: string; value: number }[]
   >([]);
+  const [projectStatusOptions, setProjectStatusOptions] = useState<
+    { label: string; value: number }[]
+  >([]);
+  const [allStatusRecords, setAllStatusRecords] = useState<any[]>([]);
   const [assignableUsers, setAssignableUsers] = useState<
     WorkspaceUserWithRelations[]
   >([]);
@@ -77,6 +91,15 @@ export default function TaskForm({
     []
   );
   const [errors, setErrors] = useState<any>({});
+  const [attachments, setAttachments] = useState<DocumentWithRelations[]>(
+    initialAttachments ?? []
+  );
+
+  useEffect(() => {
+    if (initialAttachments !== undefined) {
+      setAttachments(initialAttachments);
+    }
+  }, [initialAttachments]);
 
   // --- هوک‌های واکشی ---
   const { getById: getProjectById, loading: loadingProjectDetails } =
@@ -115,19 +138,24 @@ export default function TaskForm({
 
     (async () => {
       try {
-        const res = await getAllStatuses({ page: 1, limit: 100, type: "TASK" });
+        const res = await getAllStatuses({
+          page: 1,
+          limit: 1000,
+          type: "TASK",
+        });
         if (!mounted) return;
-        const newStatuses = (res?.data || []).map((s: any) => ({
-          label: s.name,
-          value: s.id,
-        }));
-        setStatusOptions((prev) =>
+        const list = res?.data || [];
+        setAllStatusRecords(list);
+        const globals = list
+          .filter((s: any) => !s.projectId)
+          .map((s: any) => ({ label: s.name, value: s.id }));
+        setGlobalStatusOptions((prev) =>
           idsEqual(
             prev.map((x) => x.value),
-            newStatuses.map((x) => x.value)
+            globals.map((x) => x.value)
           )
             ? prev
-            : newStatuses
+            : globals
         );
       } catch (e) {
         console.error("getAllStatuses error", e);
@@ -195,6 +223,31 @@ export default function TaskForm({
     }
   }, []); // intentionally run once on mount for initialData
 
+  // بروزرسانی گزینه‌های وضعیت پروژه با توجه به پروژه انتخاب شده
+  useEffect(() => {
+    if (!projectId) {
+      setProjectStatusOptions([]);
+      setProjectStatusId(undefined);
+      return;
+    }
+    const projectSpecific = allStatusRecords.filter(
+      (s: any) => Number(s.projectId) === Number(projectId)
+    );
+    const options = projectSpecific.map((s: any) => ({
+      label: s.name,
+      value: s.id,
+    }));
+    setProjectStatusOptions(options);
+    if (
+      projectStatusId &&
+      !projectSpecific.some(
+        (s: any) => Number(s.id) === Number(projectStatusId)
+      )
+    ) {
+      setProjectStatusId(undefined);
+    }
+  }, [allStatusRecords, projectId, projectStatusId]);
+
   // --- مشتقات memoized ---
   const selectedUserObjects = useMemo(
     () => assignableUsers.filter((u) => assignedUserIds.includes(u.id)),
@@ -246,7 +299,8 @@ export default function TaskForm({
       title,
       description,
       project: projectId ? { id: projectId } : undefined,
-      status: statusId ? { id: statusId } : undefined,
+      globalStatus: globalStatusId ? { id: globalStatusId } : undefined,
+      projectStatus: projectStatusId ? { id: projectStatusId } : undefined,
       priority,
       startDate,
       endDate,
@@ -263,7 +317,7 @@ export default function TaskForm({
     }
 
     setErrors({});
-    onSubmit(validation.data);
+    onSubmit(validation.data, attachments);
   };
 
   // --- وقتی کاربر پروژه را انتخاب می‌کند: پروژه را ست کن و بلافاصله assignmentها را بارگذاری کن ---
@@ -293,33 +347,104 @@ export default function TaskForm({
           <label className="label">
             <span className="label-text">توضیحات</span>
           </label>
-          <RichTextEditor value={description} onChange={setDescription} />
+          <RichTextEditorTiptap
+            value={description}
+            onChange={setDescription}
+            placeholder="توضیحات وظیفه را بنویسید..."
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Select3
-            label="پروژه"
-            value={projectId}
-            onChange={handleProjectChange}
-            options={projectOptions}
-            required
-            name="project"
-          />
+          <div>
+            <Select3
+              label="پروژه"
+              value={projectId}
+              onChange={handleProjectChange}
+              options={projectOptions}
+              required
+              name="project"
+            />
+            {errors.project && (
+              <p className="text-sm text-red-500 mt-1">{errors.project[0]}</p>
+            )}
+          </div>
 
-          <Select3
-            label="وضعیت"
-            value={statusId}
-            onChange={(e: any) => {
-              if (e && e.target)
-                setStatusId(
-                  e.target.value ? Number(e.target.value) : undefined
-                );
-              else setStatusId(e ? Number(e) : undefined);
-            }}
-            options={statusOptions}
-            required
-            name="status"
-          />
+          <div>
+            <Select3
+              label="وضعیت کلی"
+              value={globalStatusId}
+              onChange={(e: any) => {
+                if (e && e.target)
+                  setGlobalStatusId(
+                    e.target.value ? Number(e.target.value) : undefined
+                  );
+                else setGlobalStatusId(e ? Number(e) : undefined);
+              }}
+              options={globalStatusOptions}
+              required
+              name="globalStatus"
+            />
+            {errors.globalStatus && (
+              <p className="text-sm text-red-500 mt-1">
+                {errors.globalStatus[0]}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-1">
+            <Select3
+              label="وضعیت خاص پروژه"
+              value={projectStatusId}
+              onChange={(e: any) => {
+                if (e && e.target)
+                  setProjectStatusId(
+                    e.target.value ? Number(e.target.value) : undefined
+                  );
+                else setProjectStatusId(e ? Number(e) : undefined);
+              }}
+              options={projectStatusOptions}
+              disabled={
+                !projectId ||
+                projectStatusOptions.length === 0 ||
+                loadingProjectDetails
+              }
+              required={projectStatusOptions.length > 0}
+              name="projectStatus"
+            />
+            <div className="text-xs text-gray-500 space-y-1">
+              {!projectId && (
+                <span>
+                  برای مشاهده وضعیت‌های خاص ابتدا پروژه را انتخاب کنید.
+                </span>
+              )}
+              {projectId && projectStatusOptions.length === 0 && (
+                <span>
+                  برای این پروژه وضعیت خاصی تعریف نشده است.{" "}
+                  <Link
+                    href={`/dashboard/pm-statuses?projectId=${projectId}`}
+                    className="text-primary hover:underline"
+                  >
+                    مدیریت وضعیت‌های خاص
+                  </Link>
+                </span>
+              )}
+              {projectId && projectStatusOptions.length > 0 && (
+                <Link
+                  href={`/dashboard/pm-statuses?projectId=${projectId}`}
+                  className="text-primary hover:underline"
+                >
+                  مدیریت وضعیت‌های خاص این پروژه
+                </Link>
+              )}
+            </div>
+            {errors.projectStatus && (
+              <p className="text-sm text-red-500 mt-1">
+                {errors.projectStatus[0]}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="p-4 border border-dashed rounded-lg space-y-4">
@@ -433,6 +558,12 @@ export default function TaskForm({
             name="priority"
           />
         </div>
+
+        <TaskAttachmentsSection
+          value={attachments}
+          onChange={setAttachments}
+          taskId={taskId}
+        />
       </div>
 
       <div className="flex justify-end mt-6">

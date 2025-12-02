@@ -1,5 +1,6 @@
 export const include = {
   status: true,
+  projectStatus: true,
   project: true,
   assignedUsers: {
     select: {
@@ -19,7 +20,19 @@ export const include = {
       name: true,
     },
   },
+  documents: {
+    select: {
+      id: true,
+      originalName: true,
+      mimeType: true,
+      size: true,
+      url: true,
+      entityType: true,
+      entityId: true,
+      taskId: true,
+    },
+  },
 };
 export const searchFileds = ["title"];
 export const relations = [];
-export const connects = ["project", "status"];
+export const connects = ["project", "status", "projectStatus", "documents"];

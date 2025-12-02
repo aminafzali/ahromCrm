@@ -22,6 +22,7 @@ interface Props {
     categoryId: string | number;
     entityType: string;
     entityId: string | number;
+    taskId: string | number;
   }>;
 }
 
@@ -167,7 +168,11 @@ export default function DocumentCreateForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.debug("[DOC_FORM] submit clicked");
+    e.stopPropagation();
+    console.log("[DOC_FORM] submit clicked", {
+      filesCount: files?.length || 0,
+      defaultValues,
+    });
     if (!files || files.length === 0) {
       console.warn("[DOC_FORM] no files selected");
       setUiError("لطفاً حداقل یک فایل انتخاب کنید");
@@ -177,23 +182,38 @@ export default function DocumentCreateForm({
     setSubmitting(true);
     try {
       const form = new FormData();
-      Array.from(files).forEach((f) => form.append("files", f));
+      Array.from(files).forEach((f) => {
+        form.append("files", f);
+        console.log("[DOC_FORM] appended file", {
+          name: f.name,
+          size: f.size,
+          type: (f as any).type,
+        });
+      });
       if (type) form.append("type", type);
       if (categoryId) form.append("categoryId", String(Number(categoryId)));
       if (entityType) form.append("entityType", entityType);
-      if (entityId) form.append("entityId", entityId);
+      if (entityId) form.append("entityId", String(entityId));
+      if (
+        defaultValues?.taskId !== undefined &&
+        defaultValues?.taskId !== null
+      ) {
+        form.append("taskId", String(defaultValues.taskId));
+        console.log("[DOC_FORM] appended taskId", defaultValues.taskId);
+      }
 
-      console.debug("[DOC_FORM] upload start", {
+      console.log("[DOC_FORM] upload start", {
         files: files.length,
         type,
         categoryId,
         entityType,
         entityId,
+        taskId: defaultValues?.taskId,
       });
       const wsId = activeWorkspace?.workspaceId
         ? String(activeWorkspace.workspaceId)
         : null;
-      console.debug(
+      console.log(
         "[DOC_FORM] resolved workspaceId from context:",
         wsId || "(none)"
       );
@@ -201,28 +221,60 @@ export default function DocumentCreateForm({
       const headers: Record<string, string> = {};
       if (wsId) headers["x-workspace-id"] = String(wsId);
 
+      console.log("[DOC_FORM] sending request to /api/documents/upload", {
+        headers,
+        hasFiles: files.length > 0,
+      });
       const res = await fetch(`/api/documents/upload`, {
         method: "POST",
         body: form,
         headers,
       });
+      console.log("[DOC_FORM] response received", {
+        ok: res.ok,
+        status: res.status,
+        statusText: res.statusText,
+      });
       if (!res.ok) {
         const msg = await res.text();
-        console.error("[DOC_FORM] upload failed", res.status, msg);
+        console.error("[DOC_FORM] upload failed", {
+          status: res.status,
+          statusText: res.statusText,
+          message: msg,
+        });
         const err = new Error("Upload failed");
         try {
           onError?.(msg || err);
-        } catch {}
+        } catch (e) {
+          console.error("[DOC_FORM] onError callback failed", e);
+        }
         throw err;
       }
       const data = await res.json();
-      console.debug("[DOC_FORM] upload success", data?.files?.length);
-      onCreated?.(data.files || []);
+      console.log("[DOC_FORM] upload success", {
+        filesCount: data?.files?.length || 0,
+        files: data?.files,
+        fullResponse: data,
+      });
+      if (data?.files && Array.isArray(data.files) && data.files.length > 0) {
+        console.log("[DOC_FORM] calling onCreated callback", {
+          filesToPass: data.files,
+        });
+        onCreated?.(data.files || []);
+      } else {
+        console.warn("[DOC_FORM] no files in response or empty array", data);
+      }
+      // فقط فایل‌ها را پاک می‌کنیم، بقیه فیلدها را نگه می‌داریم
       setFiles(null);
-      setType("image");
-      setCategoryId("");
-      setEntityType("");
-      setEntityId("");
+      // نوع فایل را فقط اگر خالی بود reset می‌کنیم
+      if (!type) setType("image");
+    } catch (error: any) {
+      console.error("[DOC_FORM] upload error", {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+      });
+      setUiError(error?.message || "خطا در آپلود فایل");
     } finally {
       setSubmitting(false);
     }

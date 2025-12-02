@@ -14,12 +14,26 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
 
     // Extract filters from searchParams
+    const filters: any = {};
+
+    // New format: relation IDs
+    const taskId = searchParams.get("taskId");
+    const knowledgeId = searchParams.get("knowledgeId");
+    const documentId = searchParams.get("documentId");
+    const projectId = searchParams.get("projectId");
+
+    if (taskId) filters.taskId = parseInt(taskId);
+    if (knowledgeId) filters.knowledgeId = parseInt(knowledgeId);
+    if (documentId) filters.documentId = parseInt(documentId);
+    if (projectId) filters.projectId = parseInt(projectId);
+
+    // Backward compatibility: old format
     const entityType = searchParams.get("entityType");
     const entityId = searchParams.get("entityId");
-
-    const filters: any = {};
-    if (entityType) filters.entityType = entityType;
-    if (entityId) filters.entityId = parseInt(entityId);
+    if (entityType && entityId) {
+      filters.entityType = entityType;
+      filters.entityId = parseInt(entityId);
+    }
 
     const commentService = new CommentServiceApi();
     const result = await commentService.getAll(

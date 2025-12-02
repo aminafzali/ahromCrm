@@ -5,6 +5,7 @@ import Loading from "@/@Client/Components/common/Loading";
 import Modal from "@/@Client/Components/ui/Modal";
 import { useActualService } from "@/modules/actual-services/hooks/useActualService";
 import { ActualService } from "@/modules/actual-services/types";
+import { useBankAccount } from "@/modules/bank-accounts/hooks/useBankAccount";
 import SelectInvoice from "@/modules/invoices/components/SelectInvoice";
 import { useInvoice } from "@/modules/invoices/hooks/useInvoice";
 import { useProduct } from "@/modules/products/hooks/useProduct";
@@ -17,6 +18,7 @@ import { InvoiceType } from "@prisma/client"; // <<-- 1. ایمپورت InvoiceT
 import { Button, Input } from "ndui-ahrom";
 import { useEffect, useId, useState } from "react";
 import { z } from "zod";
+import SelectBankAccount2 from "./SelectBankAccount2";
 import SelectRequest2 from "./SelectRequest2";
 import SelectUser2 from "./SelectUser2";
 import StandaloneDatePicker from "./StandaloneDatePicker";
@@ -220,6 +222,15 @@ export default function InvoiceForm({
   const [dueDate, setDueDate] = useState<string | null>(
     defaultValues?.dueDate || null
   );
+  const [description, setDescription] = useState<string | null>(
+    defaultValues?.description || null
+  );
+  const [customerBankAccount, setCustomerBankAccount] = useState<any | null>(
+    defaultValues?.customerBankAccount || null
+  );
+  const [adminBankAccount, setAdminBankAccount] = useState<any | null>(
+    defaultValues?.adminBankAccount || null
+  );
 
   const [error, setError] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string[]>>({});
@@ -234,10 +245,14 @@ export default function InvoiceForm({
   const { getAll: getAllServices, loading: loadingService } = useServiceType();
   const { getAll: getAllActualServices, loading: loadingActualService } =
     useActualService();
+  const { getAll: getAllBankAccounts, loading: loadingBankAccounts } =
+    useBankAccount();
 
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
   const [services, setServices] = useState<ServiceType[]>([]);
   const [actualServices, setActualServices] = useState<ActualService[]>([]);
+  const [customerBankAccounts, setCustomerBankAccounts] = useState<any[]>([]);
+  const [adminBankAccounts, setAdminBankAccounts] = useState<any[]>([]);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerMode, setPickerMode] = useState<"products" | "actuals">(
@@ -408,6 +423,52 @@ export default function InvoiceForm({
     setPickerTargetRow(null);
   };
 
+  /* ---------- load bank accounts when user changes ---------- */
+  useEffect(() => {
+    const loadBankAccounts = async () => {
+      if (!user?.id) {
+        setCustomerBankAccounts([]);
+        setAdminBankAccounts([]);
+        return;
+      }
+      try {
+        // Load customer bank accounts
+        const customerAccounts = await getAllBankAccounts({
+          page: 1,
+          limit: 100,
+          workspaceUserId: user.id,
+        });
+        setCustomerBankAccounts(customerAccounts.data || []);
+
+        // Load admin bank accounts (default for receive/pay)
+        const adminAccounts = await getAllBankAccounts({
+          page: 1,
+          limit: 100,
+          isDefaultForReceive: true,
+          isDefaultForPay: true,
+        });
+        setAdminBankAccounts(adminAccounts.data || []);
+
+        // Auto-select default accounts if available
+        if (!customerBankAccount && customerAccounts.data?.length > 0) {
+          const defaultCustomer = customerAccounts.data.find(
+            (acc: any) => acc.isDefaultForReceive || acc.isDefaultForPay
+          );
+          if (defaultCustomer) setCustomerBankAccount(defaultCustomer);
+        }
+        if (!adminBankAccount && adminAccounts.data?.length > 0) {
+          const defaultAdmin = adminAccounts.data.find(
+            (acc: any) => acc.isDefaultForReceive || acc.isDefaultForPay
+          );
+          if (defaultAdmin) setAdminBankAccount(defaultAdmin);
+        }
+      } catch (e) {
+        console.error("Failed to load bank accounts", e);
+      }
+    };
+    loadBankAccounts();
+  }, [user?.id]);
+
   /* ---------- request/user handlers (بدون تغییر) ---------- */
   const onSetRequest = (selectedItem: any) => {
     if (!selectedItem) return;
@@ -550,6 +611,9 @@ export default function InvoiceForm({
         referenceInvoiceId: referenceInvoice?.id,
         issueDate,
         dueDate,
+        description,
+        customerBankAccountId: customerBankAccount?.id || null,
+        adminBankAccountId: adminBankAccount?.id || null,
       };
       if (req) data.requestId = req.id;
       // نام فاکتور حالا از invoiceNumberName استفاده می‌کند
@@ -752,6 +816,112 @@ export default function InvoiceForm({
                 onChange={(p: any) => setDueDate(p ? p.iso : null)}
               />
             </div>
+          </div>
+
+          {/* حساب‌های بانکی */}
+          <div className="mt-4">
+            <label className="label">
+              <span className="label-text font-medium">حساب‌های بانکی</span>
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">
+                  <span className="label-text text-sm">حساب بانکی مشتری</span>
+                </label>
+                <div className="p-3 border rounded-lg bg-base-200/50 min-h-[70px]">
+                  {customerBankAccount ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">
+                          {customerBankAccount.title}
+                        </p>
+                        {customerBankAccount.cardNumber && (
+                          <p className="text-xs text-gray-500">
+                            کارت: {customerBankAccount.cardNumber}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="btn-circle btn-xs"
+                        onClick={() => setCustomerBankAccount(null)}
+                      >
+                        <DIcon icon="fa-times" cdi={false} />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <SelectBankAccount2
+                        onSelect={(acc) => setCustomerBankAccount(acc)}
+                        workspaceUserId={user?.id}
+                        buttonProps={{ size: "sm" }}
+                      />
+                      {user && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            window.open(
+                              `/dashboard/bank-accounts/create?workspaceUserId=${user.id}`,
+                              "_blank"
+                            );
+                          }}
+                        >
+                          <DIcon icon="fa-plus" cdi={false} /> ایجاد حساب جدید
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text text-sm">حساب بانکی ادمین</span>
+                </label>
+                <div className="p-3 border rounded-lg bg-base-200/50 min-h-[70px]">
+                  {adminBankAccount ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{adminBankAccount.title}</p>
+                        {adminBankAccount.cardNumber && (
+                          <p className="text-xs text-gray-500">
+                            کارت: {adminBankAccount.cardNumber}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="btn-circle btn-xs"
+                        onClick={() => setAdminBankAccount(null)}
+                      >
+                        <DIcon icon="fa-times" cdi={false} />
+                      </Button>
+                    </div>
+                  ) : (
+                    <SelectBankAccount2
+                      onSelect={(acc) => setAdminBankAccount(acc)}
+                      filterDefault={true}
+                      buttonProps={{ size: "sm" }}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* فیلد توضیحات */}
+          <div className="mt-4">
+            <label className="label">
+              <span className="label-text font-medium">توضیحات</span>
+            </label>
+            <textarea
+              className="textarea textarea-bordered w-full min-h-[100px]"
+              placeholder="توضیحات فاکتور (اختیاری)"
+              value={description || ""}
+              onChange={(e) => setDescription(e.target.value || null)}
+            />
           </div>
         </div>
       </div>

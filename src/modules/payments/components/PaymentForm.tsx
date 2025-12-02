@@ -4,12 +4,14 @@
 
 import DIcon from "@/@Client/Components/common/DIcon";
 import Input2 from "@/@Client/Components/ui/Input2";
+import { useBankAccount } from "@/modules/bank-accounts/hooks/useBankAccount";
+import SelectBankAccount2 from "@/modules/invoices/components/SelectBankAccount2";
 import { InvoiceWithRelations } from "@/modules/invoices/types";
 import PaymentCategorySelect2 from "@/modules/payment-categories/components/PaymentCategorySelect2";
 import { listItemRender } from "@/modules/workspace-users/data/table";
 import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
 import { Button } from "ndui-ahrom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPaymentSchema } from "../validation/schema";
 import SelectInvoice from "./SelectInvoice";
 import SelectUser2 from "./SelectUser2";
@@ -52,6 +54,12 @@ export default function PaymentForm({
     number | undefined
   >(defaultValues.paymentCategoryId || undefined);
   const [error, setError] = useState<string | null>(null);
+  const [customerBankAccount, setCustomerBankAccount] = useState<any | null>(
+    defaultValues.customerBankAccount || null
+  );
+  const [adminBankAccount, setAdminBankAccount] = useState<any | null>(
+    defaultValues.adminBankAccount || null
+  );
 
   // ===>>> ۱. State جدید برای نگهداری تاریخ پرداخت <<<===
   // تاریخ امروز به عنوان مقدار پیش‌فرض در نظر گرفته می‌شود
@@ -59,7 +67,84 @@ export default function PaymentForm({
     defaultValues.paidAt || new Date().toISOString()
   );
 
+  const { getAll: getAllBankAccounts } = useBankAccount();
+
+  // Load default bank accounts when user or invoice changes
+  useEffect(() => {
+    const loadDefaultBankAccounts = async () => {
+      const targetUser = invoice?.workspaceUser || user;
+      if (!targetUser?.id) {
+        setCustomerBankAccount(null);
+        return;
+      }
+
+      try {
+        // Load customer bank accounts
+        const customerAccounts = await getAllBankAccounts({
+          page: 1,
+          limit: 100,
+          workspaceUserId: targetUser.id,
+        });
+        const customerAccountsList = customerAccounts.data || [];
+
+        // Auto-select default customer account
+        if (!customerBankAccount && customerAccountsList.length > 0) {
+          const defaultCustomer = customerAccountsList.find(
+            (acc: any) => acc.isDefaultForReceive || acc.isDefaultForPay
+          );
+          if (defaultCustomer) {
+            setCustomerBankAccount(defaultCustomer);
+          } else if (customerAccountsList.length === 1) {
+            setCustomerBankAccount(customerAccountsList[0]);
+          }
+        }
+
+        // Load admin bank accounts (default for receive/pay)
+        const adminAccounts = await getAllBankAccounts({
+          page: 1,
+          limit: 100,
+        });
+        const adminAccountsList = adminAccounts.data || [];
+
+        // Auto-select default admin account
+        if (!adminBankAccount && adminAccountsList.length > 0) {
+          const defaultAdmin = adminAccountsList.find(
+            (acc: any) =>
+              (type === "RECEIVE" && acc.isDefaultForReceive) ||
+              (type === "PAY" && acc.isDefaultForPay)
+          );
+          if (defaultAdmin) {
+            setAdminBankAccount(defaultAdmin);
+          } else {
+            // Fallback: find any default account
+            const anyDefault = adminAccountsList.find(
+              (acc: any) => acc.isDefaultForReceive || acc.isDefaultForPay
+            );
+            if (anyDefault) {
+              setAdminBankAccount(anyDefault);
+            } else if (adminAccountsList.length === 1) {
+              setAdminBankAccount(adminAccountsList[0]);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load bank accounts", e);
+      }
+    };
+
+    loadDefaultBankAccounts();
+  }, [user?.id, invoice?.workspaceUser?.id, type]);
+
   const handleSubmit = () => {
+    if (!customerBankAccount) {
+      setError("انتخاب حساب بانکی مشتری الزامی است.");
+      return;
+    }
+    if (!adminBankAccount) {
+      setError("انتخاب حساب بانکی ادمین الزامی است.");
+      return;
+    }
+
     const data = {
       amount: parseFloat(amount) || 0,
       method,
@@ -67,10 +152,12 @@ export default function PaymentForm({
       status,
       reference,
       description,
-      workspaceUser: user,
+      workspaceUser: user || invoice?.workspaceUser,
       paymentCategoryId: paymentCategoryId,
       // ===>>> ۳. افزودن تاریخ به داده‌های نهایی برای ارسال <<<===
       paidAt: paidAt,
+      customerBankAccountId: customerBankAccount.id,
+      adminBankAccountId: adminBankAccount.id,
     };
     if (invoice) {
       data["invoiceId"] = invoice.id;
@@ -244,6 +331,127 @@ export default function PaymentForm({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+          </div>
+
+          {/* حساب‌های بانکی */}
+          <div className="md:col-span-2">
+            <h3 className="font-semibold mb-4 text-slate-800 dark:text-slate-200">
+              حساب‌های بانکی
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">
+                  <span className="label-text text-sm font-medium">
+                    حساب بانکی مشتری <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <div className="p-3 border rounded-lg bg-base-200/50 min-h-[70px]">
+                  {customerBankAccount ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">
+                          {customerBankAccount.title}
+                        </p>
+                        {customerBankAccount.bankName && (
+                          <p className="text-xs text-gray-500">
+                            {customerBankAccount.bankName}
+                          </p>
+                        )}
+                        {customerBankAccount.cardNumber && (
+                          <p className="text-xs text-gray-500">
+                            کارت: {customerBankAccount.cardNumber}
+                          </p>
+                        )}
+                        {customerBankAccount.accountNumber && (
+                          <p className="text-xs text-gray-500">
+                            حساب: {customerBankAccount.accountNumber}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="btn-circle btn-xs"
+                        onClick={() => setCustomerBankAccount(null)}
+                      >
+                        <DIcon icon="fa-times" cdi={false} />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <SelectBankAccount2
+                        onSelect={(acc) => setCustomerBankAccount(acc)}
+                        workspaceUserId={
+                          invoice?.workspaceUser?.id || user?.id
+                        }
+                        buttonProps={{ size: "sm" }}
+                      />
+                      {(invoice?.workspaceUser?.id || user?.id) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            window.open(
+                              `/dashboard/bank-accounts/create?workspaceUserId=${
+                                invoice?.workspaceUser?.id || user?.id
+                              }`,
+                              "_blank"
+                            );
+                          }}
+                        >
+                          <DIcon icon="fa-plus" cdi={false} /> ایجاد حساب جدید
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text text-sm font-medium">
+                    حساب بانکی ادمین <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <div className="p-3 border rounded-lg bg-base-200/50 min-h-[70px]">
+                  {adminBankAccount ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{adminBankAccount.title}</p>
+                        {adminBankAccount.bankName && (
+                          <p className="text-xs text-gray-500">
+                            {adminBankAccount.bankName}
+                          </p>
+                        )}
+                        {adminBankAccount.cardNumber && (
+                          <p className="text-xs text-gray-500">
+                            کارت: {adminBankAccount.cardNumber}
+                          </p>
+                        )}
+                        {adminBankAccount.accountNumber && (
+                          <p className="text-xs text-gray-500">
+                            حساب: {adminBankAccount.accountNumber}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="btn-circle btn-xs"
+                        onClick={() => setAdminBankAccount(null)}
+                      >
+                        <DIcon icon="fa-times" cdi={false} />
+                      </Button>
+                    </div>
+                  ) : (
+                    <SelectBankAccount2
+                      onSelect={(acc) => setAdminBankAccount(acc)}
+                      filterDefault={true}
+                      buttonProps={{ size: "sm" }}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

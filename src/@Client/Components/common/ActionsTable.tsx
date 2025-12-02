@@ -61,6 +61,10 @@ interface TableActionsProps {
    */
   onView?: string;
   /**
+   * Callback for view action when a URL is not needed
+   */
+  onViewAction?: (row: any) => void;
+  /**
    * Callback for edit action
    */
   onEdit?: string;
@@ -118,6 +122,7 @@ const ActionsTable: React.FC<TableActionsProps> = ({
   actions,
   row,
   onView,
+  onViewAction,
   onEdit,
   onDelete,
   showLabels = false,
@@ -254,15 +259,28 @@ const ActionsTable: React.FC<TableActionsProps> = ({
           ${className}
         `}
       >
-        {actions.includes("view") && onView && (
-          <Link
-            href={onView}
-            className={`text-primary flex items-center mx-1 `}
-          >
-            {icons.view}
-            {showLabels && <span className="mr-2">{labels.view}</span>}
-          </Link>
-        )}
+        {actions.includes("view") &&
+          (onView || onViewAction) &&
+          (onViewAction ? (
+            <Button
+              size={size}
+              variant="ghost"
+              onClick={() => onViewAction(row)}
+              className="text-primary"
+              aria-label={labels.view || "View"}
+            >
+              {icons.view}
+              {showLabels && <span className="mr-2">{labels.view}</span>}
+            </Button>
+          ) : (
+            <Link
+              href={onView || "#"}
+              className={`text-primary flex items-center mx-1 `}
+            >
+              {icons.view}
+              {showLabels && <span className="mr-2">{labels.view}</span>}
+            </Link>
+          ))}
 
         {actions.includes("edit") && onEdit && (
           <Link className={`text-info flex items-center mx-1 `} href={onEdit}>

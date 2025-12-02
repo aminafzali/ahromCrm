@@ -15,103 +15,135 @@ const priorityOptions = [
   { label: "زیاد", value: "high" },
 ];
 
-export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => ({
-  fields: [
-    {
-      name: "title",
-      label: "عنوان وظیفه",
-      type: "text",
-      required: true,
-      col: 2,
-    },
-    { name: "description", label: "توضیحات", type: "textarea", col: 2 },
-    {
-      name: "project",
-      label: "پروژه",
-      type: "dataTable",
-      required: true,
-      data: data?.get("projects") || [],
-      columns: columnsForSelectProject,
-    },
-    {
-      name: "status",
-      label: "وضعیت وظیفه",
-      type: "dataTable",
-      required: true,
-      data: data?.get("taskStatuses") || [],
-      columns: columnsForSelectStatus,
-    },
-    // { name: "startDate", label: "تاریخ شروع", type: "date" },
-    // { name: "endDate", label: "تاریخ پایان", type: "date" },
-    {
-      name: "priority",
-      label: "اولویت",
-      type: "select",
-      options: priorityOptions,
-    },
-    {
-      name: "assignedUsers",
-      label: "اعضای تخصیص یافته",
-      type: "dataTable",
-      data: data?.get("workspaceUsers") || [],
-      columns: columnsForSelectWorkspaceUser,
-      multiple: true,
-    },
-  ],
-  validation: createTaskSchema,
-  layout: {
-    columns: 2,
-    gap: 4,
-  },
-});
+const splitTaskStatuses = (data?: Map<string, any>) => {
+  const taskStatuses = (data?.get("taskStatuses") || []) as any[];
+  const globals = taskStatuses.filter((status) => !status.projectId);
+  const projectSpecific = taskStatuses.filter((status) => !!status.projectId);
+  return { globals, projectSpecific };
+};
 
-export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => ({
-  fields: [
-    {
-      name: "title",
-      label: "عنوان وظیفه",
-      type: "text",
-      required: true,
-      col: 2,
+export const getCreateFormConfig = (data?: Map<string, any>): FormConfig => {
+  const { globals, projectSpecific } = splitTaskStatuses(data);
+
+  return {
+    fields: [
+      {
+        name: "title",
+        label: "عنوان وظیفه",
+        type: "text",
+        required: true,
+        col: 2,
+      },
+      { name: "description", label: "توضیحات", type: "textarea", col: 2 },
+      {
+        name: "project",
+        label: "پروژه",
+        type: "dataTable",
+        required: true,
+        data: data?.get("projects") || [],
+        columns: columnsForSelectProject,
+      },
+      {
+        name: "globalStatus",
+        label: "وضعیت کلی وظیفه",
+        type: "dataTable",
+        required: true,
+        data: globals,
+        columns: columnsForSelectStatus,
+      },
+      {
+        name: "projectStatus",
+        label: "وضعیت خاص پروژه",
+        type: "dataTable",
+        data: projectSpecific,
+        columns: columnsForSelectStatus,
+        placeholder:
+          "برای استفاده از وضعیت‌های خاص، ابتدا پروژه را انتخاب کنید.",
+      },
+      // { name: "startDate", label: "تاریخ شروع", type: "date" },
+      // { name: "endDate", label: "تاریخ پایان", type: "date" },
+      {
+        name: "priority",
+        label: "اولویت",
+        type: "select",
+        options: priorityOptions,
+      },
+      {
+        name: "assignedUsers",
+        label: "اعضای تخصیص یافته",
+        type: "dataTable",
+        data: data?.get("workspaceUsers") || [],
+        columns: columnsForSelectWorkspaceUser,
+        multiple: true,
+      },
+    ],
+    validation: createTaskSchema,
+    layout: {
+      columns: 2,
+      gap: 4,
     },
-    { name: "description", label: "توضیحات", type: "textarea", col: 2 },
-    {
-      name: "project",
-      label: "پروژه",
-      type: "dataTable",
-      required: true,
-      data: data?.get("projects") || [],
-      columns: columnsForSelectProject,
+  };
+};
+
+export const getUpdateFormConfig = (data?: Map<string, any>): FormConfig => {
+  const { globals, projectSpecific } = splitTaskStatuses(data);
+
+  return {
+    fields: [
+      {
+        name: "title",
+        label: "عنوان وظیفه",
+        type: "text",
+        required: true,
+        col: 2,
+      },
+      { name: "description", label: "توضیحات", type: "textarea", col: 2 },
+      {
+        name: "project",
+        label: "پروژه",
+        type: "dataTable",
+        required: true,
+        data: data?.get("projects") || [],
+        columns: columnsForSelectProject,
+      },
+      {
+        name: "globalStatus",
+        label: "وضعیت کلی وظیفه",
+        type: "dataTable",
+        required: true,
+        data: globals,
+        columns: columnsForSelectStatus,
+      },
+      {
+        name: "projectStatus",
+        label: "وضعیت خاص پروژه",
+        type: "dataTable",
+        data: projectSpecific,
+        columns: columnsForSelectStatus,
+        placeholder:
+          "برای استفاده از وضعیت‌های خاص، ابتدا پروژه را انتخاب کنید.",
+      },
+      // { name: "startDate", label: "تاریخ شروع", type: "date" },
+      // { name: "endDate", label: "تاریخ پایان", type: "date" },
+      {
+        name: "priority",
+        label: "اولویت",
+        type: "select",
+        options: priorityOptions,
+      },
+      {
+        name: "assignedUsers",
+        label: "اعضای تخصیص یافته",
+        type: "dataTable",
+        data: data?.get("workspaceUsers") || [],
+        columns: columnsForSelectWorkspaceUser,
+        multiple: true,
+      },
+    ],
+    validation: updateTaskSchema,
+    layout: {
+      columns: 2,
+      gap: 4,
     },
-    {
-      name: "status",
-      label: "وضعیت وظیفه",
-      type: "dataTable",
-      required: true,
-      data: data?.get("taskStatuses") || [],
-      columns: columnsForSelectStatus,
-    },
-    // { name: "startDate", label: "تاریخ شروع", type: "date" },
-    // { name: "endDate", label: "تاریخ پایان", type: "date" },
-    {
-      name: "priority",
-      label: "اولویت",
-      type: "select",
-      options: priorityOptions,
-    },
-    {
-      name: "assignedUsers",
-      label: "اعضای تخصیص یافته",
-      type: "dataTable",
-   //   showName: "displayName",
-      data: data?.get("workspaceUsers") || [],
-      columns: columnsForSelectWorkspaceUser,
-      multiple: true,
-    },
-  ],
-  validation: updateTaskSchema,
-  layout: {
-    columns: 2,
-    gap: 4,
-  },
-});
+  };
+};

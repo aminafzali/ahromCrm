@@ -65,10 +65,37 @@ export class BaseApi {
         : "http://localhost"
     );
 
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        url.searchParams.append(key, String(value));
+    const appendParam = (key: string, value: any) => {
+      if (value === undefined || value === null) return;
+
+      const isObject =
+        typeof value === "object" && !Array.isArray(value) && value !== null;
+
+      if (isObject) {
+        url.searchParams.append(key, JSON.stringify(value));
+        return;
       }
+
+      if (Array.isArray(value)) {
+        url.searchParams.append(key, JSON.stringify(value));
+        return;
+      }
+
+      url.searchParams.append(key, String(value));
+    };
+
+    console.log(`🔍 [CLIENT - BaseApi] Building URL with params:`, params);
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (key === "filters") {
+        console.log(`🔍 [CLIENT - BaseApi] Building URL with filters:`, value);
+        console.log(`🔍 [CLIENT - BaseApi] Filters type:`, typeof value);
+        console.log(
+          `🔍 [CLIENT - BaseApi] Filters JSON:`,
+          JSON.stringify(value)
+        );
+      }
+      appendParam(key, value);
     });
 
     // ===== لاگ ردیابی ۱: بررسی URL ساخته شده =====
@@ -77,6 +104,9 @@ export class BaseApi {
       "color: #007acc;",
       url.toString()
     );
+    // بررسی filters در URL
+    const filtersParam = url.searchParams.get("filters");
+    console.log(`🔍 [CLIENT - BaseApi] Filters in URL:`, filtersParam);
     // ===========================================
 
     return url.toString();

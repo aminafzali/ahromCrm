@@ -2,6 +2,12 @@ export const include = {
   category: {
     select: { id: true, name: true, parentId: true },
   },
+  task: {
+    select: {
+      id: true,
+      title: true,
+    },
+  },
 };
 
 export const searchFileds = [

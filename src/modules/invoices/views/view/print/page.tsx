@@ -207,6 +207,63 @@ export default function PrintInvoicePage({ id }: PrintInvoicePageProps) {
             </div>
           </div>
 
+          {/* Bank Accounts */}
+          {(invoice.customerBankAccount || invoice.adminBankAccount) && (
+            <div className="mt-8 pt-8 border-t">
+              <h3 className="text-lg font-semibold mb-4">
+                اطلاعات حساب‌های بانکی
+              </h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {invoice.customerBankAccount && (
+                  <div>
+                    <p className="font-semibold">حساب بانکی مشتری:</p>
+                    <p>{invoice.customerBankAccount.title}</p>
+                    {invoice.customerBankAccount.bankName && (
+                      <p>بانک: {invoice.customerBankAccount.bankName}</p>
+                    )}
+                    {invoice.customerBankAccount.cardNumber && (
+                      <p>کارت: {invoice.customerBankAccount.cardNumber}</p>
+                    )}
+                    {invoice.customerBankAccount.accountNumber && (
+                      <p>حساب: {invoice.customerBankAccount.accountNumber}</p>
+                    )}
+                    {invoice.customerBankAccount.iban && (
+                      <p>شبا: {invoice.customerBankAccount.iban}</p>
+                    )}
+                  </div>
+                )}
+                {invoice.adminBankAccount && (
+                  <div>
+                    <p className="font-semibold">حساب بانکی ادمین:</p>
+                    <p>{invoice.adminBankAccount.title}</p>
+                    {invoice.adminBankAccount.bankName && (
+                      <p>بانک: {invoice.adminBankAccount.bankName}</p>
+                    )}
+                    {invoice.adminBankAccount.cardNumber && (
+                      <p>کارت: {invoice.adminBankAccount.cardNumber}</p>
+                    )}
+                    {invoice.adminBankAccount.accountNumber && (
+                      <p>حساب: {invoice.adminBankAccount.accountNumber}</p>
+                    )}
+                    {invoice.adminBankAccount.iban && (
+                      <p>شبا: {invoice.adminBankAccount.iban}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          {invoice.description && (
+            <div className="mt-8 pt-8 border-t">
+              <h3 className="text-lg font-semibold mb-2">توضیحات</h3>
+              <p className="text-sm whitespace-pre-wrap">
+                {invoice.description}
+              </p>
+            </div>
+          )}
+
           {/* Signature */}
           <div className="mt-8 pt-8 border-t">
             <div className="flex justify-between">

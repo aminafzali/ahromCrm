@@ -23,8 +23,8 @@ export const include = {
       id: true,
       amount: true,
       method: true,
-      type:true,
-      paidAt:true,
+      type: true,
+      paidAt: true,
       status: true,
       createdAt: true,
     },
@@ -32,6 +32,26 @@ export const include = {
   workspaceUser: {
     include: {
       user: true,
+    },
+  },
+  customerBankAccount: {
+    select: {
+      id: true,
+      title: true,
+      bankName: true,
+      iban: true,
+      accountNumber: true,
+      cardNumber: true,
+    },
+  },
+  adminBankAccount: {
+    select: {
+      id: true,
+      title: true,
+      bankName: true,
+      iban: true,
+      accountNumber: true,
+      cardNumber: true,
     },
   },
 };

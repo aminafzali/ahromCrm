@@ -3,7 +3,13 @@ import ActionsTable from "@/@Client/Components/common/ActionsTable";
 import DIcon from "@/@Client/Components/common/DIcon";
 import { TaskWithRelations } from "@/modules/tasks/types";
 import { Column } from "ndui-ahrom/dist/components/Table/Table";
+import Link from "next/link";
 import React from "react";
+
+const stripHtml = (value?: string | null) => {
+  if (!value) return "";
+  return value.replace(/<[^>]+>/g, "");
+};
 
 // کامپوننت کمکی برای نمایش اولویت با رنگ‌های مختلف
 export const PriorityBadge = ({ priority }: { priority: string }) => {
@@ -29,8 +35,25 @@ export const PriorityBadge = ({ priority }: { priority: string }) => {
   );
 };
 
+const formatAssignment = (row: TaskWithRelations) => {
+  const users =
+    row.assignedUsers
+      ?.map((u: any) => u.displayName || u.user?.name)
+      .filter(Boolean)
+      .join(", ") || "";
+  const teams =
+    row.assignedTeams?.map((t: any) => `تیم ${t.name}`).join(", ") || "";
+
+  if (!users && !teams) return "---";
+  return [users, teams].filter(Boolean).join(" | ");
+};
+
+type ColumnOptions = {
+  onViewTask?: (task: TaskWithRelations) => void;
+};
+
 // تعریف ستون‌های جدول برای نمایش دسکتاپ
-export const columnsForAdmin: Column[] = [
+export const getColumnsForAdmin = (options: ColumnOptions = {}): Column[] => [
   {
     name: "title",
     field: "title",
@@ -48,7 +71,7 @@ export const columnsForAdmin: Column[] = [
   },
   {
     name: "status",
-    label: "وضعیت",
+    label: "وضعیت کلی",
     render: (row: TaskWithRelations) => (
       <span
         className="px-2 py-1 text-xs font-medium rounded-full"
@@ -62,6 +85,24 @@ export const columnsForAdmin: Column[] = [
     ),
   },
   {
+    name: "projectStatus",
+    label: "وضعیت پروژه",
+    render: (row: TaskWithRelations) =>
+      row.projectStatus ? (
+        <span
+          className="px-2 py-1 text-xs font-medium rounded-full"
+          style={{
+            backgroundColor: `${row.projectStatus?.color}20`,
+            color: row.projectStatus?.color,
+          }}
+        >
+          {row.projectStatus?.name}
+        </span>
+      ) : (
+        <span className="text-xs text-gray-500">---</span>
+      ),
+  },
+  {
     name: "priority",
     label: "اولویت",
     render: (row: TaskWithRelations) => (
@@ -71,17 +112,7 @@ export const columnsForAdmin: Column[] = [
   {
     name: "assignedTo",
     label: "مسئولین",
-    render: (row: TaskWithRelations) => {
-      const users =
-        row.assignedUsers
-          ?.map((u: any) => u.displayName || u.user?.name)
-          .join(", ") || "";
-      const teams =
-        row.assignedTeams?.map((t: any) => `تیم ${t.name}`).join(", ") || "";
-
-      if (!users && !teams) return "---";
-      return [users, teams].filter(Boolean).join(" | ");
-    },
+    render: (row: TaskWithRelations) => formatAssignment(row),
   },
   {
     name: "startDate",
@@ -104,8 +135,10 @@ export const columnsForAdmin: Column[] = [
       <ActionsTable
         row={row}
         actions={["view", "edit", "delete"]}
-        //endpoint="tasks" // افزودن endpoint برای سهولت در مدیریت عملیات
-        onView={`/dashboard/tasks/${row.id}`}
+        onView={options.onViewTask ? undefined : `/dashboard/tasks/${row.id}`}
+        onViewAction={
+          options.onViewTask ? () => options.onViewTask?.(row) : undefined
+        }
         onEdit={`/dashboard/tasks/${row.id}/update`}
       />
     ),
@@ -113,98 +146,105 @@ export const columnsForAdmin: Column[] = [
 ];
 // ===== شروع اصلاحیه =====
 // امضای تابع برای مطابقت با نیاز DataTableWrapper2 تغییر کرد
-export const listItemRender = (item: TaskWithRelations): React.ReactNode => (
-  <div className="p-4 my-2 bg-white rounded-lg shadow-md dark:bg-slate-800">
-    <div className="flex items-center justify-between mb-3">
-      <div className="flex items-center">
-        <h3 className="ml-2 text-lg font-bold text-slate-800 dark:text-slate-100">
-          {item.title}
-        </h3>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          ({item.project?.name || "بدون پروژه"})
-        </span>
-      </div>
-      <div className="flex items-center space-x-2">
-        {/*
-          کامپوننت ActionsTable خودش عملیات‌ها را مدیریت می‌کند
-          و نیازی به پاس دادن توابع onView, onEdit, onDelete از اینجا نیست.
-          مانند ستون‌ها، از URL ها برای لینک‌دهی استفاده می‌کنیم.
-        */}
-        <ActionsTable
-          row={item}
-          actions={["view", "edit", "delete"]}
-         // endpoint="tasks"
-          onView={`/dashboard/tasks/${item.id}`}
-          onEdit={`/dashboard/tasks/${item.id}/update`}
-        />
-      </div>
-    </div>
+export const listItemRender = (
+  item: TaskWithRelations,
+  options?: ColumnOptions
+): React.ReactNode => {
+  const assignment = formatAssignment(item) || "---";
+  const handleView = options?.onViewTask;
+  const plainDescription = stripHtml(item.description).trim();
+  const description =
+    plainDescription.length > 200
+      ? `${plainDescription.slice(0, 200)}…`
+      : plainDescription;
 
-    <div className="grid grid-cols-2 gap-4 text-sm">
-      <div className="flex items-center">
-        <DIcon icon="fa-flag" className="ml-2 text-gray-400" />
-        <span className="font-semibold text-gray-600 dark:text-gray-300">
-          وضعیت:
-        </span>
-        <span
-          className="px-2 py-1 mr-2 text-xs font-medium rounded-full"
-          style={{
-            backgroundColor: `${item.status?.color}20`,
-            color: item.status?.color,
-          }}
-        >
-          {item.status?.name || "---"}
-        </span>
+  return (
+    <div className="p-4 my-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+        <div>
+          <p className="text-xs uppercase text-gray-400">
+            {item.project?.name || "بدون پروژه"}
+          </p>
+          <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100">
+            {item.title}
+          </h3>
+          {description && (
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+              {description}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 text-gray-500 text-xs">
+          {handleView ? (
+            <button
+              type="button"
+              onClick={() => handleView(item)}
+              className="p-1 rounded hover:text-primary transition"
+              aria-label="مشاهده"
+            >
+              <DIcon icon="fa-eye" className="text-[0.85rem]" />
+            </button>
+          ) : (
+            <Link
+              href={`/dashboard/tasks/${item.id}`}
+              className="p-1 rounded hover:text-primary transition"
+              aria-label="مشاهده"
+            >
+              <DIcon icon="fa-eye" className="text-[0.85rem]" />
+            </Link>
+          )}
+          <Link
+            href={`/dashboard/tasks/${item.id}/update`}
+            className="p-1 rounded hover:text-primary transition"
+            aria-label="ویرایش"
+          >
+            <DIcon icon="fa-pen-to-square" className="text-[0.85rem]" />
+          </Link>
+        </div>
       </div>
 
-      <div className="flex items-center">
-        <DIcon icon="fa-exclamation-circle" className="ml-2 text-gray-400" />
-        <span className="font-semibold text-gray-600 dark:text-gray-300">
-          اولویت:
+      <div className="flex flex-wrap gap-2 mb-3 text-xs">
+        <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">
+          {item.status?.name || "وضعیت کلی نامشخص"}
         </span>
-        <div className="mr-2">
+        {item.projectStatus?.name && (
+          <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">
+            {item.projectStatus?.name}
+          </span>
+        )}
+        <div className="flex items-center gap-1">
+          <span className="text-gray-500">اولویت:</span>
           <PriorityBadge priority={item.priority} />
         </div>
       </div>
 
-      <div className="flex items-center col-span-2">
-        <DIcon icon="fa-users" className="ml-2 text-gray-400" />
-        <span className="font-semibold text-gray-600 dark:text-gray-300">
-          مسئولین:
-        </span>
-        <span className="mr-2 text-gray-700 dark:text-gray-200">
-          {columnsForAdmin
-            .find((c) => c.name === "assignedTo")
-            ?.render?.(item) || "---"}
-        </span>
-      </div>
-
-      <div className="flex items-center">
-        <DIcon icon="fa-calendar-alt" className="ml-2 text-gray-400" />
-        <span className="font-semibold text-gray-600 dark:text-gray-300">
-          شروع:
-        </span>
-        <span className="mr-2 text-gray-700 dark:text-gray-200">
-          {item.startDate
-            ? new Date(item.startDate).toLocaleDateString("fa-IR")
-            : "---"}
-        </span>
-      </div>
-
-      <div className="flex items-center">
-        <DIcon icon="fa-calendar-check" className="ml-2 text-gray-400" />
-        <span className="font-semibold text-gray-600 dark:text-gray-300">
-          پایان:
-        </span>
-        <span className="mr-2 text-gray-700 dark:text-gray-200">
-          {item.endDate
-            ? new Date(item.endDate).toLocaleDateString("fa-IR")
-            : "---"}
-        </span>
+      <div className="flex flex-wrap gap-4 text-[0.85rem] text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-1">
+          <DIcon icon="fa-users" />
+          <span>{assignment}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <DIcon icon="fa-calendar-alt" />
+          <span>
+            شروع:{" "}
+            {item.startDate
+              ? new Date(item.startDate).toLocaleDateString("fa-IR")
+              : "---"}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <DIcon icon="fa-calendar-check" />
+          <span>
+            پایان:{" "}
+            {item.endDate
+              ? new Date(item.endDate).toLocaleDateString("fa-IR")
+              : "---"}
+          </span>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 // ===== پایان اصلاحیه =====
 
 // import ActionsTable from "@/@Client/Components/common/ActionsTable";

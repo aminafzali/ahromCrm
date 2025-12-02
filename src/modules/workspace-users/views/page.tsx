@@ -60,7 +60,7 @@ const WorkspaceUsersPage = () => {
 
     if (groups.length > 0) {
       newFilters.push({
-        name: "userGroups_some", // نام فیلتر برای ارسال به بک‌اند
+        name: "userGroupId", // تغییر از userGroups_some به userGroupId
         label: "گروه کاربری",
         options: [
           { value: "all", label: "همه" },

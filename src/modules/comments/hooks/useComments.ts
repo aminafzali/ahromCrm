@@ -5,12 +5,34 @@ import { useCrud } from "@/@Client/hooks/useCrud";
 import { useMemo } from "react";
 import { z } from "zod";
 
-const createSchema = z.object({
-  entityType: z.string().min(1),
-  entityId: z.coerce.number().int().positive(),
-  body: z.string().min(1),
-  parent: z.object({ id: z.coerce.number() }).optional().nullable(),
-});
+const createSchema = z
+  .object({
+    taskId: z.coerce.number().int().positive().optional().nullable(),
+    knowledgeId: z.coerce.number().int().positive().optional().nullable(),
+    documentId: z.coerce.number().int().positive().optional().nullable(),
+    projectId: z.coerce.number().int().positive().optional().nullable(),
+    body: z.string().min(1),
+    parent: z.object({ id: z.coerce.number() }).optional().nullable(),
+    // Backward compatibility
+    entityType: z.string().optional(),
+    entityId: z.coerce.number().int().positive().optional(),
+  })
+  .refine(
+    (data) => {
+      // At least one relation must be provided
+      return (
+        data.taskId ||
+        data.knowledgeId ||
+        data.documentId ||
+        data.projectId ||
+        data.entityId
+      );
+    },
+    {
+      message:
+        "At least one relation (taskId, knowledgeId, documentId, or projectId) must be provided",
+    }
+  );
 
 const updateSchema = z.object({
   body: z.string().min(1).optional(),

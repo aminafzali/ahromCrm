@@ -20,11 +20,50 @@ export const include = {
   },
   images: {
     orderBy: {
-      sortOrder: 'asc',
+      sortOrder: "asc",
+    },
+  },
+  // Inventory relations
+  stocks: {
+    include: {
+      warehouse: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
+  // Visibility & payment relations
+  visibilityByGroup: {
+    include: {
+      userGroup: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
+  paymentOptions: true,
+  paymentOptionsByGroup: {
+    include: {
+      userGroup: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
     },
   },
 };
 
 export const searchFields = ["name", "description"];
-export const relations = ["images"];
-export const connects = ["category" , "brand"];
+export const relations = [
+  "images",
+  "stocks",
+  "visibilityByGroup",
+  "paymentOptions",
+  "paymentOptionsByGroup",
+];
+export const connects = ["category", "brand"];

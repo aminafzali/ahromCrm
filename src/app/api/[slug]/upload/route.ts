@@ -44,6 +44,19 @@ export async function POST(
         const entityId = formData.get("entityId")
           ? Number(formData.get("entityId"))
           : undefined;
+        const taskId = formData.get("taskId")
+          ? Number(formData.get("taskId"))
+          : undefined;
+
+        console.log("[UPLOAD:documents] received form data", {
+          filesCount: files.length,
+          type,
+          categoryId,
+          entityType,
+          entityId,
+          taskId,
+          workspaceId,
+        });
 
         if (!files || files.length === 0) {
           return NextResponse.json(
@@ -62,24 +75,44 @@ export async function POST(
           )
         );
 
+        console.log("[UPLOAD:documents] files uploaded", {
+          uploadedCount: uploaded.length,
+        });
+
         const created = await Promise.all(
-          uploaded.map((u) =>
-            (prisma as any).document.create({
-              data: {
-                workspaceId,
-                originalName: u.originalName,
+          uploaded.map((u) => {
+            const docData: any = {
+              workspaceId,
+              originalName: u.originalName,
+              filename: u.filename,
+              mimeType: u.mimeType,
+              size: u.size,
+              url: u.url,
+              type: type,
+              ...(categoryId ? { categoryId } : {}),
+              ...(entityType ? { entityType } : {}),
+              ...(entityId ? { entityId } : {}),
+            };
+
+            // اضافه کردن taskId اگر موجود باشد
+            if (taskId && taskId > 0) {
+              docData.taskId = taskId;
+              console.log("[UPLOAD:documents] adding taskId to document", {
+                taskId,
                 filename: u.filename,
-                mimeType: u.mimeType,
-                size: u.size,
-                url: u.url,
-                type: type,
-                ...(categoryId ? { categoryId } : {}),
-                ...(entityType ? { entityType } : {}),
-                ...(entityId ? { entityId } : {}),
-              },
-            })
-          )
+              });
+            }
+
+            return (prisma as any).document.create({
+              data: docData,
+            });
+          })
         );
+
+        console.log("[UPLOAD:documents] documents created", {
+          createdCount: created.length,
+          createdIds: created.map((c: any) => c.id),
+        });
 
         return NextResponse.json({ files: created });
       } catch (err: any) {
