@@ -9,18 +9,30 @@ export const createWorkspaceUserSchema = z.object({
     .min(11, "شماره تلفن ۱۱ رقمی معتبر وارد کنید.")
     .max(11, "شماره تلفن معتبر نیست."),
 
-  // ===== شروع اصلاحیه =====
-  // به جای انتظار برای یک عدد، اکنون منتظر یک آبجکت هستیم که حداقل یک شناسه عددی داشته باشد
+  // نقش به صورت آبجکت با شناسه
   role: z.object(
     { id: z.coerce.number() },
     { required_error: "انتخاب نقش الزامی است." }
   ),
-  // ===== پایان اصلاحیه =====
 
   displayName: z.string().optional(),
-  // برای برچسب‌ها و گروه‌ها نیز همین الگو را پیاده می‌کنیم
   labels: z.array(z.object({ id: z.number() })).optional(),
-  userGroups: z.array(z.object({ id: z.number() })).optional(),
+  userGroupId: z.number().optional(), // تغییر به one-to-one
+
+  // فیلدهای تکمیلی
+  address: z.string().optional(),
+  postalCode: z.string().optional(),
+  province: z.string().optional(),
+  city: z.string().optional(),
+  economicCode: z.string().optional(),
+  registrationNumber: z.string().optional(),
+  nationalId: z.string().optional(),
+
+  // به صورت متن چندخطی، در سرویس به Json (آرایه) تبدیل می‌شود
+  otherPhones: z.string().optional(),
+  bankAccounts: z.string().optional(),
+
+  description: z.string().optional(),
 });
 
 export const updateWorkspaceUserSchema = z.object({
@@ -30,5 +42,16 @@ export const updateWorkspaceUserSchema = z.object({
   ),
   displayName: z.string().optional(),
   labels: z.array(z.object({ id: z.number() })).optional(),
-  userGroups: z.array(z.object({ id: z.number() })).optional(),
+  userGroupId: z.number().optional(), // تغییر به one-to-one
+
+  address: z.string().optional(),
+  postalCode: z.string().optional(),
+  province: z.string().optional(),
+  city: z.string().optional(),
+  economicCode: z.string().optional(),
+  registrationNumber: z.string().optional(),
+  nationalId: z.string().optional(),
+  otherPhones: z.string().optional(),
+  bankAccounts: z.string().optional(),
+  description: z.string().optional(),
 });

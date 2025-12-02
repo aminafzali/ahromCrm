@@ -92,7 +92,6 @@ const IndexWrapper = <T, R extends BaseRepository<T, number>>({
 
   useEffect(() => {
     get();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, filtersValue, extraFilter]);
 
   const get = async (page = 1, limit = pagination.limit) => {
@@ -137,7 +136,7 @@ const IndexWrapper = <T, R extends BaseRepository<T, number>>({
   const optionsMap = useMemo(() => {
     const map = new Map<string, string>();
     filterOptions.forEach((filter) => {
-      filter.options.forEach((option) => {
+      filter.options?.forEach((option) => {
         map.set(`${filter.name}-${option.value}`, option.label);
       });
     });
@@ -226,7 +225,7 @@ const IndexWrapper = <T, R extends BaseRepository<T, number>>({
                 <div key={filter.name} className="w-full sm:w-auto md:w-52">
                   <MultiSelectFilter
                     label={filter.label}
-                    options={filter.options}
+                    options={filter.options ?? []}
                     selectedValues={filtersValue.get(filter.name) || []}
                     onChange={(values) =>
                       handleFilterChange(filter.name, values)

@@ -11,6 +11,13 @@ export const dashboardMenuItems = [
     href: "/dashboard/notifications",
   },
   {
+    id: "chatbot",
+    value: "chatbot",
+    label: "دستیار مدیریت کاربران",
+    icon: <DIcon icon="fa-robot" cdi={false}></DIcon>,
+    href: "/dashboard/chatbot",
+  },
+  {
     id: "dashboard",
     label: "داشبورد",
     icon: <DIcon icon="fa-grid" cdi={false}></DIcon>,
@@ -116,7 +123,7 @@ export const dashboardMenuItems = [
 
   {
     id: "settingDivider",
-    label: "فروشگاه",
+    label: "فروشگاه و موجودی",
     divider: true,
     href: "/settingDivider",
   },
@@ -137,6 +144,86 @@ export const dashboardMenuItems = [
     label: "محصولات",
     icon: <DIcon icon="fa-box" cdi={false}></DIcon>,
     href: "/dashboard/products",
+  },
+  {
+    id: "warehouse-management",
+    label: "مدیریت انبار",
+    icon: <DIcon icon="fa-boxes-stacked" cdi={false}></DIcon>,
+    children: [
+      {
+        id: "warehouses",
+        label: "انبارها",
+        icon: <DIcon icon="fa-warehouse" cdi={false}></DIcon>,
+        href: "/dashboard/warehouses",
+      },
+      {
+        id: "inventory",
+        label: "مدیریت موجودی",
+        icon: <DIcon icon="fa-cubes" cdi={false}></DIcon>,
+        href: "/dashboard/inventory",
+      },
+      {
+        id: "stock-transfers",
+        label: "انتقال موجودی",
+        icon: <DIcon icon="fa-arrows-left-right" cdi={false}></DIcon>,
+        href: "/dashboard/stock-transfers",
+      },
+      {
+        id: "stock-movements",
+        label: "تاریخچه تغییرات موجودی",
+        icon: <DIcon icon="fa-clock-rotate-left" cdi={false}></DIcon>,
+        href: "/dashboard/stock-movements",
+      },
+    ],
+  },
+  {
+    id: "purchase-orders",
+    label: "سفارشات خرید",
+    icon: <DIcon icon="fa-shopping-cart" cdi={false}></DIcon>,
+    href: "/dashboard/purchase-orders",
+  },
+  {
+    id: "sales-divider",
+    label: "فروش و سفارشات",
+    divider: true,
+    href: "/sales-divider",
+  },
+  {
+    id: "orders",
+    label: "سفارشات مشتریان",
+    icon: <DIcon icon="fa-shopping-bag" cdi={false}></DIcon>,
+    href: "/dashboard/orders",
+  },
+  {
+    id: "pos",
+    label: "فروش حضوری (POS)",
+    icon: <DIcon icon="fa-cash-register" cdi={false}></DIcon>,
+    href: "/dashboard/pos",
+  },
+  {
+    id: "shop-settings",
+    label: "تنظیمات فروشگاه",
+    icon: <DIcon icon="fa-cog" cdi={false}></DIcon>,
+    children: [
+      {
+        id: "shipping-methods",
+        label: "روش‌های ارسال",
+        icon: <DIcon icon="fa-truck" cdi={false}></DIcon>,
+        href: "/dashboard/settings/shipping-methods",
+      },
+      {
+        id: "payment-gateways",
+        label: "درگاه‌های پرداخت",
+        icon: <DIcon icon="fa-credit-card" cdi={false}></DIcon>,
+        href: "/dashboard/settings/payment-gateways",
+      },
+      {
+        id: "shipping-zones",
+        label: "مناطق ارسال",
+        icon: <DIcon icon="fa-map-location-dot" cdi={false}></DIcon>,
+        href: "/dashboard/settings/shipping-zones",
+      },
+    ],
   },
   {
     id: "mali",
@@ -165,11 +252,16 @@ export const dashboardMenuItems = [
 
   {
     id: "activity",
-    label: "فعالیتها",
+    label: "ارتباطات",
     divider: true,
     href: "/activity",
   },
-  ,
+  {
+    id: "internal-chat",
+    label: "چت درون سازمانی",
+    icon: <DIcon icon="fa-comments" cdi={false}></DIcon>,
+    href: "/dashboard/internal-chat",
+  },
   {
     id: "reminders",
     label: "یادآوری ها",
@@ -199,6 +291,25 @@ export const dashboardMenuItems = [
         label: "وظایف",
         icon: <DIcon icon="fa-list-timeline" cdi={false}></DIcon>,
         href: "/dashboard/tasks",
+      },
+    ],
+  },
+  {
+    id: "chat-group",
+    label: "فعالیت ها",
+    icon: <DIcon icon="fa-headset" cdi={false}></DIcon>,
+    children: [
+      {
+        id: "activities",
+        label: "فعالیت ها",
+        icon: <DIcon icon="fa-list-timeline" cdi={false}></DIcon>,
+        href: "/dashboard/activities",
+      },
+      {
+        id: "activity-categories",
+        label: "دسته بندی فعالیت",
+        icon: <DIcon icon="fa-list-check" cdi={false}></DIcon>,
+        href: "/dashboard/activity-categories",
       },
     ],
   },
@@ -247,25 +358,6 @@ export const dashboardMenuItems = [
       },
     ],
   },
-  {
-    id: "chat-group",
-    label: "سیستم گفتگو و پشتیبانی",
-    icon: <DIcon icon="fa-headset" cdi={false}></DIcon>,
-    children: [
-      {
-        id: "internal-chat",
-        label: "چت درون سازمانی",
-        icon: <DIcon icon="fa-comments" cdi={false}></DIcon>,
-        href: "/dashboard/internal-chat",
-      },
-      {
-        id: "support-info",
-        label: "اطلاعات پشتیبانی",
-        icon: <DIcon icon="fa-circle-info" cdi={false}></DIcon>,
-        href: "/dashboard/tickets",
-      },
-    ],
-  },
 ];
 
 export const dashboardBottomItems = [
@@ -311,6 +403,12 @@ export const userMenuItems = [
     label: "درخواست‌ها",
     icon: <DIcon icon="fa-hand" cdi={false}></DIcon>,
     href: "/panel/requests",
+  },
+  {
+    id: "user-orders",
+    label: "سفارشات من",
+    icon: <DIcon icon="fa-shopping-bag" cdi={false}></DIcon>,
+    href: "/panel/my-orders",
   },
   {
     id: "notifications",

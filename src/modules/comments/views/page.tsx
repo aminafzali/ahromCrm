@@ -11,16 +11,24 @@ export default function CommentsIndexPage() {
 
   const filters: FilterOption[] = [
     {
-      name: "entityType",
-      label: "نوع موجودیت",
-      options: [
-        { value: "all", label: "همه" },
-        { value: "Task", label: "وظیفه" },
-        { value: "Project", label: "پروژه" },
-        { value: "Knowledge", label: "دانش" },
-        { value: "Document", label: "سند" },
-        { value: "Support", label: "پشتیبانی" },
-      ],
+      name: "taskId",
+      label: "وظیفه",
+      type: "number",
+    },
+    {
+      name: "knowledgeId",
+      label: "دانش",
+      type: "number",
+    },
+    {
+      name: "documentId",
+      label: "سند",
+      type: "number",
+    },
+    {
+      name: "projectId",
+      label: "پروژه",
+      type: "number",
     },
   ];
 

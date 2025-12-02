@@ -74,6 +74,26 @@ export abstract class BaseController<T> {
 
   // ... تمام متدهای دیگر (update, delete, bulk, etc.) بدون تغییر باقی می‌مانند ...
 
+  /**
+   * Parse filters parameter from query string if it's a JSON string
+   * This is used specifically for handling filters that come as JSON strings from the client
+   */
+  protected parseFiltersFromQuery(value: string): Record<string, any> | null {
+    try {
+      const parsed = JSON.parse(value);
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        !Array.isArray(parsed)
+      ) {
+        return parsed;
+      }
+    } catch {
+      // Not JSON or invalid format, return null
+    }
+    return null;
+  }
+
   protected parseQueryParams(req: NextRequest): any {
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get("limit") || "20");
@@ -106,14 +126,54 @@ export abstract class BaseController<T> {
         ].includes(key)
       ) {
         if (value && value !== "all") {
-          if (key.endsWith("Id")) {
+          // Special handling for "filters" key - it might be a JSON string
+          if (key === "filters") {
+            console.log(
+              "🔍 [BaseController] Found 'filters' in query params:",
+              value
+            );
+            const parsedFilters = this.parseFiltersFromQuery(value);
+            if (parsedFilters) {
+              console.log("✅ [BaseController] Parsed filters:", parsedFilters);
+              // Merge parsed filters into filters object
+              Object.assign(filters, parsedFilters);
+            } else {
+              console.warn(
+                "⚠️ [BaseController] Failed to parse filters, treating as regular value"
+              );
+              // If not JSON, treat as regular value
+              filters[key] = value;
+            }
+          } else if (key.endsWith("Id")) {
             filters[key] = parseInt(value);
+            console.log(
+              `✅ [BaseController] Added ${key} to filters:`,
+              filters[key]
+            );
+          } else if (value === "true" || value === "false") {
+            // تبدیل string boolean به boolean واقعی
+            filters[key] = value === "true";
+            console.log(
+              `✅ [BaseController] Converted boolean ${key} to filters:`,
+              filters[key]
+            );
           } else {
             filters[key] = value;
           }
         }
       }
     }
+
+    console.log(
+      "✅ [BaseController] Final filters after parseQueryParams:",
+      JSON.stringify(filters, null, 2)
+    );
+
+    // لاگ همه searchParams برای بررسی
+    console.log(
+      "🔍 [BaseController] All searchParams entries:",
+      Array.from(searchParams.entries())
+    );
 
     if (searchParams.has("include")) {
       try {

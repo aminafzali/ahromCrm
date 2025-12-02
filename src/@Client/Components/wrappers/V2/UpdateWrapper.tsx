@@ -24,6 +24,7 @@ interface DynamicUpdateWrapperProps<
   submitLabel?: string;
   submitIcon?: React.ReactNode;
   after?: () => void;
+  mapDefaultValues?: (entity: T) => T;
 }
 
 const UpdateWrapper = <
@@ -41,6 +42,7 @@ const UpdateWrapper = <
   submitLabel = "ویرایش",
   submitIcon = <DIcon icon="fa-save" cdi={false} classCustom="ml-2" />,
   after,
+  mapDefaultValues,
 }: DynamicUpdateWrapperProps<T, R, S>) => {
   const {
     update,
@@ -65,14 +67,18 @@ const UpdateWrapper = <
     const fetchData = async () => {
       try {
         const entityData = await getById(Number(id));
-        if (entityData != undefined) setDefaultValues(entityData);
+        if (entityData !== undefined) {
+          setDefaultValues(
+            mapDefaultValues ? mapDefaultValues(entityData) : entityData
+          );
+        }
       } catch (error) {
         console.error("Error fetching entity:", error);
       }
     };
 
     fetchData();
-  }, [id]);
+  }, [id, mapDefaultValues]);
 
   useEffect(() => {
     if (fetchers.length > 0) {

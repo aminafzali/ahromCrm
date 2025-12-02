@@ -41,8 +41,8 @@ export default function WorkspaceUserForm({
   const [selectedLabels, setSelectedLabels] = useState<string[]>(
     defaultValues.labels?.map((l: any) => String(l.labelId)) || []
   );
-  const [selectedGroups, setSelectedGroups] = useState<string[]>(
-    defaultValues.userGroups?.map((ug: any) => String(ug.userGroupId)) || []
+  const [selectedGroup, setSelectedGroup] = useState<string>(
+    defaultValues.userGroupId ? String(defaultValues.userGroupId) : "" // تغییر به one-to-one
   );
   // ===== پایان اصلاحیه ۱ =====
 
@@ -99,7 +99,7 @@ export default function WorkspaceUserForm({
           displayName,
           roleId,
           labels: selectedLabels.map(Number),
-          userGroups: selectedGroups.map(Number),
+          userGroupId: selectedGroup ? Number(selectedGroup) : undefined, // تغییر به one-to-one
         }
       : {
           name,
@@ -107,7 +107,7 @@ export default function WorkspaceUserForm({
           phone,
           roleId,
           labels: selectedLabels.map(Number),
-          userGroups: selectedGroups.map(Number),
+          userGroupId: selectedGroup ? Number(selectedGroup) : undefined, // تغییر به one-to-one
         };
     // ===== پایان اصلاحیه ۳ =====
 
@@ -188,20 +188,11 @@ export default function WorkspaceUserForm({
             //     onError={errors.labels?.[0]}
           />
           <Select
-            name="groups"
-            label="گروه‌ها"
+            name="group"
+            label="گروه کاربری"
             options={groups}
-            value={selectedGroups} // value اکنون string[] است
-            onChange={
-              (e) =>
-                // ===== شروع اصلاحیه ۲: عدم تبدیل به عدد در onChange =====
-                setSelectedGroups(
-                  Array.from(e.target.selectedOptions, (option) => option.value)
-                )
-              // ===== پایان اصلاحیه ۲ =====
-            }
-            multiple
-            //   onError={errors.groups?.[0]}
+            value={selectedGroup} // تغییر به one-to-one
+            onChange={(e) => setSelectedGroup(e.target.value)} // تغییر به one-to-one
           />
         </div>
       </div>

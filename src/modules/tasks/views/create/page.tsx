@@ -4,6 +4,8 @@
 "use client";
 
 import DIcon from "@/@Client/Components/common/DIcon";
+import { useDocument } from "@/modules/documents/hooks/useDocument";
+import { DocumentWithRelations } from "@/modules/documents/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TaskForm from "../../components/TaskForm2";
@@ -24,14 +26,29 @@ export default function CreateTaskPage({
   const router = useRouter();
   // هوک ماژول وظایف برای دسترسی به توابع و state ها
   const { create, submitting, error } = useTask();
+  const { update: updateDocument } = useDocument();
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (
+    data: any,
+    attachments: DocumentWithRelations[]
+  ) => {
     try {
       // تابع create را فراخوانی کرده و منتظر نتیجه می‌مانیم
       const result: any = await create(data);
 
       // پس از ایجاد موفق، به صفحه جزئیات وظیفه جدید هدایت شو
       if (result?.data?.id) {
+        if (attachments.length > 0) {
+          await Promise.all(
+            attachments.map((doc) =>
+              updateDocument(doc.id, {
+                task: { id: result.data.id },
+                entityType: "Task",
+                entityId: result.data.id,
+              })
+            )
+          );
+        }
         const redirectUrl = isAdmin
           ? `/dashboard/tasks/${result.data.id}`
           : `/panel/tasks/${result.data.id}`;

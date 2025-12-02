@@ -14,6 +14,12 @@ export const createPaymentSchema = z.object({
   status: z.string(),
   paymentCategoryId: z.any(),
   paidAt: z.string().optional(),
+  customerBankAccountId: z.number({
+    required_error: "انتخاب حساب بانکی مشتری الزامی است.",
+  }),
+  adminBankAccountId: z.number({
+    required_error: "انتخاب حساب بانکی ادمین الزامی است.",
+  }),
 });
 
 export const updatePaymentStatusSchema = z.object({

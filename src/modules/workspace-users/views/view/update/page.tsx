@@ -38,7 +38,7 @@ export default function CreateWorkspaceUserPage({
             ),
         },
         {
-          key: "userGroups",
+          key: "userGroupId", // تغییر به one-to-one
           fetcher: () =>
             getAllUserGroups({ page: 1, limit: 100 }).then(
               (res) => res?.data || []

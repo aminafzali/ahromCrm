@@ -76,11 +76,27 @@ export default function CommentsCreatePage() {
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-    const result: any = await create({
-      entityType,
-      entityId: Number(entityId),
+
+    // Convert to new format
+    const typeMap: Record<string, string> = {
+      Task: "taskId",
+      Knowledge: "knowledgeId",
+      Document: "documentId",
+      Project: "projectId",
+    };
+
+    const filterKey = typeMap[entityType];
+    if (!filterKey) {
+      console.error("Invalid entityType:", entityType);
+      return;
+    }
+
+    const createData: Record<string, any> = {
+      [filterKey]: Number(entityId),
       body: body.trim(),
-    } as any);
+    };
+
+    const result: any = await create(createData as any);
     if (result?.id || result?.data?.id) {
       router.push("/dashboard/comments");
     }

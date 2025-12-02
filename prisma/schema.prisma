@@ -11,6 +11,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ===== Enums for Cheque Module =====
+
+enum ChequeDirection {
+  INCOMING // چک دریافتی از مشتری
+  OUTGOING // چک پرداختی به تامین‌کننده یا سایر اشخاص
+}
+
+enum ChequeStatus {
+  CREATED // ثبت شده
+  HANDED_OVER // تحویل داده/گرفته شده
+  DEPOSITED // خوابانده شده در بانک
+  CLEARED // پاس شده
+  RETURNED // برگشتی
+  CANCELLED // باطل شده
+  LOST // مفقود شده
+}
+
 // >>>>>>>>>>>>> WORKSPACE & RBAC (Role-Based Access Control) MODELS <<<<<<<<<<<<<<
 
 model Workspace {
@@ -53,6 +70,7 @@ model Workspace {
   reminders               Reminder[]
   notifications           Notification[]
   payments                Payment[]
+  cheques                 Cheque[]
   reviews                 Review[]
   requestStatusHistories  RequestStatusHistory[]
   requestReviews          RequestReview[]
@@ -60,6 +78,19 @@ model Workspace {
   requestAttachments      RequestAttachment[]
   actualServicesOnRequest ActualServiceOnRequest[]
   paymentCategories       PaymentCategory[] // رابطه متقابل برای دسته‌بندی پرداخت‌ها
+  bankAccounts            BankAccount[]
+
+  // Inventory & Sales
+  warehouses                Warehouse[]
+  orders                    Order[]
+  shippingMethods           ShippingMethod[]
+  shippingZones             ShippingZone[]
+  paymentGateways           PaymentGatewayConfig[]
+  salesNotificationSettings SalesNotificationSettings[]
+  productStocks             ProductStock[]
+  stockMovements            StockMovement[]
+  stockTransfers            StockTransfer[]
+  purchaseOrders            PurchaseOrder[]
 
   createdAt               DateTime                  @default(now())
   updatedAt               DateTime                  @updatedAt
@@ -79,6 +110,7 @@ model Workspace {
   Knowledge               Knowledge[]
   Comment                 Comment[]
   ChatRoom                ChatRoom[]
+  chatbotSessions         ChatbotSession[]
   KnowledgeTeamPermission KnowledgeTeamPermission[]
   KnowledgeUserPermission KnowledgeUserPermission[]
   // Activity module (renamed )
@@ -99,11 +131,21 @@ model WorkspaceUser {
   userId      Int
   roleId      Int
 
-  displayName String?
-  phone       String?
-  name        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  displayName        String?
+  phone              String?
+  name               String?
+  // --- فیلدهای جدید اطلاعات تکمیلی مخاطب ---
+  address            String? // آدرس پستی
+  postalCode         String? // کد پستی
+  province           String? // استان
+  city               String? // شهر
+  economicCode       String? // شماره اقتصادی
+  registrationNumber String? // شماره ثبت
+  nationalId         String? // کد ملی / شناسه ملی
+  otherPhones        Json? // لیست شماره‌تلفن‌های دیگر (آرایه رشته‌ها)
+  description        String?  @db.Text // توضیحات مخاطب
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -123,8 +165,10 @@ model WorkspaceUser {
   statusChanges        RequestStatusHistory[]
 
   // روابط چند به چند ساده (Implicit)
-  labels     Label[]     @relation("WorkspaceUserLabels")
-  userGroups UserGroup[] @relation("WorkspaceUserGroups")
+  labels      Label[]    @relation("WorkspaceUserLabels")
+  // تغییر: هر کاربر فقط یک گروه کاربری دارد
+  userGroupId Int?
+  userGroup   UserGroup? @relation(fields: [userGroupId], references: [id], onDelete: SetNull)
 
   // Project Management Relations
   teams                   TeamMember[]
@@ -164,6 +208,14 @@ model WorkspaceUser {
   // Ticket module (new)
   TicketAsUser     Ticket[] @relation("Ticket_user")
   TicketAsAssignee Ticket[] @relation("Ticket_assignee")
+
+  // Chatbot
+  chatbotSessions ChatbotSession[]
+
+  bankAccounts             BankAccount[]
+  cheques                  Cheque[]
+  purchaseOrdersAsSupplier PurchaseOrder[]
+  orders                   Order[]
 
   @@unique([workspaceId, userId])
 }
@@ -296,8 +348,8 @@ model Invoice {
   requestId Int?
   request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
 
-  // orderId Int?
-  // order   Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderId Int?   @unique
+  order   Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
   name String?
 
@@ -327,6 +379,18 @@ model Invoice {
   description String?   @db.Text
   paymentDate DateTime?
   payments    Payment[]
+  cheques     Cheque[]
+
+  // روابط جدید
+  stockMovements StockMovement[]
+  purchaseOrder  PurchaseOrder?  @relation("PurchaseOrderInvoice")
+
+  // --- فیلدهای جدید بانک اکانت ---
+  customerBankAccountId Int?
+  customerBankAccount   BankAccount? @relation("CustomerInvoiceBankAccount", fields: [customerBankAccountId], references: [id], onDelete: SetNull)
+
+  adminBankAccountId Int?
+  adminBankAccount   BankAccount? @relation("AdminInvoiceBankAccount", fields: [adminBankAccountId], references: [id], onDelete: SetNull)
 
   // برای رابطه معکوس اگر نیاز باشد:
   referencedBy Invoice[] @relation("InvoiceReference")
@@ -375,6 +439,46 @@ model InvoiceItem {
   tax             Float @default(0)
   taxPercent      Float @default(0)
   total           Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// ===== Purchase Order (اختیاری ولی استاندارد) =====
+model PurchaseOrder {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  supplierWorkspaceUserId Int?
+  supplierWorkspaceUser   WorkspaceUser? @relation(fields: [supplierWorkspaceUserId], references: [id], onDelete: SetNull)
+
+  status String
+  notes  String? @db.Text
+
+  items           PurchaseOrderItem[]
+  linkedInvoiceId Int?                @unique
+  linkedInvoice   Invoice?            @relation("PurchaseOrderInvoice", fields: [linkedInvoiceId], references: [id], onDelete: SetNull)
+
+  stockMovements StockMovement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
+}
+
+model PurchaseOrderItem {
+  id              Int           @id @default(autoincrement())
+  purchaseOrderId Int
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity  Int
+  unitPrice Float
+  total     Float
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -436,6 +540,8 @@ model Reminder {
   invoice              Invoice?            @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   paymentId            Int?
   payment              Payment?            @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  chequeId             Int?
+  cheque               Cheque?             @relation(fields: [chequeId], references: [id], onDelete: SetNull)
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
   notified             Boolean             @default(false)
@@ -512,6 +618,30 @@ model Notification {
   NotificationRecipient  NotificationRecipient[]
 }
 
+/// تنظیمات اعلان‌های ماژول فروش (سفارش و فاکتور)
+model SalesNotificationSettings {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // رویدادهای سفارش
+  notifyOnOrderCreated       Boolean @default(true)
+  notifyOnOrderStatusChanged Boolean @default(true)
+
+  // رویدادهای فاکتور
+  notifyOnInvoiceCreated Boolean @default(true)
+  notifyOnInvoicePaid    Boolean @default(true)
+
+  // کانال‌ها
+  sendInAppForAdmins Boolean @default(true)
+  sendSmsForCustomer Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId])
+}
+
 // گیرندگان ریمایندر برای پشتیبانی از ارسال گروهی و رصد وضعیت هر گیرنده
 model ReminderRecipient {
   id              Int                    @id @default(autoincrement())
@@ -557,25 +687,56 @@ model Payment {
   workspaceUserId Int
   workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
 
-  invoiceId   Int?
-  invoice     Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  amount      Float
-  type        PaymentType   @default(RECEIVE)
-  reference   String?
-  status      PaymentStatus @default(PENDING)
-  method      PaymentMethod @default(CARD)
-  paidAt      DateTime?
-  description String?       @db.Text
+  invoiceId           Int?
+  invoice             Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  amount              Float
+  type                PaymentType   @default(RECEIVE)
+  reference           String?
+  status              PaymentStatus @default(PENDING)
+  method              PaymentMethod @default(CARD)
+  // Gateway metadata (for آنلاین)
+  gatewayRefId        String?
+  gatewayTrackingCode String?
+  rawGatewayResponse  Json?
+  paidAt              DateTime?
+  description         String?       @db.Text
 
   // ===== شروع اصلاحیه =====
   paymentCategoryId Int?
   paymentCategory   PaymentCategory? @relation(fields: [paymentCategoryId], references: [id], onDelete: Restrict)
   // ===== پایان اصلاحیه =====
 
+  // --- فیلدهای جدید بانک اکانت ---
+  customerBankAccountId Int?
+  customerBankAccount   BankAccount? @relation("CustomerBankAccountPayments", fields: [customerBankAccountId], references: [id], onDelete: Restrict)
+
+  adminBankAccountId Int?
+  adminBankAccount   BankAccount? @relation("AdminBankAccountPayments", fields: [adminBankAccountId], references: [id], onDelete: Restrict)
+
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   Reminder     Reminder[]
   Notification Notification[]
+  cheques      Cheque[]
+}
+
+/// تنظیمات درگاه بانکی برای هر ورک‌اسپیس
+model PaymentGatewayConfig {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  provider    PaymentGatewayProvider
+  isActive    Boolean                @default(true)
+  config      Json
+  callbackUrl String?
+
+  defaultForOnlinePayments Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, provider])
 }
 
 // ===== شروع مدل جدید =====
@@ -601,6 +762,138 @@ model PaymentCategory {
 }
 
 // ===== پایان مدل جدید =====
+
+/// ===== Orders (سفارش فروش اینترنتی / حضوری) =====
+
+model Order {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  status   OrderStatus
+  source   OrderSource @default(WEB)
+  isOnline Boolean     @default(true)
+
+  subtotal     Float @default(0)
+  tax          Float @default(0)
+  discount     Float @default(0)
+  total        Float @default(0)
+  shippingCost Float @default(0)
+
+  shippingMethodId Int?
+  shippingMethod   ShippingMethod? @relation(fields: [shippingMethodId], references: [id], onDelete: SetNull)
+
+  shippingAddress String? @db.Text
+
+  paymentMethod PaymentMethod
+
+  invoice        Invoice?
+  stockMovements StockMovement[]
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, status])
+}
+
+model OrderItem {
+  id      Int   @id @default(autoincrement())
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity  Int
+  unitPrice Float
+  discount  Float @default(0)
+  tax       Float @default(0)
+  total     Float
+}
+
+// ===== مدل جدید حساب بانکی =====
+model BankAccount {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // حساب مرتبط با یک مخاطب (مشتری / ادمین)
+  workspaceUserId Int?
+  workspaceUser   WorkspaceUser? @relation(fields: [workspaceUserId], references: [id], onDelete: SetNull)
+
+  // اطلاعات حساب
+  title         String // عنوان نمایشی حساب
+  bankName      String? // نام بانک
+  iban          String? // شماره شبا
+  accountNumber String? // شماره حساب
+  cardNumber    String? // شماره کارت
+
+  // پیش‌فرض‌ها برای نوع تراکنش
+  isDefaultForReceive Boolean @default(false) // پیش‌فرض برای دریافتی‌ها
+  isDefaultForPay     Boolean @default(false) // پیش‌فرض برای پرداختی‌ها
+
+  // روابط با پرداخت‌ها
+  customerPayments Payment[] @relation("CustomerBankAccountPayments")
+  adminPayments    Payment[] @relation("AdminBankAccountPayments")
+
+  // روابط با فاکتورها
+  customerInvoices Invoice[] @relation("CustomerInvoiceBankAccount")
+  adminInvoices    Invoice[] @relation("AdminInvoiceBankAccount")
+  cheques          Cheque[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, workspaceUserId])
+}
+
+// ===== Cheque model =====
+
+model Cheque {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+
+  invoiceId Int?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  paymentId Int?
+  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  bankAccountId Int?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+
+  chequeNumber  String
+  serial        String?
+  bankName      String?
+  branchName    String?
+  accountNumber String?
+  amount        Float
+
+  issueDate DateTime
+  dueDate   DateTime
+
+  direction ChequeDirection @default(INCOMING)
+  status    ChequeStatus    @default(CREATED)
+
+  description String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reminders Reminder[]
+
+  @@index([workspaceId, workspaceUserId])
+  @@index([dueDate, status])
+}
 
 model Review {
   id              Int           @id @default(autoincrement())
@@ -685,42 +978,252 @@ model Label {
 }
 
 model UserGroup {
-  id             Int             @id @default(autoincrement())
-  workspaceId    Int
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name           String
-  description    String?         @db.Text
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  workspaceUsers WorkspaceUser[] @relation("WorkspaceUserGroups")
+  id                    Int                             @id @default(autoincrement())
+  workspaceId           Int
+  workspace             Workspace                       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                  String
+  description           String?                         @db.Text
+  createdAt             DateTime                        @default(now())
+  updatedAt             DateTime                        @updatedAt
+  // تغییر: ارتباط one-to-many از UserGroup به WorkspaceUser
+  workspaceUsers        WorkspaceUser[]
+  productVisibilities   ProductUserGroupVisibility[]
+  productPaymentOptions ProductUserGroupPaymentOption[]
+  // جدید: لیست قیمت‌های محصولات برای این گروه
+  productPrices         ProductPriceList[]
 
   @@unique([name, workspaceId])
 }
 
+/// کنترل نمایش و دسترسی خرید محصول برای گروه‌های کاربری
+model ProductUserGroupVisibility {
+  productId   Int
+  userGroupId Int
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userGroup   UserGroup @relation(fields: [userGroupId], references: [id], onDelete: Cascade)
+
+  canView Boolean @default(true)
+  canBuy  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([productId, userGroupId])
+}
+
+/// روش‌های پرداخت مجاز برای هر محصول
+model ProductPaymentOption {
+  id            Int           @id @default(autoincrement())
+  productId     Int
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  paymentMethod PaymentMethod
+  isEnabled     Boolean       @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, paymentMethod])
+}
+
+/// روش‌های پرداخت مجاز برای هر محصول در سطح گروه کاربری
+model ProductUserGroupPaymentOption {
+  productId     Int
+  userGroupId   Int
+  paymentMethod PaymentMethod
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userGroup     UserGroup     @relation(fields: [userGroupId], references: [id], onDelete: Cascade)
+
+  isEnabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([productId, userGroupId, paymentMethod])
+}
+
+/// لیست قیمت محصولات برای گروه‌های کاربری
+model ProductPriceList {
+  id          Int       @id @default(autoincrement())
+  productId   Int
+  userGroupId Int
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userGroup   UserGroup @relation(fields: [userGroupId], references: [id], onDelete: Cascade)
+
+  // قیمت ویژه برای این گروه
+  price Float
+
+  // قیمت با تخفیف (اختیاری)
+  discountPrice Float?
+
+  // درصد تخفیف (محاسبه شده)
+  discountPercent Float?
+
+  // تاریخ شروع و پایان تخفیف
+  discountStartDate DateTime?
+  discountEndDate   DateTime?
+
+  // فعال/غیرفعال بودن این قیمت
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, userGroupId])
+  @@index([userGroupId])
+  @@index([productId])
+}
+
 model Product {
-  id            Int                @id @default(autoincrement())
-  workspaceId   Int
-  workspace     Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name          String
-  price         Float
-  description   String?
-  blog          Json?
-  stock         Int                @default(0)
-  warrantyId    Int?
-  isActive      Boolean            @default(false)
-  warranty      Warranty?          @relation(fields: [warrantyId], references: [id], onDelete: SetNull)
-  categoryId    Int?
-  category      Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  brandId       Int?
-  brand         Brand?             @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  attributes    ProductAttribute[]
-  variants      ProductVariant[]
-  reviews       Review[]
-  expertReviews ExpertReview[]
-  images        ProductImage[]
-  InvoiceItem   InvoiceItem[]
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id                     Int                             @id @default(autoincrement())
+  workspaceId            Int
+  workspace              Workspace                       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                   String
+  price                  Float
+  description            String?
+  blog                   Json?
+  stock                  Int                             @default(0)
+  warrantyId             Int?
+  isActive               Boolean                         @default(false)
+  // Visibility & e-commerce flags
+  isPublicVisible        Boolean                         @default(false)
+  isCustomerPanelVisible Boolean                         @default(false)
+  onlinePurchaseEnabled  Boolean                         @default(false)
+  warranty               Warranty?                       @relation(fields: [warrantyId], references: [id], onDelete: SetNull)
+  categoryId             Int?
+  category               Category?                       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brandId                Int?
+  brand                  Brand?                          @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  attributes             ProductAttribute[]
+  variants               ProductVariant[]
+  reviews                Review[]
+  expertReviews          ExpertReview[]
+  images                 ProductImage[]
+  InvoiceItem            InvoiceItem[]
+  purchaseOrderItems     PurchaseOrderItem[]
+  orderItems             OrderItem[]
+  stockTransferItems     StockTransferItem[]
+  // Inventory
+  stocks                 ProductStock[]
+  stockMovements         StockMovement[]
+  // Visibility & payment relations
+  visibilityByGroup      ProductUserGroupVisibility[]
+  paymentOptions         ProductPaymentOption[]
+  paymentOptionsByGroup  ProductUserGroupPaymentOption[]
+  // Price lists for user groups
+  priceLists             ProductPriceList[]
+  createdAt              DateTime                        @default(now())
+  updatedAt              DateTime                        @updatedAt
+}
+
+/// ===== Inventory & Warehouse Models =====
+
+model Warehouse {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String
+  address     String?
+  description String?
+
+  stocks        ProductStock[]
+  movements     StockMovement[]
+  transfersFrom StockTransfer[] @relation("TransferFromWarehouse")
+  transfersTo   StockTransfer[] @relation("TransferToWarehouse")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, name])
+}
+
+model ProductStock {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  warehouseId Int
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // اگر بعداً خواستی روی واریانت هم کنترل داشته باشی، می‌توانی این فیلد را فعال کنی
+  // productVariantId Int?
+  // productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  quantity Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, warehouseId, productId])
+}
+
+model StockMovement {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  warehouseId Int
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity     Int
+  movementType StockMovementType
+
+  invoiceId Int?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  orderId Int?
+  order   Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  purchaseOrderId Int?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+
+  description String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, warehouseId, productId])
+}
+
+model StockTransfer {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  fromWarehouseId Int
+  fromWarehouse   Warehouse @relation("TransferFromWarehouse", fields: [fromWarehouseId], references: [id])
+
+  toWarehouseId Int
+  toWarehouse   Warehouse @relation("TransferToWarehouse", fields: [toWarehouseId], references: [id])
+
+  status StockTransferStatus @default(DRAFT)
+  items  StockTransferItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, fromWarehouseId])
+  @@index([workspaceId, toWarehouseId])
+}
+
+model StockTransferItem {
+  id              Int           @id @default(autoincrement())
+  stockTransferId Int
+  stockTransfer   StockTransfer @relation(fields: [stockTransferId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // =========================
@@ -771,6 +1274,11 @@ model Document {
   // اتصال چندشکلی به موجودیت‌ها (اختیاری)
   entityType String? // e.g. project, task, user, invoice, request
   entityId   Int?
+
+  taskId Int?
+  task   Task? @relation("TaskDocuments", fields: [taskId], references: [id], onDelete: SetNull)
+
+  comments Comment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -834,6 +1342,8 @@ model Knowledge {
 
   categoryId Int?
   category   KnowledgeCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  comments Comment[]
 
   // Relations
   labels    KnowledgeLabel[]
@@ -933,8 +1443,18 @@ model Comment {
   workspaceId Int
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  entityType String
-  entityId   Int
+  // Relations to entities
+  taskId Int?
+  task   Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  knowledgeId Int?
+  knowledge   Knowledge? @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+
+  documentId Int?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  projectId Int?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   authorId Int
   author   WorkspaceUser @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -953,7 +1473,10 @@ model Comment {
 
   likes CommentLike[]
 
-  @@index([workspaceId, entityType, entityId])
+  @@index([workspaceId, taskId])
+  @@index([workspaceId, knowledgeId])
+  @@index([workspaceId, documentId])
+  @@index([workspaceId, projectId])
 }
 
 model CommentLike {
@@ -965,6 +1488,63 @@ model CommentLike {
   createdAt DateTime @default(now())
 
   @@id([commentId, workspaceUserId])
+}
+
+// =========================
+// Chatbot Models
+// =========================
+
+model ChatbotSession {
+  id              Int                  @id @default(autoincrement())
+  workspaceId     Int
+  workspace       Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceUserId Int
+  workspaceUser   WorkspaceUser        @relation(fields: [workspaceUserId], references: [id], onDelete: Cascade)
+  status          ChatbotSessionStatus @default(ACTIVE)
+  title           String?              @db.VarChar(255)
+  currentIntent   String?
+  pendingAction   String?
+  context         Json?
+  lastMessageAt   DateTime?            @default(now())
+  messages        ChatbotMessage[]
+  actions         ChatbotAction[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([workspaceId, workspaceUserId])
+  @@index([status])
+  @@index([workspaceId, lastMessageAt])
+}
+
+model ChatbotMessage {
+  id        Int                @id @default(autoincrement())
+  sessionId Int
+  session   ChatbotSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      ChatbotMessageRole
+  content   String?            @db.LongText
+  intent    String?
+  payload   Json?
+  isError   Boolean            @default(false)
+  createdAt DateTime           @default(now())
+
+  @@index([sessionId, role])
+  @@index([createdAt])
+}
+
+model ChatbotAction {
+  id           Int                 @id @default(autoincrement())
+  sessionId    Int
+  session      ChatbotSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  actionType   String
+  status       ChatbotActionStatus @default(PENDING)
+  payload      Json?
+  result       Json?
+  errorMessage String?             @db.Text
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([sessionId, actionType])
+  @@index([status])
 }
 
 // =========================
@@ -1897,12 +2477,93 @@ model ProductVariant {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   productId   Int
   product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sku         String?   @unique
-  price       Float
-  stock       Int       @default(0)
-  attributes  Json
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+
+  // اطلاعات اصلی واریانت
+  name String? // نام واریانت (مثلاً "رنگ قرمز - سایز L")
+  sku  String? @unique // کد محصول
+
+  // قیمت و موجودی
+  price Float // قیمت واریانت
+  stock Int   @default(0) // موجودی واریانت
+
+  // ویژگی‌های واریانت (JSON)
+  // مثال: {"color": "red", "size": "L", "material": "cotton"}
+  attributes Json
+
+  // تصاویر واریانت
+  images Json? // آرایه‌ای از URL تصاویر
+
+  // وضعیت
+  isActive Boolean @default(true)
+
+  // وزن و ابعاد (برای حمل و نقل)
+  weight Float? // وزن (گرم)
+  length Float? // طول (سانتی‌متر)
+  width  Float? // عرض (سانتی‌متر)
+  height Float? // ارتفاع (سانتی‌متر)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([sku])
+}
+
+/// ===== Shipping Models =====
+
+model ShippingMethod {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name      String
+  type      ShippingMethodType
+  basePrice Float
+  isActive  Boolean            @default(true)
+  settings  Json?
+
+  zones  ShippingMethodZone[]
+  orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, isActive])
+}
+
+model ShippingZone {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name      String
+  provinces Json?
+  cities    Json?
+
+  methods ShippingMethodZone[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, name])
+}
+
+model ShippingMethodZone {
+  id               Int            @id @default(autoincrement())
+  shippingMethodId Int
+  shippingMethod   ShippingMethod @relation(fields: [shippingMethodId], references: [id], onDelete: Cascade)
+
+  shippingZoneId Int
+  shippingZone   ShippingZone @relation(fields: [shippingZoneId], references: [id], onDelete: Cascade)
+
+  extraCost    Float  @default(0)
+  minCartValue Float?
+  maxCartValue Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shippingMethodId, shippingZoneId])
 }
 
 model ExpertReview {
@@ -2027,6 +2688,8 @@ model Project {
   // وضعیت‌های خاص این پروژه (برای وظایف)
   specificStatuses PMStatus[] @relation("ProjectSpecificStatuses")
 
+  comments Comment[]
+
   // Internal Chat
   chatRooms ChatRoom[]
 
@@ -2049,13 +2712,18 @@ model Task {
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   statusId Int
-  status   PMStatus @relation(fields: [statusId], references: [id])
+  status   PMStatus @relation("TaskGlobalStatus", fields: [statusId], references: [id])
 
-  orderInStatus Float?
+  orderInStatus        Float?
+  projectStatusId      Int?
+  projectStatus        PMStatus? @relation("TaskProjectStatus", fields: [projectStatusId], references: [id])
+  projectOrderInStatus Float?
 
   parentId Int?
   parent   Task?  @relation("TaskHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   subTasks Task[] @relation("TaskHierarchy")
+
+  comments Comment[]
 
   assignedUsers WorkspaceUser[] @relation("AssignedWorkspaceUsersToTask")
   assignedTeams Team[]          @relation("AssignedTeamsToTask")
@@ -2083,6 +2751,8 @@ model Task {
 
   // Activity relations
   activity ActivityTask[]
+
+  documents Document[] @relation("TaskDocuments")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2112,7 +2782,8 @@ model PMStatus {
   projectId            Int?
   project              Project?            @relation("ProjectSpecificStatuses", fields: [projectId], references: [id], onDelete: Cascade)
   projects             Project[]           @relation("ProjectGlobalStatuses")
-  tasks                Task[]
+  tasks                Task[]              @relation("TaskGlobalStatus")
+  projectTasks         Task[]              @relation("TaskProjectStatus")
   TaskStatusHistoryNew TaskStatusHistory[] @relation(name: "newStatus")
   TaskStatusHistoryOld TaskStatusHistory[] @relation(name: "oldStatus")
 
@@ -2218,6 +2889,8 @@ enum PaymentMethod {
   CASH
   CARD
   TRANSFER
+  ONLINE_GATEWAY
+  COD
 }
 
 enum InvoiceStatus {
@@ -2252,6 +2925,61 @@ enum InvoiceType {
 enum PaymentType {
   RECEIVE
   PAY
+}
+
+/// نوع حرکت در انبار
+enum StockMovementType {
+  STOCK_IN
+  STOCK_OUT
+  PURCHASE
+  SALE
+  TRANSFER_OUT
+  TRANSFER_IN
+  ADJUSTMENT
+  RESERVATION
+}
+
+/// وضعیت حواله بین انبارها
+enum StockTransferStatus {
+  DRAFT
+  PENDING
+  DONE
+  CANCELED
+}
+
+/// وضعیت سفارش فروش
+enum OrderStatus {
+  NEW
+  PENDING_PAYMENT
+  PAID
+  PREPARING
+  SHIPPED
+  COMPLETED
+  CANCELED
+}
+
+/// منبع ثبت سفارش
+enum OrderSource {
+  WEB
+  POS
+  MANUAL
+}
+
+/// نوع روش حمل و نقل
+enum ShippingMethodType {
+  FIXED
+  BY_WEIGHT
+  BY_DISTANCE
+  BY_CART_VALUE
+}
+
+/// ارائه‌دهنده درگاه پرداخت
+enum PaymentGatewayProvider {
+  ZARINPAL
+  IDPAY
+  SADAD
+  NEXTPAY
+  CUSTOM
 }
 
 enum InvoiceItemType {
@@ -2376,4 +3104,23 @@ enum TicketStatus {
   RESOLVED
   CLOSED
   REOPENED
+}
+
+// Chatbot enums
+enum ChatbotSessionStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ChatbotMessageRole {
+  USER
+  BOT
+  SYSTEM
+}
+
+enum ChatbotActionStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }

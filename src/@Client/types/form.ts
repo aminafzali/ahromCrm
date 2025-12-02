@@ -22,12 +22,9 @@ export type FieldType =
   | "radio"
   | "dataTable"
   | "color"
-  // ===== شروع اصلاحیه =====
-  | "switch" // ۱. تایپ جدید را به لیست اضافه می‌کنیم
-  // ===== پایان اصلاحیه =====
-  // ===== شروع اصلاحیه =====
-  | "date"; // نوع جدید را اضافه می‌کنیم
-// ===== پایان اصلاحیه =====
+  | "switch"
+  | "multiSelect"
+  | "custom";
 
 export interface FormField {
   showName?: string;
@@ -53,6 +50,11 @@ export interface FormField {
   renderOption?: (option: Option) => React.ReactNode;
   onChange?: (value: any) => void;
   onCreateOption?: (value: any) => void;
+  render?: (
+    field: FormField,
+    value: any,
+    onChange: (value: any) => void
+  ) => React.ReactNode; // For custom fields
 }
 
 export interface FormConfig {

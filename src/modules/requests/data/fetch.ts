@@ -8,7 +8,7 @@ export const include = {
       user: true,
       role: true,
       labels: true,
-      userGroups: true,
+      userGroup: true, // تغییر از userGroups به userGroup (one-to-one)
     },
   },
   assignedTo: {

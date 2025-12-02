@@ -11,10 +11,17 @@ import { PMStatus } from "@/modules/pm-statuses/types";
 import { useProject } from "@/modules/projects/hooks/useProject";
 import { TeamWithRelations } from "@/modules/teams/types";
 import { WorkspaceUserWithRelations } from "@/modules/workspace-users/types";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Modal } from "ndui-ahrom";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import TaskAssignmentFilter from "../components/TaskAssignmentFilter";
-import { PriorityBadge, columnsForAdmin, listItemRender } from "../data/table";
+import TaskDetailPanel from "../components/TaskDetailPanel";
+import {
+  PriorityBadge,
+  getColumnsForAdmin,
+  listItemRender,
+} from "../data/table";
 import { useTask } from "../hooks/useTask";
 import { TaskWithRelations } from "../types";
 
@@ -32,6 +39,22 @@ const KLog = {
   i: (msg: string, obj?: any) => console.info("[KANBAN] " + msg, obj ?? ""),
   w: (msg: string, obj?: any) => console.warn("[KANBAN] " + msg, obj ?? ""),
   e: (msg: string, obj?: any) => console.error("[KANBAN] " + msg, obj ?? ""),
+};
+
+const getAssignmentLabel = (task: TaskWithRelations) => {
+  const users =
+    task.assignedUsers
+      ?.map((u) => u.displayName || u.user?.name)
+      .filter(Boolean) || [];
+  const teams =
+    task.assignedTeams?.map((team) => `تیم ${team.name}`).filter(Boolean) || [];
+  const combined = [...users, ...teams];
+  return combined.length ? combined.join("، ") : null;
+};
+
+const stripHtml = (value?: string | null) => {
+  if (!value) return "";
+  return value.replace(/<[^>]+>/g, "");
 };
 
 const TaskKanbanCard = ({
@@ -54,6 +77,12 @@ const TaskKanbanCard = ({
 
   // تشخیص موبایل برای اضافه کردن فضای سمت راست به عنوان
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const assignedLabel = getAssignmentLabel(item);
+  const plainDescription = stripHtml(item.description).trim();
+  const description =
+    plainDescription.length > 140
+      ? `${plainDescription.slice(0, 140)}…`
+      : plainDescription;
 
   return (
     <div
@@ -77,16 +106,51 @@ const TaskKanbanCard = ({
           <span className="font-semibold ml-1">پروژه:</span>
           <span>{item.project?.name || "---"}</span>
         </div>
+        <div className="flex items-center gap-1">
+          <span className="font-semibold">وضعیت کلی:</span>
+          <span>{item.status?.name || "---"}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="font-semibold">وضعیت پروژه:</span>
+          <span>{item.projectStatus?.name || "---"}</span>
+        </div>
         <div className="flex items-center">
           <span className="font-semibold ml-1">اولویت:</span>
           <PriorityBadge priority={item.priority} />
         </div>
+        {assignedLabel && (
+          <div className="flex items-center gap-1">
+            <DIcon icon="fa-users" className="text-gray-400" />
+            <span className="truncate">{assignedLabel}</span>
+          </div>
+        )}
+        {description && (
+          <p className="text-[11px] leading-5 text-gray-600 dark:text-gray-300 line-clamp-2">
+            {description}
+          </p>
+        )}
         {item.endDate && (
           <div className="flex items-center pt-1">
             <span className="font-semibold ml-1">تاریخ پایان:</span>
             <span>{new Date(item.endDate).toLocaleDateString("fa-IR")}</span>
           </div>
         )}
+      </div>
+      <div className="flex justify-end gap-2 pt-3 text-xs text-gray-500">
+        <Link
+          href={`/dashboard/tasks/${item.id}`}
+          className="p-1 rounded hover:text-primary transition"
+          aria-label="مشاهده وظیفه"
+        >
+          <DIcon icon="fa-eye" className="text-[0.85rem]" />
+        </Link>
+        <Link
+          href={`/dashboard/tasks/${item.id}/update`}
+          className="p-1 rounded hover:text-primary transition"
+          aria-label="ویرایش وظیفه"
+        >
+          <DIcon icon="fa-pen-to-square" className="text-[0.85rem]" />
+        </Link>
       </div>
     </div>
   );
@@ -120,6 +184,27 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
   const [allStatuses, setAllStatuses] = useState<
     (PMStatus & { projectId?: number | null })[]
   >([]);
+  const [isKanbanActive, setIsKanbanActive] = useState(true);
+  const [detailTaskId, setDetailTaskId] = useState<number | null>(null);
+
+  const handleViewTask = useCallback((task: TaskWithRelations) => {
+    setDetailTaskId(task.id);
+  }, []);
+
+  const closeDetailModal = useCallback(() => {
+    setDetailTaskId(null);
+  }, []);
+
+  const tableColumns = useMemo(
+    () => getColumnsForAdmin({ onViewTask: handleViewTask }),
+    [handleViewTask]
+  );
+
+  const listRenderer = useMemo(
+    () => (item: TaskWithRelations) =>
+      listItemRender(item, { onViewTask: handleViewTask }),
+    [handleViewTask]
+  );
 
   // ref برای جلوگیری از ارسال همزمان چند PATCH روی یک آیتم
   const pendingRef = useRef<Set<string>>(new Set());
@@ -175,12 +260,24 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
 
   // گروه‌بندی تسک‌ها براساس statusId — هر بار tasks یا taskStatuses تغییر کرد
   useEffect(() => {
+    const isProjectView = statusType === "project";
     const groups = taskStatuses.reduce((acc, status) => {
       const statusId = String(status.id);
       acc[statusId] = tasks
-        .filter((task) => String(task.statusId) === statusId)
-        // اطمینان از اینکه ترتیب داخل ستون بر اساس orderInStatus رعایت می‌شود
-        .sort((a, b) => (a.orderInStatus ?? 0) - (b.orderInStatus ?? 0));
+        .filter((task) =>
+          isProjectView
+            ? String(task.projectStatusId ?? "") === statusId
+            : String(task.statusId) === statusId
+        )
+        .sort((a, b) => {
+          const orderA = isProjectView
+            ? a.projectOrderInStatus ?? 0
+            : a.orderInStatus ?? 0;
+          const orderB = isProjectView
+            ? b.projectOrderInStatus ?? 0
+            : b.orderInStatus ?? 0;
+          return orderA - orderB;
+        });
       return acc;
     }, {} as GroupedTasks);
 
@@ -190,7 +287,7 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
     });
 
     setGroupedTasks(groups);
-  }, [tasks, taskStatuses]);
+  }, [tasks, taskStatuses, statusType]);
 
   const handleSelectionChange = (
     users: WorkspaceUserWithRelations[],
@@ -257,7 +354,7 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
         options: [{ value: "all", label: "همه پروژه‌ها" }, ...userProjects],
       },
       {
-        name: "statusId_in",
+        name: statusType === "project" ? "projectStatusId_in" : "statusId_in",
         label: "وضعیت",
         options: [
           { value: "all", label: "همه وضعیت‌ها" },
@@ -276,7 +373,7 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
         ],
       },
     ],
-    [userProjects, taskStatuses]
+    [userProjects, taskStatuses, statusType]
   );
 
   const dateFilterFields = useMemo(
@@ -499,9 +596,28 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
         newOrderInStatus = (prevOrder + nextOrder) / 2;
       }
 
-      const payload: any = { orderInStatus: newOrderInStatus };
+      const isProjectView = statusType === "project";
+
+      const payload: any = isProjectView
+        ? { projectOrderInStatus: newOrderInStatus }
+        : { orderInStatus: newOrderInStatus };
+      const destinationStatus = taskStatuses.find(
+        (status) => String(status.id) === String(toContainerId)
+      );
       if (fromContainerId !== toContainerId) {
-        payload.statusId = Number(toContainerId);
+        if (isProjectView) {
+          const nextId = Number(toContainerId);
+          if (!Number.isNaN(nextId)) {
+            payload.projectStatusId = nextId;
+            payload.projectStatus = { id: nextId };
+          }
+        } else {
+          const nextStatusId = Number(toContainerId);
+          if (!Number.isNaN(nextStatusId)) {
+            payload.statusId = nextStatusId;
+            payload.globalStatus = { id: nextStatusId };
+          }
+        }
       }
 
       KLog.i("computed move", {
@@ -529,8 +645,27 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
         const filtered = prev.filter((t) => String(t.id) !== activeId);
         const localUpdated = {
           ...movedTask,
-          statusId: payload.statusId ?? movedTask.statusId,
-          orderInStatus: newOrderInStatus,
+          statusId:
+            !isProjectView && payload.statusId
+              ? payload.statusId
+              : movedTask.statusId,
+          projectStatusId: isProjectView
+            ? payload.projectStatusId ?? movedTask.projectStatusId
+            : movedTask.projectStatusId,
+          orderInStatus: isProjectView
+            ? movedTask.orderInStatus
+            : newOrderInStatus,
+          projectOrderInStatus: isProjectView
+            ? newOrderInStatus
+            : movedTask.projectOrderInStatus,
+          status:
+            !isProjectView && destinationStatus
+              ? (destinationStatus as PMStatus)
+              : movedTask.status,
+          projectStatus:
+            isProjectView && destinationStatus
+              ? (destinationStatus as PMStatus)
+              : movedTask.projectStatus,
         };
         return [...filtered, localUpdated];
       });
@@ -573,14 +708,22 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
                 (it) => String(it.id) !== String(serverTask.id)
               );
             });
-            const dest = String(serverTask.statusId);
-            if (!g[dest]) g[dest] = [];
-            // درج در جای مناسب بر اساس orderInStatus
-            const insertIndex = g[dest].findIndex(
-              (it) => (it.orderInStatus ?? 0) > (serverTask.orderInStatus ?? 0)
+            const isProjectView = statusType === "project";
+            const destinationId = isProjectView
+              ? String(serverTask.projectStatusId ?? "")
+              : String(serverTask.statusId);
+            if (!g[destinationId]) g[destinationId] = [];
+            const orderValue = isProjectView
+              ? serverTask.projectOrderInStatus ?? 0
+              : serverTask.orderInStatus ?? 0;
+            const insertIndex = g[destinationId].findIndex(
+              (it) =>
+                (isProjectView
+                  ? it.projectOrderInStatus ?? 0
+                  : it.orderInStatus ?? 0) > orderValue
             );
-            if (insertIndex === -1) g[dest].push(serverTask);
-            else g[dest].splice(insertIndex, 0, serverTask);
+            if (insertIndex === -1) g[destinationId].push(serverTask);
+            else g[destinationId].splice(insertIndex, 0, serverTask);
             return g;
           });
 
@@ -602,43 +745,41 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
     }
   };
 
-  // نمایش دکمه‌های نوع وضعیت فقط زمانی که پروژه انتخاب شده باشد
-  const showStatusTypeButtons = selectedProjectIds.length > 0;
+  const statusToggleActions = (
+    <div className="flex items-center gap-2 bg-gray-200 dark:bg-slate-700 rounded-lg p-1">
+      <button
+        onClick={() => setStatusType("global")}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+          statusType === "global"
+            ? "bg-white dark:bg-slate-600 text-primary shadow"
+            : "text-gray-600 dark:text-gray-300"
+        }`}
+      >
+        <DIcon icon="fa-globe" />
+        <span>وضعیت کلی</span>
+      </button>
+      <button
+        onClick={() => setStatusType("project")}
+        disabled={selectedProjectIds.length === 0}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+          statusType === "project"
+            ? "bg-white dark:bg-slate-600 text-primary shadow"
+            : "text-gray-600 dark:text-gray-300"
+        } ${
+          selectedProjectIds.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+        }`}
+      >
+        <DIcon icon="fa-project-diagram" />
+        <span>وضعیت خاص</span>
+      </button>
+    </div>
+  );
 
   return (
     <div className="w-full">
       {/* دکمه‌های انتخاب نوع وضعیت */}
-      {showStatusTypeButtons && (
-        <div className="mb-4 flex items-center gap-2 p-3 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            نمایش بر اساس:
-          </span>
-          <button
-            onClick={() => setStatusType("global")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center ${
-              statusType === "global"
-                ? "bg-primary text-white shadow-md"
-                : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
-            }`}
-          >
-            <DIcon icon="fa-globe" className="ml-2" />
-            وضعیت کلی
-          </button>
-          <button
-            onClick={() => setStatusType("project")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center ${
-              statusType === "project"
-                ? "bg-primary text-white shadow-md"
-                : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
-            }`}
-          >
-            <DIcon icon="fa-project-diagram" className="ml-2" />
-            وضعیت خاص پروژه
-          </button>
-        </div>
-      )}
       <DataTableWrapper5<TaskWithRelations>
-        columns={columnsForAdmin}
+        columns={tableColumns}
         createUrl="/dashboard/tasks/create"
         loading={loading || loadingStatuses || loadingProjects}
         error={error}
@@ -646,7 +787,7 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
         fetcher={fetchData}
         filterOptions={filterOptions}
         dateFilterFields={dateFilterFields}
-        listItemRender={listItemRender}
+        listItemRender={listRenderer}
         defaultViewMode="kanban"
         extraFilter={extraFilter}
         customFilterComponent={
@@ -659,6 +800,8 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
         }
         customFilterItems={customFilterItems}
         onCustomFilterItemRemove={handleDeselectItem}
+        onViewModeChange={(mode) => setIsKanbanActive(mode === "kanban")}
+        viewModeActions={statusToggleActions}
         // ---- ارسال تنظیمات کانبان (توجه: قابلیت تنظیم تاچ سنسور از اینجا)
         kanbanOptions={{
           enabled: true,
@@ -687,6 +830,22 @@ export default function IndexPage({ title = "مدیریت وظایف" }) {
           scrollSpeed: 20, // سرعت auto-scroll بیشتر
         }}
       />
+      <Modal
+        isOpen={detailTaskId !== null}
+        onClose={closeDetailModal}
+        title="جزئیات وظیفه"
+      >
+        {detailTaskId !== null && (
+          <div className="max-h-[80vh] overflow-y-auto">
+            <TaskDetailPanel
+              taskId={detailTaskId}
+              variant="modal"
+              onClose={closeDetailModal}
+              showComments={false}
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

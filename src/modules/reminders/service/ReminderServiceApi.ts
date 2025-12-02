@@ -144,7 +144,7 @@ export class ReminderServiceApi extends BaseService<any> {
         const targets = await prisma.workspaceUser.findMany({
           where: {
             ...(groupIds.length > 0 && {
-              userGroups: { some: { id: { in: groupIds } } },
+              userGroupId: { in: groupIds },
             }),
             ...(labelIds.length > 0 && {
               labels: { some: { id: { in: labelIds } } },
@@ -228,11 +228,7 @@ export class ReminderServiceApi extends BaseService<any> {
       if (ids.length > 0) {
         processedFilters.workspaceUser = {
           ...processedFilters.workspaceUser,
-          userGroups: {
-            some: {
-              id: { in: ids },
-            },
-          },
+          userGroupId: { in: ids },
         };
       }
     }

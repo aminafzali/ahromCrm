@@ -3,8 +3,25 @@
 import { NextResponse } from "next/server";
 
 export abstract class ApiResponse {
-  static internalServerError(errorMessage: string, error: unknown) {
-    throw new Error("Method not implemented.");
+  static internalServerError(
+    errorMessage: string = "Internal server error",
+    error?: unknown
+  ) {
+    console.error(
+      `%c[ApiResponse] ❌ Sending INTERNAL SERVER ERROR Response (Status: 500)`,
+      "color: #dc3545; font-weight: bold;",
+      { errorMessage, error }
+    );
+    return NextResponse.json(
+      {
+        error: errorMessage,
+        details:
+          process.env.NODE_ENV === "development" && error instanceof Error
+            ? error.message
+            : undefined,
+      },
+      { status: 500 }
+    );
   }
 
   /**

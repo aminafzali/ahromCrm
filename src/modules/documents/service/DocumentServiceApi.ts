@@ -103,6 +103,14 @@ export class DocumentServiceApi extends BaseService<any> {
     if (context.workspaceId) {
       params.filters.workspaceId = context.workspaceId;
     }
+
+    // پردازش فیلتر taskId - QueryBuilder به صورت خودکار آن را مدیریت می‌کند
+    if (params.filters.taskId !== undefined) {
+      console.log("[DOC_SERVICE] taskId filter detected", {
+        originalValue: params.filters.taskId,
+      });
+    }
+
     // اعمال سطح دسترسی خواندن بر اساس نقش/تیم
     if (context.role?.name !== "Admin") {
       const rolePolicy = await (prisma as any).roleDocumentPolicy.findUnique({
@@ -126,6 +134,8 @@ export class DocumentServiceApi extends BaseService<any> {
         }
       }
     }
+
+    // فراخوانی BaseService.getAll - QueryBuilder به صورت خودکار taskId را مدیریت می‌کند
     return super.getAll(params, context);
   }
 
@@ -147,11 +157,12 @@ export class DocumentServiceApi extends BaseService<any> {
       }
     }
     const validated = this.validate(this.createSchema, data);
-    const { category, ...rest } = validated;
+    const { category, task, ...rest } = validated;
     const finalData: any = {
       ...rest,
       workspaceId: Number(context.workspaceId),
       ...(category?.id ? { categoryId: Number(category.id) } : {}),
+      ...(task?.id ? { taskId: Number(task.id) } : {}),
     };
     return (prisma as any).document.create({ data: finalData, include });
   }
@@ -165,10 +176,15 @@ export class DocumentServiceApi extends BaseService<any> {
     // توجه: BaseService.update فقط (id, data) می‌گیرد و context را پاس نمی‌دهد
     // اینجا از سیاست کلی استفاده می‌کنیم: در کنترلر سطح بالاتر می‌توان context را enforce کرد
     const validated = this.validate(this.updateSchema, data);
-    const { category, ...rest } = validated;
+    const { category, task, ...rest } = validated;
     const finalData: any = {
       ...rest,
       ...(category?.id ? { categoryId: Number(category.id) } : {}),
+      ...(task !== undefined
+        ? task?.id
+          ? { taskId: Number(task.id) }
+          : { taskId: null }
+        : {}),
     };
     return (prisma as any).document.update({
       where: { id },

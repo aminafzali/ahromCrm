@@ -23,6 +23,22 @@ export type InvoiceWithRelations = Invoice & {
   workspaceUser?: WorkspaceUserProfile;
   invoiceStatus: InvoiceStatus;
   paymentStatus: InvoicePaymentStatus;
+  customerBankAccount?: {
+    id: number;
+    title: string;
+    bankName: string | null;
+    iban: string | null;
+    accountNumber: string | null;
+    cardNumber: string | null;
+  } | null;
+  adminBankAccount?: {
+    id: number;
+    title: string;
+    bankName: string | null;
+    iban: string | null;
+    accountNumber: string | null;
+    cardNumber: string | null;
+  } | null;
 };
 
 /**
@@ -37,7 +53,7 @@ type WorkspaceUserProfile = WorkspaceUser & {
   role: Role;
   // روابط جدید را با تایپ‌های صحیح و تو در تو تعریف می‌کنیم
   labels?: Label[];
-  userGroups?: UserGroup[];
+  userGroup?: UserGroup | null; // تغییر به one-to-one
   notifications?: Notification[];
 };
 

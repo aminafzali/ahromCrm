@@ -32,19 +32,16 @@ export const include = {
       },
     },
   },
-  userGroups: {
-    include: {
-      _count: {
-        select: {
-          workspaceUsers: true, // تعداد کاربران مرتبط با هر label
-        },
-      },
+  userGroup: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
     },
-  }, // Include the relation normally
+  }, // Include the relation normally (changed from userGroups to userGroup)
   _count: {
     select: {
       labels: true, // Count labels
-      userGroups: true, // Count groups
     },
   },
 };
@@ -61,4 +58,4 @@ export const searchFileds = [
 // ===== پایان اصلاحیه برای تست =====
 
 export const relations = [];
-export const connects = ["user", "role", "labels", "userGroups"];
+export const connects = ["user", "role", "labels", "userGroup"];

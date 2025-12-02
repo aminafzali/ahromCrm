@@ -35,6 +35,8 @@ const baseInvoiceSchema = z.object({
   issueDate: z.string().optional().nullable(),
   dueDate: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
+  customerBankAccountId: z.number().optional().nullable(),
+  adminBankAccountId: z.number().optional().nullable(),
 });
 
 // FIX: اسکیمای ساخت فاکتور جدید، حالا شماره فاکتور را از کلاینت دریافت می‌کند

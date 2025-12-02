@@ -5,6 +5,8 @@ import { useBrand } from "@/modules/brands/hooks/useBrand";
 import { BrandWithRelations } from "@/modules/brands/types";
 import { useCategory } from "@/modules/categories/hooks/useCategory";
 import { CategoryWithRelations } from "@/modules/categories/types";
+import { useUserGroup } from "@/modules/user-groups/hooks/useUserGroup";
+import { UserGroupWithRelations } from "@/modules/user-groups/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -31,8 +33,11 @@ export default function UpdateProductPage({ id }: UpdateProductPageProps) {
   const { getAll: getAllBrands, loading: loadingBrands } = useBrand();
   const { getAll: getAllCategories, loading: loadingCategories } =
     useCategory();
+  const { getAll: getAllUserGroups, loading: loadingUserGroups } =
+    useUserGroup();
   const [brands, setBrands] = useState<BrandWithRelations[]>([]);
   const [categories, setCategories] = useState<CategoryWithRelations[]>([]);
+  const [userGroups, setUserGroups] = useState<UserGroupWithRelations[]>([]);
   const [productData, setProductData] = useState<any>(null);
 
   useEffect(() => {
@@ -41,15 +46,18 @@ export default function UpdateProductPage({ id }: UpdateProductPageProps) {
 
   const fetchProduct = async () => {
     try {
-      const [mainData, brandsData, categoriesData] = await Promise.all([
-        getById(id),
-        getAllBrands({ page: 1, limit: 100 }),
-        getAllCategories({ page: 1, limit: 100 }),
-      ]);
+      const [mainData, brandsData, categoriesData, userGroupsData] =
+        await Promise.all([
+          getById(id),
+          getAllBrands({ page: 1, limit: 100 }),
+          getAllCategories({ page: 1, limit: 100 }),
+          getAllUserGroups({ page: 1, limit: 100 }),
+        ]);
 
       setProductData(mainData);
       setBrands(brandsData.data);
       setCategories(categoriesData.data);
+      setUserGroups(userGroupsData.data);
     } catch (error) {
       console.error("Error fetching product:", error);
     }
@@ -64,12 +72,14 @@ export default function UpdateProductPage({ id }: UpdateProductPageProps) {
     }
   };
 
-  if (dataLoading || loadingBrands || loadingCategories) return <Loading />;
+  if (dataLoading || loadingBrands || loadingCategories || loadingUserGroups)
+    return <Loading />;
   if (statusCode === 404) return <NotFound />;
 
   const data = new Map<string, any>();
   data.set("brands", brands);
   data.set("categories", categories);
+  data.set("userGroups", userGroups);
 
   return (
     <div className="space-y-6">

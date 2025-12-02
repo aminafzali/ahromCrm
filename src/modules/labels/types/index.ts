@@ -1,8 +1,7 @@
-import { Label, UserGroup, WorkspaceUser } from "@prisma/client";
+import { Label, WorkspaceUser } from "@prisma/client";
 
 export type LabelWithRelations = Label & {
   workspaceUsers?: WorkspaceUser[];
-  userGroups?: UserGroup[];
 };
 
 export type LabelColor =

@@ -109,6 +109,9 @@ interface DataTableWrapperProps<T> {
   customFilterItems?: CustomFilterItem[];
   onCustomFilterItemRemove?: (item: CustomFilterItem) => void;
   kanbanTouchConfig?: KanbanTouchConfig;
+  headerActions?: React.ReactNode;
+  onViewModeChange?: (mode: "table" | "list" | "kanban") => void;
+  viewModeActions?: React.ReactNode;
 }
 
 /** helper: تبدیل hex color به rgba با آلفا */
@@ -489,7 +492,6 @@ const KanbanView = <T extends { id: number | string }>(props: {
     return () => {
       disableGlobalMoveListeners();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -568,6 +570,9 @@ const DataTableWrapper5 = <T extends { id: number | string }>(
     customFilterItems = [],
     onCustomFilterItemRemove,
     kanbanTouchConfig,
+    headerActions,
+    onViewModeChange,
+    viewModeActions,
   } = props;
 
   const [data, setData] = useState<T[]>([]);
@@ -581,11 +586,25 @@ const DataTableWrapper5 = <T extends { id: number | string }>(
   const [filtersValue, setFilterValue] = useState(new Map<string, any>());
   const [viewMode, setViewMode] = useState(defaultViewMode);
 
+  const changeViewMode = (mode: "table" | "list" | "kanban") => {
+    setViewMode(mode);
+  };
+
+  useEffect(() => {
+    onViewModeChange?.(viewMode);
+  }, [viewMode, onViewModeChange]);
+
   useEffect(() => {
     const limit = viewMode === "kanban" ? 1000 : pagination.limit;
     get(pagination.page, limit);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, filtersValue, extraFilter, viewMode]);
+  }, [
+    searchTerm,
+    filtersValue,
+    extraFilter,
+    viewMode,
+    pagination.page,
+    pagination.limit,
+  ]);
 
   const get = async (page = 1, limit = pagination.limit) => {
     try {
@@ -635,7 +654,7 @@ const DataTableWrapper5 = <T extends { id: number | string }>(
   const optionsMap = useMemo(() => {
     const map = new Map<string, string>();
     filterOptions.forEach((filter) =>
-      filter.options.forEach((option) =>
+      filter.options?.forEach((option) =>
         map.set(`${filter.name}-${option.value}`, option.label)
       )
     );
@@ -723,7 +742,7 @@ const DataTableWrapper5 = <T extends { id: number | string }>(
   return (
     <div className={className}>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6 px-1">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <Form schema={searchSchema} onSubmit={handleSearch} className="grow">
             <div className="flex items-center">
               <Input
@@ -741,42 +760,52 @@ const DataTableWrapper5 = <T extends { id: number | string }>(
               />
             </div>
           </Form>
-          {showIconViews && (
-            <div className="flex items-center p-1 bg-gray-200 dark:bg-slate-700 rounded-lg">
-              <button
-                onClick={() => setViewMode("table")}
-                className={`p-1.5 rounded-md ${
-                  viewMode === "table"
-                    ? "bg-white dark:bg-slate-600 shadow"
-                    : ""
-                }`}
-              >
-                <TableIcon />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-1.5 rounded-md ${
-                  viewMode === "list" ? "bg-white dark:bg-slate-600 shadow" : ""
-                }`}
-              >
-                <ListIcon />
-              </button>
-              {kanbanOptions?.enabled && (
-                <button
-                  onClick={() => setViewMode("kanban")}
-                  className={`p-1.5 rounded-md ${
-                    viewMode === "kanban"
-                      ? "bg-white dark:bg-slate-600 shadow"
-                      : ""
-                  }`}
-                >
-                  <KanbanIcon />
-                </button>
+          {(showIconViews || viewModeActions) && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {showIconViews && (
+                <div className="flex items-center p-1 bg-gray-200 dark:bg-slate-700 rounded-lg">
+                  <button
+                    onClick={() => changeViewMode("table")}
+                    className={`p-1.5 rounded-md ${
+                      viewMode === "table"
+                        ? "bg-white dark:bg-slate-600 shadow"
+                        : ""
+                    }`}
+                  >
+                    <TableIcon />
+                  </button>
+                  <button
+                    onClick={() => changeViewMode("list")}
+                    className={`p-1.5 rounded-md ${
+                      viewMode === "list"
+                        ? "bg-white dark:bg-slate-600 shadow"
+                        : ""
+                    }`}
+                  >
+                    <ListIcon />
+                  </button>
+                  {kanbanOptions?.enabled && (
+                    <button
+                      onClick={() => changeViewMode("kanban")}
+                      className={`p-1.5 rounded-md ${
+                        viewMode === "kanban"
+                          ? "bg-white dark:bg-slate-600 shadow"
+                          : ""
+                      }`}
+                    >
+                      <KanbanIcon />
+                    </button>
+                  )}
+                </div>
               )}
+              {viewModeActions}
             </div>
           )}
         </div>
-        {actionButton}
+        <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto">
+          {headerActions}
+          {actionButton}
+        </div>
       </div>
 
       {(filterOptions.length > 0 || dateFilterFields.length > 0) && (
@@ -792,7 +821,7 @@ const DataTableWrapper5 = <T extends { id: number | string }>(
                 <div key={filter.name} className="w-full sm:w-auto md:w-52">
                   <MultiSelectFilter
                     label={filter.label}
-                    options={filter.options}
+                    options={filter.options || []}
                     selectedValues={filtersValue.get(filter.name) || []}
                     onChange={(values) =>
                       handleFilterChange(filter.name, values)
